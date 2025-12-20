@@ -5,13 +5,14 @@
 //! - Cache hit/miss tracking
 //! - Response time histograms
 //! - Prometheus-compatible exports
+//! - Query history logging
 
 use parking_lot::RwLock;
 use serde::Serialize;
-use std::collections::HashMap;
+use std::collections::{HashMap, VecDeque};
 use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::Arc;
-use std::time::Duration;
+use std::time::{Duration, SystemTime, UNIX_EPOCH};
 
 /// Response time histogram with predefined buckets
 #[derive(Debug, Clone, Default, Serialize)]
@@ -61,6 +62,75 @@ pub struct ClientStats {
     pub last_seen: i64,
 }
 
+/// Individual query log entry
+#[derive(Debug, Clone, Serialize)]
+pub struct QueryLogEntry {
+    pub timestamp: u64,
+    pub domain: String,
+    pub client_ip: String,
+    pub blocked: bool,
+    pub response_time_ms: u64,
+}
+
+/// Query history with circular buffer
+#[derive(Debug)]
+pub struct QueryLog {
+    entries: RwLock<VecDeque<QueryLogEntry>>,
+    max_size: usize,
+}
+
+impl QueryLog {
+    pub fn new(max_size: usize) -> Self {
+        Self {
+            entries: RwLock::new(VecDeque::with_capacity(max_size)),
+            max_size,
+        }
+    }
+
+    /// Record a new query to the log
+    pub fn record(
+        &self,
+        domain: String,
+        client_ip: String,
+        blocked: bool,
+        response_time_ms: u64,
+    ) {
+        let timestamp = SystemTime::now()
+            .duration_since(UNIX_EPOCH)
+            .unwrap_or_default()
+            .as_secs();
+
+        let entry = QueryLogEntry {
+            timestamp,
+            domain,
+            client_ip,
+            blocked,
+            response_time_ms,
+        };
+
+        let mut entries = self.entries.write();
+
+        // If at capacity, remove oldest entry
+        if entries.len() >= self.max_size {
+            entries.pop_front();
+        }
+
+        entries.push_back(entry);
+    }
+
+    /// Get recent query history (newest first)
+    pub fn get_recent(&self, limit: usize) -> Vec<QueryLogEntry> {
+        let entries = self.entries.read();
+        entries.iter().rev().take(limit).cloned().collect()
+    }
+}
+
+impl Default for QueryLog {
+    fn default() -> Self {
+        Self::new(100)
+    }
+}
+
 /// Snapshot of current metrics state
 #[derive(Debug, Clone, Serialize)]
 pub struct MetricsSnapshot {
@@ -88,6 +158,7 @@ struct MetricsCollectorInner {
     cache_misses: AtomicU64,
     histogram: RwLock<ResponseTimeHistogram>,
     client_stats: RwLock<HashMap<String, ClientStats>>,
+    query_log: QueryLog,
 }
 
 impl Default for MetricsCollector {
@@ -107,6 +178,7 @@ impl MetricsCollector {
                 cache_misses: AtomicU64::new(0),
                 histogram: RwLock::new(ResponseTimeHistogram::default()),
                 client_stats: RwLock::new(HashMap::new()),
+                query_log: QueryLog::new(100),
             }),
         }
     }
@@ -120,6 +192,18 @@ impl MetricsCollector {
         }
     }
 
+    /// Record a query with full details to the query log
+    pub fn record_query_with_details(
+        &self,
+        domain: String,
+        client_ip: String,
+        blocked: bool,
+        response_time_ms: u64,
+    ) {
+        self.record_query(blocked);
+        self.inner.query_log.record(domain, client_ip, blocked, response_time_ms);
+    }
+
     pub fn record_cache_hit(&self) {
         self.inner.cache_hits.fetch_add(1, Ordering::Relaxed);
     }
@@ -131,6 +215,11 @@ impl MetricsCollector {
     pub fn record_response_time(&self, duration: Duration) {
         let duration_ms = duration.as_millis() as u64;
         self.inner.histogram.write().record(duration_ms);
+    }
+
+    /// Get recent query history
+    pub fn get_query_history(&self, limit: usize) -> Vec<QueryLogEntry> {
+        self.inner.query_log.get_recent(limit)
     }
 
     pub fn snapshot(&self) -> MetricsSnapshot {

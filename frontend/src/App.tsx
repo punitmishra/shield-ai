@@ -17,6 +17,14 @@ interface HealthStatus {
   uptime_seconds: number
 }
 
+interface QueryLogEntry {
+  timestamp: number
+  domain: string
+  client_ip: string
+  blocked: boolean
+  response_time_ms: number
+}
+
 // Stat Card Component
 function StatCard({
   title,
@@ -75,6 +83,7 @@ function ProgressBar({ value, color }: { value: number; color: string }) {
 function App() {
   const [stats, setStats] = useState<Stats | null>(null)
   const [health, setHealth] = useState<HealthStatus | null>(null)
+  const [queryHistory, setQueryHistory] = useState<QueryLogEntry[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [lastUpdated, setLastUpdated] = useState<Date>(new Date())
@@ -82,9 +91,10 @@ function App() {
   const fetchData = async () => {
     try {
       setError(null)
-      const [statsRes, healthRes] = await Promise.all([
+      const [statsRes, healthRes, historyRes] = await Promise.all([
         fetch('/api/stats'),
-        fetch('/health')
+        fetch('/health'),
+        fetch('/api/history')
       ])
 
       if (statsRes.ok) {
@@ -94,6 +104,10 @@ function App() {
       if (healthRes.ok) {
         const healthData = await healthRes.json()
         setHealth(healthData)
+      }
+      if (historyRes.ok) {
+        const historyData = await historyRes.json()
+        setQueryHistory(historyData.queries || [])
       }
       setLastUpdated(new Date())
     } catch (err) {
@@ -123,6 +137,10 @@ function App() {
     if (num >= 1000000) return (num / 1000000).toFixed(1) + 'M'
     if (num >= 1000) return (num / 1000).toFixed(1) + 'K'
     return num.toString()
+  }
+
+  const formatTimestamp = (timestamp: number) => {
+    return new Date(timestamp * 1000).toLocaleTimeString()
   }
 
   if (loading) {
@@ -231,7 +249,7 @@ function App() {
             </div>
 
             {/* Rate Cards */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
               <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
                 <h3 className="text-lg font-semibold text-gray-900 mb-4">Cache Performance</h3>
                 <div className="space-y-4">
@@ -276,6 +294,53 @@ function App() {
             </div>
           </>
         )}
+
+        {/* Query History Table */}
+        <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6 mb-8">
+          <h3 className="text-lg font-semibold text-gray-900 mb-4">Recent Queries</h3>
+          <div className="overflow-x-auto">
+            <table className="min-w-full divide-y divide-gray-200">
+              <thead>
+                <tr>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Time</th>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Domain</th>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Response Time</th>
+                </tr>
+              </thead>
+              <tbody className="bg-white divide-y divide-gray-200">
+                {queryHistory.length > 0 ? (
+                  queryHistory.slice(0, 20).map((query, index) => (
+                    <tr key={index} className="hover:bg-gray-50 transition-colors">
+                      <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-500">
+                        {formatTimestamp(query.timestamp)}
+                      </td>
+                      <td className="px-4 py-3 whitespace-nowrap text-sm font-medium text-gray-900">
+                        {query.domain}
+                      </td>
+                      <td className="px-4 py-3 whitespace-nowrap text-sm">
+                        <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                          query.blocked ? 'bg-red-100 text-red-800' : 'bg-green-100 text-green-800'
+                        }`}>
+                          {query.blocked ? 'Blocked' : 'Allowed'}
+                        </span>
+                      </td>
+                      <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-500">
+                        {query.response_time_ms}ms
+                      </td>
+                    </tr>
+                  ))
+                ) : (
+                  <tr>
+                    <td colSpan={4} className="px-4 py-8 text-center text-sm text-gray-500">
+                      No query history available
+                    </td>
+                  </tr>
+                )}
+              </tbody>
+            </table>
+          </div>
+        </div>
 
         {/* Footer */}
         <div className="mt-8 text-center text-sm text-gray-500">

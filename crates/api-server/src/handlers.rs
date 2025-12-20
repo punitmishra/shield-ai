@@ -2,10 +2,10 @@
 
 use axum::{
     extract::{Path, State},
-    response::Response,
     Json,
 };
 use serde::{Deserialize, Serialize};
+use shield_metrics::QueryLogEntry;
 use std::sync::Arc;
 use tracing::{info, warn};
 
@@ -102,18 +102,22 @@ pub async fn resolve_domain(
     let blocked = domain.contains("malware") || domain.contains("phishing");
 
     if blocked {
-        state.metrics.record_query(true);
+        let query_time_ms = start.elapsed().as_millis() as u64;
+        state.metrics.record_query_with_details(
+            domain.clone(),
+            "0.0.0.0".to_string(),
+            true,
+            query_time_ms,
+        );
         warn!("Blocked domain: {}", domain);
         return Ok(Json(DnsResolveResponse {
             domain,
             ip_addresses: vec![],
             blocked: true,
             cached: false,
-            query_time_ms: start.elapsed().as_millis() as u64,
+            query_time_ms,
         }));
     }
-
-    state.metrics.record_query(false);
 
     // Simulate DNS resolution
     let ip_addresses = match domain.as_str() {
@@ -132,6 +136,15 @@ pub async fn resolve_domain(
     }
 
     let query_time_ms = start.elapsed().as_millis() as u64;
+
+    // Log query with details
+    state.metrics.record_query_with_details(
+        domain.clone(),
+        "0.0.0.0".to_string(),
+        false,
+        query_time_ms,
+    );
+
     info!("Resolved {} to {:?} in {}ms", domain, ip_addresses, query_time_ms);
 
     Ok(Json(DnsResolveResponse {
@@ -146,4 +159,17 @@ pub async fn resolve_domain(
 /// Prometheus metrics endpoint
 pub async fn metrics(State(state): State<Arc<AppState>>) -> String {
     state.metrics.to_prometheus()
+}
+
+/// Query history response
+#[derive(Serialize)]
+pub struct QueryHistoryResponse {
+    pub queries: Vec<QueryLogEntry>,
+}
+
+/// Query history endpoint
+pub async fn get_query_history(State(state): State<Arc<AppState>>) -> Json<QueryHistoryResponse> {
+    let queries = state.metrics.get_query_history(100);
+    info!("Returning {} query history entries", queries.len());
+    Json(QueryHistoryResponse { queries })
 }

@@ -27,6 +27,7 @@ async fn main() -> Result<()> {
     let app = Router::new()
         .route("/health", get(handlers::health_check))
         .route("/api/stats", get(handlers::get_stats))
+        .route("/api/history", get(handlers::get_query_history))
         .route("/api/dns/resolve/:domain", get(handlers::resolve_domain))
         .route("/metrics", get(handlers::metrics))
         .with_state(app_state)
