@@ -1,0 +1,38 @@
+version: '3.8'
+
+services:
+  redis:
+    image: redis:7-alpine
+    container_name: shield-ai-redis
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+
+  api-server:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile
+    container_name: shield-ai-api
+    restart: unless-stopped
+    ports:
+      - "8080:8080"
+    environment:
+      - RUST_LOG=info
+    depends_on:
+      - redis
+
+  frontend:
+    build:
+      context: ../frontend
+      dockerfile: ../docker/Dockerfile.frontend
+    container_name: shield-ai-frontend
+    restart: unless-stopped
+    ports:
+      - "3000:80"
+    depends_on:
+      - api-server
+
+volumes:
+  redis_data:

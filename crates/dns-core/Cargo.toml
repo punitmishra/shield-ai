@@ -1,0 +1,24 @@
+[package]
+name = "shield-dns-core"
+version.workspace = true
+edition.workspace = true
+description = "High-performance DNS filtering engine"
+
+[dependencies]
+tokio = { workspace = true }
+anyhow = { workspace = true }
+thiserror = { workspace = true }
+hickory-resolver = { workspace = true }
+hickory-proto = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
+dashmap = { workspace = true }
+parking_lot = { workspace = true }
+ahash = { workspace = true }
+lru = { workspace = true }
+tracing = { workspace = true }
+chrono = { workspace = true }
+
+[lib]
+name = "shield_dns_core"
+path = "src/lib.rs"

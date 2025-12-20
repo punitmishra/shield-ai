@@ -1,0 +1,144 @@
+# Shield AI - Sample Blocklist Files
+# These are example blocklist files for Phase 1 testing
+
+# ============================================================================
+# File: blocklists/malware.txt
+# Description: Known malware and malicious domains
+# ============================================================================
+
+# Known malware domains (examples - not exhaustive)
+malware-test.com
+virus-download.net
+trojan-horse.org
+suspicious-malware.info
+fake-antivirus.com
+phishing-bank.net
+identity-theft.org
+ransomware-payment.com
+botnet-controller.net
+malicious-redirect.com
+
+# DGA (Domain Generation Algorithm) patterns - common malware families
+qwertyuiop123.com
+randomstring456.net
+abcdef789012.org
+xyzabc321.com
+malwareabc123.info
+
+# Common malware hosting TLDs and patterns
+*.tk
+*.ml
+*.ga
+*.cf
+suspicious-*.com
+malware-*.net
+virus-*.org
+
+# ============================================================================
+# File: blocklists/ads.txt  
+# Description: Advertising and tracking domains
+# ============================================================================
+
+# Major ad networks
+doubleclick.net
+googleadservices.com
+googlesyndication.com
+google-analytics.com
+googletagmanager.com
+facebook.com
+fbcdn.net
+amazon-adsystem.com
+adsystem.amazon.com
+bing.com
+msn.com
+
+# Social media trackers
+connect.facebook.net
+platform.twitter.com
+widgets.pinterest.com
+platform.linkedin.com
+instagram.com
+snapchat.com
+tiktok.com
+
+# Analytics and tracking
+analytics.google.com
+fonts.googleapis.com
+ajax.googleapis.com
+code.jquery.com
+cdnjs.cloudflare.com
+
+# Ad serving domains
+ads.yahoo.com
+advertising.com
+adsense.google.com
+adnxs.com
+adsystem.amazon.co.uk
+amazon-adsystem.com
+criteo.com
+outbrain.com
+taboola.com
+
+# Popup and redirect ads
+popads.net
+popcash.net
+propellerads.com
+adcash.com
+clickadu.com
+trafficjunky.net
+
+# ============================================================================
+# File: blocklists/phishing.txt
+# Description: Phishing and social engineering domains  
+# ============================================================================
+
+# Banking phishing examples
+fake-bank-login.com
+phishing-paypal.net
+fake-amazon-signin.org
+bogus-ebay-account.com
+fraudulent-visa.info
+scam-mastercard.net
+fake-chase-bank.com
+phishing-wellsfargo.org
+
+# Social media phishing
+fake-facebook-login.com
+bogus-instagram.net
+scam-twitter.org
+fake-linkedin-signin.com
+phishing-gmail.net
+fraudulent-outlook.com
+
+# Tech support scams
+fake-microsoft-support.com
+bogus-apple-support.net
+scam-tech-help.org
+fraudulent-windows-fix.com
+fake-antivirus-scan.net
+
+# Cryptocurrency scams
+fake-bitcoin-wallet.com
+bogus-crypto-exchange.net
+scam-ethereum.org
+fraudulent-coinbase.com
+fake-binance.net
+
+# ============================================================================
+# File: blocklists/adult.txt
+# Description: Adult content domains (family filter)
+# ============================================================================
+
+# Adult content sites (examples)
+adult-content.com
+explicit-material.net
+mature-content.org
+adult-videos.com
+pornographic-site.net
+
+# Dating scams
+fake-dating.com
+scam-romance.net
+fraudulent-match.org
+
+# 

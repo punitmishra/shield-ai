@@ -1,0 +1,67 @@
+[workspace]
+resolver = "2"
+members = [
+    "crates/dns-core",
+    "crates/api-server",
+    "crates/ai-engine",
+    "crates/metrics",
+]
+
+[workspace.package]
+version = "0.1.0"
+edition = "2021"
+authors = ["Shield AI Team"]
+license = "MIT"
+
+[workspace.dependencies]
+# Core async runtime
+tokio = { version = "1.35", features = ["full"] }
+anyhow = "1.0"
+thiserror = "1.0"
+
+# DNS and networking
+hickory-resolver = "0.24"
+hickory-proto = "0.24"
+
+# Serialization
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+
+# High-performance data structures
+dashmap = "5.5"
+arc-swap = "1.6"
+parking_lot = "0.12"
+ahash = "0.8"
+lru = "0.12"
+
+# Cryptography and security
+ring = "0.17"
+uuid = { version = "1.6", features = ["v4", "serde"] }
+rand = "0.8"
+
+# Observability
+tracing = "0.1"
+tracing-subscriber = { version = "0.3", features = ["env-filter", "json"] }
+
+# HTTP and API
+axum = { version = "0.7", features = ["ws", "macros"] }
+tower = { version = "0.4", features = ["full"] }
+tower-http = { version = "0.5", features = ["cors", "trace"] }
+
+# Configuration
+config = "0.14"
+clap = { version = "4.4", features = ["derive"] }
+
+# Time utilities
+chrono = { version = "0.4", features = ["serde"] }
+
+[profile.release]
+lto = "fat"
+codegen-units = 1
+panic = "abort"
+opt-level = 3
+strip = true
+
+[profile.dev]
+opt-level = 1
+debug = true

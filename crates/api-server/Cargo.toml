@@ -1,0 +1,25 @@
+[package]
+name = "shield-api-server"
+version.workspace = true
+edition.workspace = true
+description = "REST API server for Shield AI"
+
+[dependencies]
+shield-dns-core = { path = "../dns-core" }
+shield-metrics = { path = "../metrics" }
+
+tokio = { workspace = true }
+anyhow = { workspace = true }
+axum = { workspace = true }
+tower = { workspace = true }
+tower-http = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
+tracing = { workspace = true }
+tracing-subscriber = { workspace = true }
+chrono = { workspace = true }
+uuid = { workspace = true }
+
+[[bin]]
+name = "api-server"
+path = "src/main.rs"

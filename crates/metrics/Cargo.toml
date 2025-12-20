@@ -1,0 +1,18 @@
+[package]
+name = "shield-metrics"
+version.workspace = true
+edition.workspace = true
+description = "Metrics collection and monitoring"
+
+[dependencies]
+tokio = { workspace = true }
+anyhow = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
+tracing = { workspace = true }
+parking_lot = { workspace = true }
+chrono = { workspace = true }
+
+[lib]
+name = "shield_metrics"
+path = "src/lib.rs"

@@ -1,0 +1,20 @@
+[package]
+name = "shield-ai-engine"
+version.workspace = true
+edition.workspace = true
+description = "AI-powered threat detection engine"
+
+[dependencies]
+tokio = { workspace = true }
+anyhow = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
+tracing = { workspace = true }
+dashmap = { workspace = true }
+parking_lot = { workspace = true }
+ahash = { workspace = true }
+lru = { workspace = true }
+
+[lib]
+name = "shield_ai_engine"
+path = "src/lib.rs"
