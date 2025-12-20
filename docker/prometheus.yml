@@ -1,0 +1,20 @@
+global:
+  scrape_interval: 15s
+  evaluation_interval: 15s
+
+scrape_configs:
+  - job_name: 'shield-ai-api'
+    static_configs:
+      - targets: ['api-server:8080']
+    metrics_path: /metrics
+    scrape_interval: 5s
+
+  - job_name: 'shield-ai-dns'
+    static_configs:
+      - targets: ['dns-server:9090']
+    metrics_path: /metrics
+    scrape_interval: 5s
+
+  - job_name: 'redis'
+    static_configs:
+      - targets: ['redis:6379']
