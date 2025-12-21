@@ -1,0 +1,28 @@
+# Shield AI - Tracking Blocklist
+# User tracking, fingerprinting, and telemetry
+
+# Browser fingerprinting
+fingerprintjs.com
+fingerprint2.js
+whoami.akamai.net
+
+# Web beacons and pixels
+pixel.facebook.com
+bat.bing.com
+t.co
+
+# Session replay
+hotjar.com
+fullstory.com
+mouseflow.com
+smartlook.com
+
+# User tracking
+mixpanel.com
+amplitude.com
+segment.io
+heap.io
+
+# Telemetry
+telemetry.microsoft.com
+data.microsoft.com

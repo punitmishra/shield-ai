@@ -1,0 +1,28 @@
+# Shield AI - Phishing Blocklist
+# Phishing, scam, and social engineering domains
+
+# Banking phishing
+fake-bank-login.com
+phishing-paypal.net
+fake-amazon-signin.org
+bogus-ebay-account.com
+fake-chase-bank.com
+
+# Social media phishing
+fake-facebook-login.com
+bogus-instagram.net
+fake-linkedin-signin.com
+
+# Tech support scams
+fake-microsoft-support.com
+bogus-apple-support.net
+scam-tech-help.org
+
+# Cryptocurrency scams
+fake-bitcoin-wallet.com
+bogus-crypto-exchange.net
+fake-binance.net
+
+# Email phishing
+fake-gmail-login.com
+bogus-outlook.net

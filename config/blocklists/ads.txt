@@ -1,0 +1,32 @@
+# Shield AI - Advertising Blocklist
+# Ad networks, trackers, and analytics
+
+# Major ad networks
+doubleclick.net
+googleadservices.com
+googlesyndication.com
+amazon-adsystem.com
+adsrvr.org
+adnxs.com
+criteo.com
+outbrain.com
+taboola.com
+
+# Popup ads
+popads.net
+popcash.net
+propellerads.com
+adcash.com
+
+# Mobile ad networks
+appsflyer.com
+branch.io
+adjust.com
+
+# Analytics (optional - comment out if needed)
+# google-analytics.com
+# analytics.google.com
+
+# Social media trackers
+connect.facebook.net
+platform.twitter.com

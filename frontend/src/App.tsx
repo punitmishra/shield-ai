@@ -1,5 +1,5 @@
-import { useState, useEffect } from 'react'
-import { Shield, Activity, Ban, Database, Clock, RefreshCw, Server, AlertTriangle } from 'lucide-react'
+import { useState, useEffect, useRef, useCallback } from 'react'
+import { Shield, Activity, Ban, Database, Clock, RefreshCw, Server, AlertTriangle, Wifi, WifiOff } from 'lucide-react'
 
 // Types
 interface Stats {
@@ -9,12 +9,15 @@ interface Stats {
   cache_misses: number
   cache_hit_rate: number
   block_rate: number
+  blocklist_size?: number
 }
 
 interface HealthStatus {
   status: string
   version: string
   uptime_seconds: number
+  blocklist_size?: number
+  cache_hit_rate?: number
 }
 
 interface QueryLogEntry {
@@ -87,8 +90,12 @@ function App() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [lastUpdated, setLastUpdated] = useState<Date>(new Date())
+  const [wsConnected, setWsConnected] = useState(false)
+  const wsRef = useRef<WebSocket | null>(null)
+  const reconnectTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
-  const fetchData = async () => {
+  // Fetch initial data and query history
+  const fetchData = useCallback(async () => {
     try {
       setError(null)
       const [statsRes, healthRes, historyRes] = await Promise.all([
@@ -116,13 +123,97 @@ function App() {
     } finally {
       setLoading(false)
     }
-  }
+  }, [])
 
+  // WebSocket connection for real-time stats updates
+  const connectWebSocket = useCallback(() => {
+    if (wsRef.current?.readyState === WebSocket.OPEN) return
+
+    const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:'
+    const wsUrl = `${protocol}//${window.location.host}/ws`
+
+    try {
+      const ws = new WebSocket(wsUrl)
+
+      ws.onopen = () => {
+        console.log('WebSocket connected')
+        setWsConnected(true)
+        setError(null)
+      }
+
+      ws.onmessage = (event) => {
+        try {
+          const data = JSON.parse(event.data) as Stats
+          setStats(data)
+          setLastUpdated(new Date())
+        } catch (e) {
+          console.error('Failed to parse WebSocket message:', e)
+        }
+      }
+
+      ws.onerror = (event) => {
+        console.error('WebSocket error:', event)
+      }
+
+      ws.onclose = () => {
+        console.log('WebSocket disconnected')
+        setWsConnected(false)
+        wsRef.current = null
+
+        // Attempt to reconnect after 3 seconds
+        reconnectTimeoutRef.current = setTimeout(() => {
+          connectWebSocket()
+        }, 3000)
+      }
+
+      wsRef.current = ws
+    } catch (err) {
+      console.error('Failed to create WebSocket:', err)
+    }
+  }, [])
+
+  // Initial data fetch and WebSocket connection
   useEffect(() => {
     fetchData()
-    const interval = setInterval(fetchData, 5000)
-    return () => clearInterval(interval)
-  }, [])
+    connectWebSocket()
+
+    // Fetch query history every 5 seconds (stats come via WebSocket)
+    const historyInterval = setInterval(async () => {
+      try {
+        const historyRes = await fetch('/api/history')
+        if (historyRes.ok) {
+          const historyData = await historyRes.json()
+          setQueryHistory(historyData.queries || [])
+        }
+      } catch (err) {
+        console.error('Failed to fetch history:', err)
+      }
+    }, 5000)
+
+    // Fetch health every 10 seconds
+    const healthInterval = setInterval(async () => {
+      try {
+        const healthRes = await fetch('/health')
+        if (healthRes.ok) {
+          const healthData = await healthRes.json()
+          setHealth(healthData)
+        }
+      } catch (err) {
+        console.error('Failed to fetch health:', err)
+      }
+    }, 10000)
+
+    return () => {
+      clearInterval(historyInterval)
+      clearInterval(healthInterval)
+      if (reconnectTimeoutRef.current) {
+        clearTimeout(reconnectTimeoutRef.current)
+      }
+      if (wsRef.current) {
+        wsRef.current.close()
+      }
+    }
+  }, [fetchData, connectWebSocket])
 
   const formatUptime = (seconds: number) => {
     const days = Math.floor(seconds / 86400)
@@ -170,6 +261,16 @@ function App() {
               </div>
             </div>
             <div className="flex items-center space-x-4">
+              {/* WebSocket status indicator */}
+              <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${
+                wsConnected ? 'bg-green-100 text-green-700' : 'bg-yellow-100 text-yellow-700'
+              }`}>
+                {wsConnected ? (
+                  <><Wifi className="w-3 h-3 mr-1" /> Live</>
+                ) : (
+                  <><WifiOff className="w-3 h-3 mr-1" /> Polling</>
+                )}
+              </span>
               {health && <StatusBadge status={health.status} />}
               <button
                 onClick={fetchData}
