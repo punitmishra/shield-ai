@@ -28,35 +28,36 @@ Memory: ~15MB | Latency: <1ms | Throughput: 100K+ QPS | Zero Config
 curl -sSL https://raw.githubusercontent.com/punitmishra/shield-ai/main/install.sh | bash
 ```
 
-### Manual Setup
+### Build from Source
 
 ```bash
-# Clone
 git clone https://github.com/punitmishra/shield-ai.git
 cd shield-ai
-
-# Run with Docker
-docker-compose up -d
-
-# Or build from source
 cargo build --release
 ./target/release/api-server
 ```
 
-### Cloud Deploy
+### Try It Now (No Install)
 
-**Railway (Recommended)**
-1. Fork this repo
-2. Connect to [Railway](https://railway.app)
-3. Deploy (auto-detects Dockerfile)
+```bash
+# Check if a domain is safe
+curl https://shield-ai-production.up.railway.app/api/ai/analyze/facebook.com
 
-**Live Demo**: https://shield-ai-production.up.railway.app/health
+# Resolve DNS
+curl https://shield-ai-production.up.railway.app/api/dns/resolve/google.com
+```
+
+**[📖 Full Getting Started Guide](docs/GETTING_STARTED.md)** - Docker, Cloud Deploy, Device Setup
+
+**Live Demo**:
+- API: https://shield-ai-production.up.railway.app/health
+- Dashboard: https://artistic-integrity-production.up.railway.app
 
 ## Features
 
 ### Core Protection
 - **Real DNS Resolution** - Powered by Hickory DNS
-- **Blocklist Filtering** - Ads, malware, phishing, tracking (70+ domains included)
+- **Blocklist Filtering** - 7 categories, 150+ domains out of the box
 - **Smart Caching** - 50,000 entry LRU cache with 300s TTL
 - **Graceful Shutdown** - Zero dropped connections
 
@@ -125,11 +126,14 @@ another-bad-site.net
 *.malware-family.com  # Wildcard support
 ```
 
-Included blocklists:
+Included blocklists (7 categories):
 - `malware.txt` - Known malware domains
 - `ads.txt` - Advertising networks
 - `phishing.txt` - Phishing sites
 - `tracking.txt` - User tracking domains
+- `social-trackers.txt` - Facebook, Twitter, TikTok trackers
+- `cryptominers.txt` - Browser crypto miners
+- `gambling.txt` - Online gambling sites (family mode)
 
 ## API Reference
 

@@ -68,6 +68,9 @@ impl AppState {
             "ads.txt",
             "phishing.txt",
             "tracking.txt",
+            "social-trackers.txt",
+            "cryptominers.txt",
+            "gambling.txt",
         ];
 
         for filename in &blocklist_files {

@@ -1,0 +1,30 @@
+# Shield AI - Cryptominer Blocklist
+# Blocks browser-based cryptocurrency mining scripts
+
+# Coinhive (defunct but clones exist)
+coinhive.com
+coin-hive.com
+coinhive-manager.com
+authedmine.com
+
+# Other miners
+jsecoin.com
+crypto-loot.com
+cryptoloot.pro
+minero.cc
+coinerra.com
+coinnebula.com
+afminer.com
+webmine.cz
+monerise.com
+minr.pw
+hashforcash.us
+ppoi.org
+coinpot.co
+minemytraffic.com
+webminepool.com
+hashing.win
+freecontent.bid
+freecontent.stream
+freecontent.date
+freecontent.faith

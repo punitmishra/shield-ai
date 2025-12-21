@@ -1,0 +1,38 @@
+# Shield AI - Social Media Trackers
+# Blocks tracking from social media platforms
+
+# Facebook/Meta
+connect.facebook.net
+pixel.facebook.com
+www.facebook.com
+graph.facebook.com
+staticxx.facebook.com
+*.fbcdn.net
+
+# Twitter/X
+analytics.twitter.com
+syndication.twitter.com
+platform.twitter.com
+t.co
+
+# LinkedIn
+analytics.linkedin.com
+platform.linkedin.com
+snap.licdn.com
+
+# TikTok
+analytics.tiktok.com
+log.tiktokv.com
+mon.tiktokv.com
+
+# Pinterest
+log.pinterest.com
+trk.pinterest.com
+
+# Snapchat
+tr.snapchat.com
+sc-analytics.appspot.com
+
+# Reddit
+events.reddit.com
+pixel.redditmedia.com

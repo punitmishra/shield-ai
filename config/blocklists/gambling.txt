@@ -1,0 +1,24 @@
+# Shield AI - Gambling Sites
+# Blocks online gambling and betting sites
+
+# Major gambling sites
+bet365.com
+888casino.com
+pokerstars.com
+draftkings.com
+fanduel.com
+betfair.com
+williamhill.com
+ladbrokes.com
+paddypower.com
+unibet.com
+betway.com
+bovada.lv
+mybookie.ag
+betonline.ag
+sportsbetting.ag
+bwin.com
+betfred.com
+skybet.com
+betvictor.com
+coral.co.uk
