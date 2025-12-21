@@ -8,6 +8,8 @@ members = [
     "crates/threat-intel",
     "crates/tiers",
     "crates/profiles",
+    "crates/plugin-system",
+    "crates/ml-engine",
 ]
 
 [workspace.package]
@@ -70,7 +72,23 @@ codegen-units = 1
 panic = "abort"
 opt-level = 3
 strip = true
+overflow-checks = false
+debug = false
+
+[profile.release-small]
+inherits = "release"
+opt-level = "z"
+lto = true
+strip = true
 
 [profile.dev]
 opt-level = 1
 debug = true
+
+[profile.bench]
+inherits = "release"
+debug = true
+
+# Faster compile times for development
+[profile.dev.package."*"]
+opt-level = 2

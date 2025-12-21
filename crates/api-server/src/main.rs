@@ -10,7 +10,7 @@ use std::net::SocketAddr;
 use std::sync::Arc;
 
 use anyhow::Result;
-use axum::{routing::{delete, get}, Router};
+use axum::{routing::{delete, get, post, put}, Router};
 use tower_http::{
     cors::{Any, CorsLayer},
     trace::{DefaultMakeSpan, DefaultOnResponse, TraceLayer},
@@ -57,6 +57,29 @@ async fn main() -> Result<()> {
         .route("/api/allowlist/:domain", delete(handlers::remove_from_allowlist))
         // Rate limit stats
         .route("/api/rate-limit/stats", get(handlers::rate_limit_stats))
+        // Threat intelligence endpoints
+        .route("/api/threat/analyze/:domain", get(handlers::threat_analyze))
+        .route("/api/threat/check/:domain", get(handlers::threat_check))
+        .route("/api/threat/feeds/stats", get(handlers::threat_feed_stats))
+        // Profile management endpoints
+        .route("/api/profiles", get(handlers::list_profiles).post(handlers::create_profile))
+        .route("/api/profiles/stats", get(handlers::profile_stats))
+        .route("/api/profiles/:id", get(handlers::get_profile).delete(handlers::delete_profile))
+        .route("/api/profiles/device", post(handlers::assign_device))
+        // Tier management endpoints
+        .route("/api/tiers/pricing", get(handlers::get_pricing))
+        .route("/api/tiers/check", post(handlers::check_feature))
+        .route("/api/tiers/:user_id", get(handlers::get_subscription))
+        .route("/api/tiers/:user_id/usage", get(handlers::get_usage))
+        .route("/api/tiers/:user_id/upgrade", put(handlers::upgrade_tier))
+        .route("/api/tiers/:user_id/trial", post(handlers::start_trial))
+        // ML Engine endpoints - Deep AI Analysis
+        .route("/api/ml/analyze/:domain", get(handlers::ml_analyze))
+        .route("/api/ml/dga/:domain", get(handlers::ml_dga_check))
+        .route("/api/ml/block/:domain", get(handlers::ml_should_block))
+        .route("/api/ml/analytics", get(handlers::ml_analytics))
+        // Combined deep analysis (AI + ML + Threat Intel)
+        .route("/api/deep/:domain", get(handlers::deep_analysis))
         // WebSocket for real-time updates
         .route("/ws", get(handlers::ws_handler))
         // Shared state

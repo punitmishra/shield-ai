@@ -1,0 +1,20 @@
+[package]
+name = "shield-plugin-system"
+version.workspace = true
+edition.workspace = true
+description = "WASM-based plugin system for Shield AI"
+
+[dependencies]
+tokio = { workspace = true }
+anyhow = { workspace = true }
+thiserror = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
+tracing = { workspace = true }
+dashmap = { workspace = true }
+uuid = { workspace = true }
+wasmtime = "27"
+
+[lib]
+name = "shield_plugin_system"
+path = "src/lib.rs"

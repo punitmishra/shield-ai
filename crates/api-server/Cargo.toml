@@ -8,6 +8,10 @@ description = "REST API server for Shield AI"
 shield-dns-core = { path = "../dns-core" }
 shield-metrics = { path = "../metrics" }
 shield-ai-engine = { path = "../ai-engine" }
+shield-threat-intel = { path = "../threat-intel" }
+shield-profiles = { path = "../profiles" }
+shield-tiers = { path = "../tiers" }
+shield-ml-engine = { path = "../ml-engine" }
 
 tokio = { workspace = true }
 anyhow = { workspace = true }

@@ -6,6 +6,10 @@ use shield_dns_core::cache::DNSCache;
 use shield_dns_core::filter::FilterEngine;
 use shield_dns_core::resolver::Resolver;
 use shield_metrics::MetricsCollector;
+use shield_ml_engine::MLEngine;
+use shield_profiles::ProfileManager;
+use shield_threat_intel::ThreatIntelEngine;
+use shield_tiers::TierManager;
 use std::path::Path;
 use std::sync::Arc;
 use std::time::{Duration, Instant};
@@ -19,6 +23,10 @@ pub struct AppState {
     pub filter: Arc<FilterEngine>,
     pub ai_engine: Arc<AIEngine>,
     pub rate_limiter: Arc<RateLimiter>,
+    pub threat_intel: Arc<ThreatIntelEngine>,
+    pub profiles: Arc<ProfileManager>,
+    pub tiers: Arc<TierManager>,
+    pub ml_engine: Arc<MLEngine>,
 }
 
 impl AppState {
@@ -42,6 +50,22 @@ impl AppState {
         let ai_engine = Arc::new(AIEngine::new().await?);
         info!("AI engine initialized");
 
+        // Initialize threat intelligence engine
+        let threat_intel = Arc::new(ThreatIntelEngine::new().await?);
+        info!("Threat intelligence engine initialized");
+
+        // Initialize profile manager
+        let profiles = Arc::new(ProfileManager::new());
+        info!("Profile manager initialized");
+
+        // Initialize tier manager
+        let tiers = Arc::new(TierManager::new());
+        info!("Tier manager initialized");
+
+        // Initialize ML engine for DGA detection and risk analysis
+        let ml_engine = Arc::new(MLEngine::new());
+        info!("ML engine initialized");
+
         // Initialize rate limiter (100 requests per minute per IP)
         let rate_limiter = Arc::new(RateLimiter::with_config(RateLimiterConfig {
             max_requests: 100,
@@ -62,6 +86,10 @@ impl AppState {
             filter,
             ai_engine,
             rate_limiter,
+            threat_intel,
+            profiles,
+            tiers,
+            ml_engine,
         })
     }
 

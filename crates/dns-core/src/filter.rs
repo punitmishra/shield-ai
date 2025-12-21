@@ -33,7 +33,8 @@ impl FilterEngine {
         }
     }
 
-    /// Check if a domain should be filtered
+    /// Check if a domain should be filtered - hot path, optimized
+    #[inline]
     pub fn check(&self, domain: &str) -> FilterDecision {
         if !self.enabled {
             return FilterDecision::Allow;
@@ -41,19 +42,19 @@ impl FilterEngine {
 
         let domain_lower = domain.to_lowercase();
 
-        // Check allowlist first
+        // Check allowlist first (priority)
         if self.allowlist.read().contains(&domain_lower) {
             debug!("Domain {} in allowlist", domain);
             return FilterDecision::Allow;
         }
 
-        // Check exact match blocklist
+        // Check exact match blocklist (O(1) lookup)
         if self.blocklist.read().contains(&domain_lower) {
             debug!("Domain {} in blocklist", domain);
             return FilterDecision::Block;
         }
 
-        // Check wildcard patterns
+        // Check wildcard patterns (less common path)
         for pattern in self.wildcard_blocklist.read().iter() {
             if self.matches_wildcard(&domain_lower, pattern) {
                 debug!("Domain {} matches wildcard {}", domain, pattern);
@@ -65,6 +66,7 @@ impl FilterEngine {
     }
 
     /// Check if domain matches a wildcard pattern
+    #[inline(always)]
     fn matches_wildcard(&self, domain: &str, pattern: &str) -> bool {
         if pattern.starts_with("*.") {
             let suffix = &pattern[2..];
@@ -99,7 +101,8 @@ impl FilterEngine {
         self.allowlist.read().iter().cloned().collect()
     }
 
-    /// Check if a domain is blocked (convenience method)
+    /// Check if a domain is blocked (convenience method) - hot path
+    #[inline]
     pub fn is_blocked(&self, domain: &str) -> bool {
         self.check(domain) == FilterDecision::Block
     }

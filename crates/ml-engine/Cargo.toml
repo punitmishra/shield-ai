@@ -1,0 +1,17 @@
+[package]
+name = "shield-ml-engine"
+version.workspace = true
+edition.workspace = true
+description = "Lightweight ML engine for domain threat detection - no external APIs"
+
+[dependencies]
+serde = { workspace = true }
+serde_json = { workspace = true }
+tracing = { workspace = true }
+dashmap = { workspace = true }
+ahash = { workspace = true }
+rand = { workspace = true }
+
+[lib]
+name = "shield_ml_engine"
+path = "src/lib.rs"

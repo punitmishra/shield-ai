@@ -29,6 +29,7 @@ export default function QueryStream({ className = '' }: QueryStreamProps) {
   const wsRef = useRef<WebSocket | null>(null)
   const scrollRef = useRef<HTMLDivElement>(null)
   const reconnectTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const connectWebSocketRef = useRef<() => void>(() => {})
 
   const connectWebSocket = useCallback(() => {
     if (wsRef.current?.readyState === WebSocket.OPEN) return
@@ -75,7 +76,7 @@ export default function QueryStream({ className = '' }: QueryStreamProps) {
       ws.onclose = () => {
         setWsConnected(false)
         wsRef.current = null
-        reconnectTimeoutRef.current = setTimeout(connectWebSocket, 3000)
+        reconnectTimeoutRef.current = setTimeout(() => connectWebSocketRef.current(), 3000)
       }
 
       wsRef.current = ws
@@ -83,6 +84,11 @@ export default function QueryStream({ className = '' }: QueryStreamProps) {
       // Ignore connection errors
     }
   }, [])
+
+  // Keep ref in sync with the callback
+  useEffect(() => {
+    connectWebSocketRef.current = connectWebSocket
+  }, [connectWebSocket])
 
   useEffect(() => {
     const fetchInitialQueries = async () => {

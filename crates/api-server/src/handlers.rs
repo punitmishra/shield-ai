@@ -20,6 +20,12 @@ use tracing::{debug, error, info, warn};
 use crate::rate_limiter::{RateLimitError, RateLimitResult, RateLimiterStats};
 use crate::state::AppState;
 
+// Re-exports for API responses
+pub use shield_ml_engine::{AnalyticsSnapshot, DeepRiskAnalysis};
+pub use shield_profiles::{Profile, ProfileStats, ProtectionLevel};
+pub use shield_threat_intel::{ThreatAnalysis, ThreatCategory};
+pub use shield_tiers::{FeatureCheck, Subscription, Tier, UsageStats};
+
 // ============================================================================
 // Response Types
 // ============================================================================
@@ -720,4 +726,403 @@ pub fn check_rate_limit(
             retry_after_secs,
         }),
     }
+}
+
+// ============================================================================
+// Threat Intelligence Endpoints
+// ============================================================================
+
+/// Comprehensive threat analysis endpoint
+pub async fn threat_analyze(
+    Path(domain): Path<String>,
+    State(state): State<Arc<AppState>>,
+) -> Result<Json<ThreatAnalysis>, Json<ErrorResponse>> {
+    if domain.is_empty() || domain.len() > 253 {
+        return Err(Json(ErrorResponse {
+            error: "invalid_domain".to_string(),
+            message: "Domain name is invalid".to_string(),
+        }));
+    }
+
+    let analysis = state.threat_intel.analyze(&domain).await;
+    debug!("Threat analysis for {}: risk={:.2}", domain, analysis.risk_score);
+    Ok(Json(analysis))
+}
+
+/// Quick threat check endpoint
+pub async fn threat_check(
+    Path(domain): Path<String>,
+    State(state): State<Arc<AppState>>,
+) -> Json<ThreatCheckResponse> {
+    let should_block = state.threat_intel.should_block(&domain);
+    Json(ThreatCheckResponse {
+        domain,
+        should_block,
+    })
+}
+
+#[derive(Serialize)]
+pub struct ThreatCheckResponse {
+    pub domain: String,
+    pub should_block: bool,
+}
+
+/// Threat feed stats endpoint
+pub async fn threat_feed_stats(
+    State(state): State<Arc<AppState>>,
+) -> Json<ThreatFeedStatsResponse> {
+    let stats = state.threat_intel.threat_feeds.stats();
+    Json(ThreatFeedStatsResponse {
+        total_threats: stats.total_threats,
+        feed_count: stats.feed_count,
+        categories: stats.category_counts,
+    })
+}
+
+#[derive(Serialize)]
+pub struct ThreatFeedStatsResponse {
+    pub total_threats: usize,
+    pub feed_count: usize,
+    pub categories: std::collections::HashMap<ThreatCategory, usize>,
+}
+
+// ============================================================================
+// Profile Management Endpoints
+// ============================================================================
+
+#[derive(Deserialize)]
+pub struct CreateProfileRequest {
+    pub name: String,
+    pub protection_level: ProtectionLevel,
+}
+
+/// Create a new profile
+pub async fn create_profile(
+    State(state): State<Arc<AppState>>,
+    Json(request): Json<CreateProfileRequest>,
+) -> Json<ProfileResponse> {
+    let id = state.profiles.create_profile(request.name.clone(), request.protection_level);
+    let profile = state.profiles.get_profile(&id);
+    Json(ProfileResponse {
+        success: true,
+        message: format!("Created profile '{}'", request.name),
+        profile,
+    })
+}
+
+#[derive(Serialize)]
+pub struct ProfileResponse {
+    pub success: bool,
+    pub message: String,
+    pub profile: Option<Profile>,
+}
+
+/// List all profiles
+pub async fn list_profiles(
+    State(state): State<Arc<AppState>>,
+) -> Json<Vec<Profile>> {
+    Json(state.profiles.list_profiles())
+}
+
+/// Get profile by ID
+pub async fn get_profile(
+    Path(id): Path<String>,
+    State(state): State<Arc<AppState>>,
+) -> Result<Json<Profile>, Json<ErrorResponse>> {
+    let uuid = uuid::Uuid::parse_str(&id).map_err(|_| {
+        Json(ErrorResponse {
+            error: "invalid_id".to_string(),
+            message: "Invalid profile ID format".to_string(),
+        })
+    })?;
+
+    state.profiles.get_profile(&uuid).map(Json).ok_or_else(|| {
+        Json(ErrorResponse {
+            error: "not_found".to_string(),
+            message: "Profile not found".to_string(),
+        })
+    })
+}
+
+/// Delete a profile
+pub async fn delete_profile(
+    Path(id): Path<String>,
+    State(state): State<Arc<AppState>>,
+) -> Json<ProfileResponse> {
+    let uuid = match uuid::Uuid::parse_str(&id) {
+        Ok(u) => u,
+        Err(_) => {
+            return Json(ProfileResponse {
+                success: false,
+                message: "Invalid profile ID".to_string(),
+                profile: None,
+            });
+        }
+    };
+
+    let success = state.profiles.delete_profile(&uuid);
+    Json(ProfileResponse {
+        success,
+        message: if success { "Profile deleted".to_string() } else { "Profile not found".to_string() },
+        profile: None,
+    })
+}
+
+#[derive(Deserialize)]
+pub struct AssignDeviceRequest {
+    pub device_id: String,
+    pub profile_id: String,
+}
+
+/// Assign a device to a profile
+pub async fn assign_device(
+    State(state): State<Arc<AppState>>,
+    Json(request): Json<AssignDeviceRequest>,
+) -> Json<ProfileResponse> {
+    let profile_uuid = match uuid::Uuid::parse_str(&request.profile_id) {
+        Ok(u) => u,
+        Err(_) => {
+            return Json(ProfileResponse {
+                success: false,
+                message: "Invalid profile ID".to_string(),
+                profile: None,
+            });
+        }
+    };
+
+    let success = state.profiles.assign_device(request.device_id.clone(), &profile_uuid);
+    Json(ProfileResponse {
+        success,
+        message: if success {
+            format!("Device {} assigned to profile", request.device_id)
+        } else {
+            "Profile not found".to_string()
+        },
+        profile: state.profiles.get_profile(&profile_uuid),
+    })
+}
+
+/// Get profile stats
+pub async fn profile_stats(
+    State(state): State<Arc<AppState>>,
+) -> Json<ProfileStats> {
+    Json(state.profiles.stats())
+}
+
+// ============================================================================
+// Tier Management Endpoints
+// ============================================================================
+
+/// Get user subscription info
+pub async fn get_subscription(
+    Path(user_id): Path<String>,
+    State(state): State<Arc<AppState>>,
+) -> Json<Subscription> {
+    Json(state.tiers.get_subscription(&user_id))
+}
+
+/// Get usage stats for a user
+pub async fn get_usage(
+    Path(user_id): Path<String>,
+    State(state): State<Arc<AppState>>,
+) -> Json<UsageStats> {
+    Json(state.tiers.get_usage(&user_id))
+}
+
+/// Check if a feature is available
+#[derive(Deserialize)]
+pub struct FeatureCheckRequest {
+    pub user_id: String,
+    pub feature: String,
+}
+
+pub async fn check_feature(
+    State(state): State<Arc<AppState>>,
+    Json(request): Json<FeatureCheckRequest>,
+) -> Json<FeatureCheck> {
+    Json(state.tiers.check_feature(&request.user_id, &request.feature))
+}
+
+#[derive(Deserialize)]
+pub struct UpgradeRequest {
+    pub tier: Tier,
+}
+
+/// Upgrade a user's tier
+pub async fn upgrade_tier(
+    Path(user_id): Path<String>,
+    State(state): State<Arc<AppState>>,
+    Json(request): Json<UpgradeRequest>,
+) -> Result<Json<Subscription>, Json<ErrorResponse>> {
+    state
+        .tiers
+        .upgrade(&user_id, request.tier)
+        .map(Json)
+        .map_err(|e| {
+            Json(ErrorResponse {
+                error: "upgrade_failed".to_string(),
+                message: e.to_string(),
+            })
+        })
+}
+
+/// Start a trial for a user
+pub async fn start_trial(
+    Path(user_id): Path<String>,
+    State(state): State<Arc<AppState>>,
+    Json(request): Json<UpgradeRequest>,
+) -> Result<Json<Subscription>, Json<ErrorResponse>> {
+    state
+        .tiers
+        .start_trial(&user_id, request.tier)
+        .map(Json)
+        .map_err(|e| {
+            Json(ErrorResponse {
+                error: "trial_failed".to_string(),
+                message: e.to_string(),
+            })
+        })
+}
+
+/// Get tier pricing info
+pub async fn get_pricing() -> Json<PricingResponse> {
+    Json(PricingResponse {
+        tiers: vec![
+            TierInfo {
+                tier: Tier::Free,
+                price_cents: 0,
+                price_display: "Free".to_string(),
+                limits: Tier::Free.limits(),
+            },
+            TierInfo {
+                tier: Tier::Pro,
+                price_cents: 499,
+                price_display: "$4.99/month".to_string(),
+                limits: Tier::Pro.limits(),
+            },
+            TierInfo {
+                tier: Tier::Enterprise,
+                price_cents: 0,
+                price_display: "Contact Sales".to_string(),
+                limits: Tier::Enterprise.limits(),
+            },
+        ],
+    })
+}
+
+#[derive(Serialize)]
+pub struct PricingResponse {
+    pub tiers: Vec<TierInfo>,
+}
+
+#[derive(Serialize)]
+pub struct TierInfo {
+    pub tier: Tier,
+    pub price_cents: u32,
+    pub price_display: String,
+    pub limits: shield_tiers::TierLimits,
+}
+
+// ============================================================================
+// ML Engine Endpoints - Deep Risk Analysis & DGA Detection
+// ============================================================================
+
+/// Deep risk analysis using neural network
+pub async fn ml_analyze(
+    Path(domain): Path<String>,
+    State(state): State<Arc<AppState>>,
+) -> Json<DeepRiskAnalysis> {
+    Json(state.ml_engine.analyze(&domain))
+}
+
+/// DGA detection endpoint
+pub async fn ml_dga_check(
+    Path(domain): Path<String>,
+    State(state): State<Arc<AppState>>,
+) -> Json<DGACheckResponse> {
+    let result = state.ml_engine.analyze(&domain);
+    Json(DGACheckResponse {
+        domain,
+        is_dga: result.dga_analysis.is_dga,
+        confidence: result.dga_analysis.confidence,
+        algorithm_family: result.dga_analysis.algorithm_family,
+    })
+}
+
+#[derive(Serialize)]
+pub struct DGACheckResponse {
+    pub domain: String,
+    pub is_dga: bool,
+    pub confidence: f32,
+    pub algorithm_family: Option<String>,
+}
+
+/// ML analytics endpoint
+pub async fn ml_analytics(
+    State(state): State<Arc<AppState>>,
+) -> Json<AnalyticsSnapshot> {
+    Json(state.ml_engine.get_analytics())
+}
+
+/// Quick block check using ML engine
+pub async fn ml_should_block(
+    Path(domain): Path<String>,
+    State(state): State<Arc<AppState>>,
+) -> Json<MLBlockResponse> {
+    let should_block = state.ml_engine.should_block(&domain);
+    Json(MLBlockResponse {
+        domain,
+        should_block,
+    })
+}
+
+#[derive(Serialize)]
+pub struct MLBlockResponse {
+    pub domain: String,
+    pub should_block: bool,
+}
+
+/// Combined analysis endpoint (AI + ML + Threat Intel)
+pub async fn deep_analysis(
+    Path(domain): Path<String>,
+    State(state): State<Arc<AppState>>,
+) -> Json<CombinedAnalysis> {
+    // Run all analyses in parallel conceptually (they're all fast)
+    let ml_result = state.ml_engine.analyze(&domain);
+    let threat_result = state.threat_intel.analyze(&domain).await;
+    let ai_result = state.ai_engine.analyze_domain(&domain).await.ok();
+
+    let combined_risk = (ml_result.overall_risk * 0.4
+        + threat_result.risk_score * 0.4
+        + ai_result.as_ref().map(|r| r.threat_score).unwrap_or(0.0) * 0.2)
+        .min(1.0);
+
+    let recommendation = if combined_risk > 0.7 {
+        "block"
+    } else if combined_risk > 0.5 {
+        "warn"
+    } else if combined_risk > 0.3 {
+        "monitor"
+    } else {
+        "allow"
+    };
+
+    Json(CombinedAnalysis {
+        domain: domain.clone(),
+        combined_risk,
+        recommendation: recommendation.to_string(),
+        ml_analysis: ml_result,
+        threat_analysis: threat_result,
+        ai_analysis: ai_result,
+    })
+}
+
+#[derive(Serialize)]
+pub struct CombinedAnalysis {
+    pub domain: String,
+    pub combined_risk: f32,
+    pub recommendation: String,
+    pub ml_analysis: DeepRiskAnalysis,
+    pub threat_analysis: ThreatAnalysis,
+    pub ai_analysis: Option<shield_ai_engine::AIAnalysisResult>,
 }
