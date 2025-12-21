@@ -6,6 +6,7 @@
     "dev": "vite",
     "build": "tsc && vite build",
     "preview": "vite preview",
+    "start": "serve dist -l $PORT",
     "lint": "eslint . --ext ts,tsx"
   },
   "dependencies": {
@@ -14,7 +15,8 @@
     "zustand": "^4.4.7",
     "axios": "^1.6.2",
     "lucide-react": "^0.294.0",
-    "recharts": "^2.10.3"
+    "recharts": "^2.10.3",
+    "serve": "^14.2.0"
   },
   "devDependencies": {
     "@types/react": "^18.2.43",

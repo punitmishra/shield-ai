@@ -4,13 +4,14 @@
 mod handlers;
 mod state;
 
+use std::env;
 use std::net::SocketAddr;
 use std::sync::Arc;
 
 use anyhow::Result;
 use axum::{routing::get, Router};
 use tower_http::{
-    cors::CorsLayer,
+    cors::{Any, CorsLayer},
     trace::{DefaultMakeSpan, DefaultOnResponse, TraceLayer},
 };
 use tracing::{info, Level};
@@ -54,10 +55,21 @@ async fn main() -> Result<()> {
                 .make_span_with(DefaultMakeSpan::new().level(Level::INFO))
                 .on_response(DefaultOnResponse::new().level(Level::INFO)),
         )
-        // CORS
-        .layer(CorsLayer::permissive());
+        // CORS - allow any origin for API access
+        .layer(
+            CorsLayer::new()
+                .allow_origin(Any)
+                .allow_methods(Any)
+                .allow_headers(Any),
+        );
 
-    let addr = SocketAddr::from(([0, 0, 0, 0], 8080));
+    // Read port from environment (Railway sets PORT)
+    let port: u16 = env::var("PORT")
+        .unwrap_or_else(|_| "8080".to_string())
+        .parse()
+        .expect("PORT must be a valid number");
+
+    let addr = SocketAddr::from(([0, 0, 0, 0], port));
     info!("Server listening on http://{}", addr);
 
     // Create TCP listener

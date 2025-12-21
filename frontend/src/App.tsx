@@ -1,6 +1,9 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
 import { Shield, Activity, Ban, Database, Clock, RefreshCw, Server, AlertTriangle, Wifi, WifiOff } from 'lucide-react'
 
+// API base URL - use environment variable in production, empty string for dev (uses Vite proxy)
+const API_BASE = import.meta.env.VITE_API_URL || ''
+
 // Types
 interface Stats {
   total_queries: number
@@ -99,9 +102,9 @@ function App() {
     try {
       setError(null)
       const [statsRes, healthRes, historyRes] = await Promise.all([
-        fetch('/api/stats'),
-        fetch('/health'),
-        fetch('/api/history')
+        fetch(`${API_BASE}/api/stats`),
+        fetch(`${API_BASE}/health`),
+        fetch(`${API_BASE}/api/history`)
       ])
 
       if (statsRes.ok) {
@@ -129,8 +132,16 @@ function App() {
   const connectWebSocket = useCallback(() => {
     if (wsRef.current?.readyState === WebSocket.OPEN) return
 
-    const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:'
-    const wsUrl = `${protocol}//${window.location.host}/ws`
+    // Build WebSocket URL from API_BASE or current host
+    let wsUrl: string
+    if (API_BASE) {
+      const apiUrl = new URL(API_BASE)
+      const protocol = apiUrl.protocol === 'https:' ? 'wss:' : 'ws:'
+      wsUrl = `${protocol}//${apiUrl.host}/ws`
+    } else {
+      const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:'
+      wsUrl = `${protocol}//${window.location.host}/ws`
+    }
 
     try {
       const ws = new WebSocket(wsUrl)
@@ -180,7 +191,7 @@ function App() {
     // Fetch query history every 5 seconds (stats come via WebSocket)
     const historyInterval = setInterval(async () => {
       try {
-        const historyRes = await fetch('/api/history')
+        const historyRes = await fetch(`${API_BASE}/api/history`)
         if (historyRes.ok) {
           const historyData = await historyRes.json()
           setQueryHistory(historyData.queries || [])
@@ -193,7 +204,7 @@ function App() {
     // Fetch health every 10 seconds
     const healthInterval = setInterval(async () => {
       try {
-        const healthRes = await fetch('/health')
+        const healthRes = await fetch(`${API_BASE}/health`)
         if (healthRes.ok) {
           const healthData = await healthRes.json()
           setHealth(healthData)
