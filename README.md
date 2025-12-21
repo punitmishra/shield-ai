@@ -161,6 +161,44 @@ curl https://your-domain.com/api/history
 # {"queries":[{"timestamp":1703123456,"domain":"google.com","blocked":false,"response_time_ms":1}]}
 ```
 
+### DNS-over-HTTPS (DoH)
+```bash
+curl "https://your-domain.com/dns-query?name=google.com&type=A"
+# {"Status":0,"TC":false,"RD":true,"RA":true,"Question":[{"name":"google.com","type":1}],"Answer":[{"name":"google.com","type":1,"TTL":300,"data":"142.250.80.46"}]}
+```
+
+### AI-Powered Analysis
+```bash
+curl https://your-domain.com/api/ai/analyze/facebook.com
+# {"domain":"facebook.com","threat_score":0.15,"threat_category":"low","privacy_score":{"score":35,"grade":"D",...}}
+```
+
+### Analytics
+```bash
+curl https://your-domain.com/api/analytics
+# {"period":"last_1000_queries","total_queries":100,"blocked_queries":15,"top_blocked_domains":[...],...}
+```
+
+### Allowlist Management
+```bash
+# Add to allowlist
+curl -X POST https://your-domain.com/api/allowlist -H "Content-Type: application/json" -d '{"domain":"example.com"}'
+# {"success":true,"message":"Added example.com to allowlist","allowlist_size":1}
+
+# Remove from allowlist
+curl -X DELETE https://your-domain.com/api/allowlist/example.com
+
+# Get allowlist
+curl https://your-domain.com/api/allowlist
+# ["example.com"]
+```
+
+### Rate Limiting
+```bash
+curl https://your-domain.com/api/rate-limit/stats
+# {"tracked_ips":0,"max_requests":100,"window_secs":60}
+```
+
 ## Performance
 
 Benchmarks on Apple M1 (single core):
@@ -198,9 +236,12 @@ npm test                 # Run tests
 - [x] Real-time dashboard
 - [x] WebSocket updates
 - [x] Railway deployment
-- [ ] AI threat scoring
-- [ ] Privacy score API
-- [ ] DNS-over-HTTPS (DoH)
+- [x] AI threat scoring
+- [x] Privacy score API
+- [x] DNS-over-HTTPS (DoH)
+- [x] Query analytics
+- [x] Allowlist management
+- [x] Rate limiting
 - [ ] DNS-over-TLS (DoT)
 - [ ] Prometheus/Grafana integration
 - [ ] Kubernetes Helm chart

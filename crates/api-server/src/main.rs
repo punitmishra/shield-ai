@@ -2,6 +2,7 @@
 //! Production-grade RESTful API for DNS protection management
 
 mod handlers;
+mod rate_limiter;
 mod state;
 
 use std::env;
@@ -9,7 +10,7 @@ use std::net::SocketAddr;
 use std::sync::Arc;
 
 use anyhow::Result;
-use axum::{routing::get, Router};
+use axum::{routing::{delete, get}, Router};
 use tower_http::{
     cors::{Any, CorsLayer},
     trace::{DefaultMakeSpan, DefaultOnResponse, TraceLayer},
@@ -47,6 +48,15 @@ async fn main() -> Result<()> {
         .route("/api/dns/resolve/:domain", get(handlers::resolve_domain))
         // AI analysis endpoint
         .route("/api/ai/analyze/:domain", get(handlers::analyze_domain))
+        // DNS-over-HTTPS (DoH) endpoint (RFC 8484)
+        .route("/dns-query", get(handlers::doh_query))
+        // Analytics endpoint
+        .route("/api/analytics", get(handlers::get_analytics))
+        // Allowlist management endpoints
+        .route("/api/allowlist", get(handlers::get_allowlist).post(handlers::add_to_allowlist))
+        .route("/api/allowlist/:domain", delete(handlers::remove_from_allowlist))
+        // Rate limit stats
+        .route("/api/rate-limit/stats", get(handlers::rate_limit_stats))
         // WebSocket for real-time updates
         .route("/ws", get(handlers::ws_handler))
         // Shared state

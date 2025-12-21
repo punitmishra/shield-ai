@@ -89,6 +89,21 @@ impl FilterEngine {
         self.allowlist.write().insert(domain.to_lowercase());
     }
 
+    /// Remove domain from allowlist
+    pub fn remove_from_allowlist(&self, domain: &str) {
+        self.allowlist.write().remove(&domain.to_lowercase());
+    }
+
+    /// Get all allowlisted domains
+    pub fn get_allowlist(&self) -> Vec<String> {
+        self.allowlist.read().iter().cloned().collect()
+    }
+
+    /// Check if a domain is blocked (convenience method)
+    pub fn is_blocked(&self, domain: &str) -> bool {
+        self.check(domain) == FilterDecision::Block
+    }
+
     /// Load blocklist from file
     pub fn load_blocklist(&self, path: &str) -> std::io::Result<usize> {
         let content = std::fs::read_to_string(path)?;

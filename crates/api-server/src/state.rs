@@ -1,5 +1,6 @@
 //! Application state management
 
+use crate::rate_limiter::{RateLimiter, RateLimiterConfig};
 use shield_ai_engine::AIEngine;
 use shield_dns_core::cache::DNSCache;
 use shield_dns_core::filter::FilterEngine;
@@ -17,6 +18,7 @@ pub struct AppState {
     pub resolver: Arc<Resolver>,
     pub filter: Arc<FilterEngine>,
     pub ai_engine: Arc<AIEngine>,
+    pub rate_limiter: Arc<RateLimiter>,
 }
 
 impl AppState {
@@ -40,6 +42,14 @@ impl AppState {
         let ai_engine = Arc::new(AIEngine::new().await?);
         info!("AI engine initialized");
 
+        // Initialize rate limiter (100 requests per minute per IP)
+        let rate_limiter = Arc::new(RateLimiter::with_config(RateLimiterConfig {
+            max_requests: 100,
+            window: Duration::from_secs(60),
+            cleanup_interval: Duration::from_secs(300),
+        }));
+        info!("Rate limiter initialized");
+
         info!(
             "Application state initialized - blocklist: {} domains",
             filter.blocklist_size()
@@ -51,6 +61,7 @@ impl AppState {
             resolver: Arc::new(resolver),
             filter,
             ai_engine,
+            rate_limiter,
         })
     }
 
