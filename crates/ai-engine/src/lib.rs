@@ -18,8 +18,43 @@ pub struct AIAnalysisResult {
     pub confidence: f32,
     pub threat_type: ThreatType,
     pub threat_score: f32,
+    pub privacy_score: PrivacyScore,
     pub features: DomainFeatures,
     pub inference_time_ns: u64,
+}
+
+/// Privacy score for a domain (0-100, higher is better)
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct PrivacyScore {
+    pub score: u8,
+    pub grade: char,
+    pub tracking: bool,
+    pub fingerprinting: bool,
+    pub third_party_cookies: bool,
+    pub data_collection: DataCollectionLevel,
+}
+
+impl Default for PrivacyScore {
+    fn default() -> Self {
+        Self {
+            score: 100,
+            grade: 'A',
+            tracking: false,
+            fingerprinting: false,
+            third_party_cookies: false,
+            data_collection: DataCollectionLevel::None,
+        }
+    }
+}
+
+/// Level of data collection by a domain
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+pub enum DataCollectionLevel {
+    None,
+    Minimal,
+    Moderate,
+    Extensive,
+    Aggressive,
 }
 
 /// Types of detected threats
@@ -52,6 +87,7 @@ pub struct DomainFeatures {
 pub struct AIEngine {
     feature_cache: DashMap<String, DomainFeatures>,
     threat_patterns: Vec<ThreatPattern>,
+    privacy_patterns: Vec<PrivacyPattern>,
     threshold: f32,
 }
 
@@ -61,42 +97,45 @@ struct ThreatPattern {
     score: f32,
 }
 
+struct PrivacyPattern {
+    pattern: String,
+    tracking: bool,
+    fingerprinting: bool,
+    data_collection: DataCollectionLevel,
+    penalty: u8,
+}
+
 impl AIEngine {
     /// Create a new AI engine
     pub async fn new() -> Result<Self> {
         info!("Initializing Shield AI Engine");
 
         let threat_patterns = vec![
-            ThreatPattern {
-                pattern: "malware".to_string(),
-                threat_type: ThreatType::Malware,
-                score: 0.9,
-            },
-            ThreatPattern {
-                pattern: "phishing".to_string(),
-                threat_type: ThreatType::Phishing,
-                score: 0.85,
-            },
-            ThreatPattern {
-                pattern: "tracker".to_string(),
-                threat_type: ThreatType::Tracking,
-                score: 0.7,
-            },
-            ThreatPattern {
-                pattern: "ads".to_string(),
-                threat_type: ThreatType::Advertising,
-                score: 0.6,
-            },
-            ThreatPattern {
-                pattern: "crypto".to_string(),
-                threat_type: ThreatType::Cryptomining,
-                score: 0.8,
-            },
+            ThreatPattern { pattern: "malware".into(), threat_type: ThreatType::Malware, score: 0.9 },
+            ThreatPattern { pattern: "phishing".into(), threat_type: ThreatType::Phishing, score: 0.85 },
+            ThreatPattern { pattern: "tracker".into(), threat_type: ThreatType::Tracking, score: 0.7 },
+            ThreatPattern { pattern: "ads".into(), threat_type: ThreatType::Advertising, score: 0.6 },
+            ThreatPattern { pattern: "crypto".into(), threat_type: ThreatType::Cryptomining, score: 0.8 },
+        ];
+
+        // Known privacy-invasive patterns
+        let privacy_patterns = vec![
+            PrivacyPattern { pattern: "facebook.com".into(), tracking: true, fingerprinting: true, data_collection: DataCollectionLevel::Aggressive, penalty: 40 },
+            PrivacyPattern { pattern: "google-analytics".into(), tracking: true, fingerprinting: false, data_collection: DataCollectionLevel::Extensive, penalty: 30 },
+            PrivacyPattern { pattern: "doubleclick".into(), tracking: true, fingerprinting: true, data_collection: DataCollectionLevel::Aggressive, penalty: 45 },
+            PrivacyPattern { pattern: "hotjar".into(), tracking: true, fingerprinting: true, data_collection: DataCollectionLevel::Extensive, penalty: 35 },
+            PrivacyPattern { pattern: "mixpanel".into(), tracking: true, fingerprinting: false, data_collection: DataCollectionLevel::Extensive, penalty: 25 },
+            PrivacyPattern { pattern: "amplitude".into(), tracking: true, fingerprinting: false, data_collection: DataCollectionLevel::Moderate, penalty: 20 },
+            PrivacyPattern { pattern: "segment".into(), tracking: true, fingerprinting: false, data_collection: DataCollectionLevel::Extensive, penalty: 25 },
+            PrivacyPattern { pattern: "fingerprint".into(), tracking: false, fingerprinting: true, data_collection: DataCollectionLevel::Moderate, penalty: 30 },
+            PrivacyPattern { pattern: "telemetry".into(), tracking: true, fingerprinting: false, data_collection: DataCollectionLevel::Moderate, penalty: 15 },
+            PrivacyPattern { pattern: "pixel".into(), tracking: true, fingerprinting: false, data_collection: DataCollectionLevel::Minimal, penalty: 10 },
         ];
 
         Ok(Self {
             feature_cache: DashMap::new(),
             threat_patterns,
+            privacy_patterns,
             threshold: 0.7,
         })
     }
@@ -112,13 +151,16 @@ impl AIEngine {
         // Check pattern matches
         let (threat_type, threat_score) = self.check_patterns(&domain_lower);
 
+        // Calculate privacy score
+        let privacy_score = self.calculate_privacy_score(&domain_lower);
+
         // Calculate final confidence
         let confidence = self.calculate_confidence(&features, threat_score);
 
         let inference_time_ns = start.elapsed().as_nanos() as u64;
         debug!(
-            "Analyzed {} in {}ns: {:?} (score: {:.2})",
-            domain, inference_time_ns, threat_type, threat_score
+            "Analyzed {} in {}ns: {:?} (threat: {:.2}, privacy: {})",
+            domain, inference_time_ns, threat_type, threat_score, privacy_score.score
         );
 
         Ok(AIAnalysisResult {
@@ -126,9 +168,60 @@ impl AIEngine {
             confidence,
             threat_type,
             threat_score,
+            privacy_score,
             features,
             inference_time_ns,
         })
+    }
+
+    /// Calculate privacy score for a domain (0-100, higher is better)
+    fn calculate_privacy_score(&self, domain: &str) -> PrivacyScore {
+        let mut score: u8 = 100;
+        let mut tracking = false;
+        let mut fingerprinting = false;
+        let mut third_party_cookies = false;
+        let mut data_collection = DataCollectionLevel::None;
+
+        // Check against known privacy-invasive patterns
+        for pattern in &self.privacy_patterns {
+            if domain.contains(&pattern.pattern) {
+                score = score.saturating_sub(pattern.penalty);
+                tracking = tracking || pattern.tracking;
+                fingerprinting = fingerprinting || pattern.fingerprinting;
+                if pattern.data_collection.clone() as u8 > data_collection.clone() as u8 {
+                    data_collection = pattern.data_collection.clone();
+                }
+            }
+        }
+
+        // Check for third-party cookie indicators
+        if domain.contains("cookie") || domain.contains("consent") {
+            third_party_cookies = true;
+            score = score.saturating_sub(5);
+        }
+
+        // Penalize tracking TLDs
+        if domain.ends_with(".tk") || domain.ends_with(".ml") || domain.ends_with(".cf") {
+            score = score.saturating_sub(10);
+        }
+
+        // Calculate grade
+        let grade = match score {
+            90..=100 => 'A',
+            80..=89 => 'B',
+            70..=79 => 'C',
+            50..=69 => 'D',
+            _ => 'F',
+        };
+
+        PrivacyScore {
+            score,
+            grade,
+            tracking,
+            fingerprinting,
+            third_party_cookies,
+            data_collection,
+        }
     }
 
     /// Extract features from a domain
@@ -261,6 +354,7 @@ impl Default for AIEngine {
         Self {
             feature_cache: DashMap::new(),
             threat_patterns: vec![],
+            privacy_patterns: vec![],
             threshold: 0.7,
         }
     }

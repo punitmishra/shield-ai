@@ -45,6 +45,8 @@ async fn main() -> Result<()> {
         .route("/api/history", get(handlers::get_query_history))
         .route("/api/blocklist/stats", get(handlers::get_blocklist_stats))
         .route("/api/dns/resolve/:domain", get(handlers::resolve_domain))
+        // AI analysis endpoint
+        .route("/api/ai/analyze/:domain", get(handlers::analyze_domain))
         // WebSocket for real-time updates
         .route("/ws", get(handlers::ws_handler))
         // Shared state

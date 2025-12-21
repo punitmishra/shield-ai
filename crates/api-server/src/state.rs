@@ -1,5 +1,6 @@
 //! Application state management
 
+use shield_ai_engine::AIEngine;
 use shield_dns_core::cache::DNSCache;
 use shield_dns_core::filter::FilterEngine;
 use shield_dns_core::resolver::Resolver;
@@ -15,6 +16,7 @@ pub struct AppState {
     pub start_time: Instant,
     pub resolver: Arc<Resolver>,
     pub filter: Arc<FilterEngine>,
+    pub ai_engine: Arc<AIEngine>,
 }
 
 impl AppState {
@@ -34,6 +36,10 @@ impl AppState {
         // Create DNS resolver with cache and filter
         let resolver = Resolver::new(cache, filter.clone()).await?;
 
+        // Initialize AI engine
+        let ai_engine = Arc::new(AIEngine::new().await?);
+        info!("AI engine initialized");
+
         info!(
             "Application state initialized - blocklist: {} domains",
             filter.blocklist_size()
@@ -44,6 +50,7 @@ impl AppState {
             start_time: Instant::now(),
             resolver: Arc::new(resolver),
             filter,
+            ai_engine,
         })
     }
 

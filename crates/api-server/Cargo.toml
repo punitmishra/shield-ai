@@ -7,6 +7,7 @@ description = "REST API server for Shield AI"
 [dependencies]
 shield-dns-core = { path = "../dns-core" }
 shield-metrics = { path = "../metrics" }
+shield-ai-engine = { path = "../ai-engine" }
 
 tokio = { workspace = true }
 anyhow = { workspace = true }

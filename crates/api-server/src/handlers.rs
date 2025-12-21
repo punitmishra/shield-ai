@@ -120,6 +120,41 @@ pub async fn get_blocklist_stats(State(state): State<Arc<AppState>>) -> Json<Blo
 }
 
 // ============================================================================
+// AI Analysis Endpoint
+// ============================================================================
+
+/// AI-powered domain analysis endpoint
+pub async fn analyze_domain(
+    Path(domain): Path<String>,
+    State(state): State<Arc<AppState>>,
+) -> Result<Json<shield_ai_engine::AIAnalysisResult>, Json<ErrorResponse>> {
+    // Validate domain
+    if domain.is_empty() || domain.len() > 253 {
+        return Err(Json(ErrorResponse {
+            error: "invalid_domain".to_string(),
+            message: "Domain name is invalid or too long".to_string(),
+        }));
+    }
+
+    match state.ai_engine.analyze_domain(&domain).await {
+        Ok(result) => {
+            debug!(
+                "AI analysis for {}: threat={:.2}, privacy={}",
+                domain, result.threat_score, result.privacy_score.score
+            );
+            Ok(Json(result))
+        }
+        Err(e) => {
+            error!("AI analysis failed for {}: {}", domain, e);
+            Err(Json(ErrorResponse {
+                error: "analysis_failed".to_string(),
+                message: format!("Failed to analyze domain: {}", e),
+            }))
+        }
+    }
+}
+
+// ============================================================================
 // DNS Resolution Endpoint
 // ============================================================================
 
