@@ -125,10 +125,10 @@ pub enum RecommendedAction {
 
 /// Main threat intelligence engine
 pub struct ThreatIntelEngine {
-    domain_intel: Arc<DomainIntelligence>,
-    tunneling_detector: Arc<TunnelingDetector>,
-    threat_feeds: Arc<ThreatFeedManager>,
-    anomaly_detector: Arc<AnomalyDetector>,
+    pub domain_intel: Arc<DomainIntelligence>,
+    pub tunneling_detector: Arc<TunnelingDetector>,
+    pub threat_feeds: Arc<ThreatFeedManager>,
+    pub anomaly_detector: Arc<AnomalyDetector>,
 }
 
 impl ThreatIntelEngine {

@@ -6,7 +6,7 @@ use chrono::{DateTime, Utc};
 use dashmap::DashMap;
 use serde::{Deserialize, Serialize};
 use std::collections::VecDeque;
-use tracing::{debug, warn};
+use tracing::debug;
 
 /// Anomaly detector for DNS query patterns
 pub struct AnomalyDetector {

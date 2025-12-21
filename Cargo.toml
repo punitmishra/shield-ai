@@ -6,6 +6,8 @@ members = [
     "crates/ai-engine",
     "crates/metrics",
     "crates/threat-intel",
+    "crates/tiers",
+    "crates/profiles",
 ]
 
 [workspace.package]

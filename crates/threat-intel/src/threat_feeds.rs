@@ -4,7 +4,6 @@
 
 use chrono::{DateTime, Utc};
 use dashmap::DashMap;
-use std::collections::HashSet;
 use tracing::{info, warn};
 
 use crate::{ThreatCategory, ThreatMatch};

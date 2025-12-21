@@ -1568,6 +1568,24 @@ dependencies = [
 ]
 
 [[package]]
+name = "shield-profiles"
+version = "0.1.0"
+dependencies = [
+ "ahash",
+ "anyhow",
+ "chrono",
+ "dashmap",
+ "parking_lot",
+ "regex",
+ "serde",
+ "serde_json",
+ "thiserror",
+ "tokio",
+ "tracing",
+ "uuid",
+]
+
+[[package]]
 name = "shield-threat-intel"
 version = "0.1.0"
 dependencies = [
@@ -1580,6 +1598,18 @@ dependencies = [
  "serde_json",
  "tokio",
  "tracing",
+]
+
+[[package]]
+name = "shield-tiers"
+version = "0.1.0"
+dependencies = [
+ "chrono",
+ "dashmap",
+ "serde",
+ "serde_json",
+ "tracing",
+ "uuid",
 ]
 
 [[package]]

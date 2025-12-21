@@ -3,7 +3,6 @@
 //! Detects attempts to exfiltrate data or establish covert channels via DNS.
 //! Uses multiple heuristics including entropy analysis, query patterns, and encoding detection.
 
-use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use tracing::debug;
 
