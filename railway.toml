@@ -1,7 +1,7 @@
 # Railway configuration for Shield AI Backend
 [build]
 builder = "dockerfile"
-dockerfilePath = "docker/Dockerfile"
+dockerfilePath = "Dockerfile"
 
 [deploy]
 healthcheckPath = "/health"
