@@ -1,0 +1,16 @@
+[package]
+name = "shield-threat-intel"
+version.workspace = true
+edition.workspace = true
+description = "Threat intelligence and domain analysis for Shield AI"
+
+[dependencies]
+tokio = { workspace = true }
+anyhow = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
+tracing = { workspace = true }
+chrono = { workspace = true }
+dashmap = { workspace = true }
+reqwest = { workspace = true }
+regex = { workspace = true }
