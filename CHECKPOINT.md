@@ -88,6 +88,7 @@ sequenceDiagram
 | `shield-profiles` | User/device profile management | ✅ Complete | 0 |
 | `shield-tiers` | Subscription tier management | ✅ Complete | 3 |
 | `shield-plugin-system` | WASM extensibility framework | ✅ Complete | 4 |
+| `shield-auth` | JWT auth, device registration | ✅ NEW | 2 |
 
 **Total Rust Tests**: 17 passing
 
@@ -268,7 +269,25 @@ docker-compose up -d
 
 ## Session Context
 
-**What was done in this session (2024-12-25)**:
+**What was done in this session (2024-12-25) - Part 2**:
+1. Created comprehensive native mobile app implementation plan
+2. Created `crates/auth/` with JWT authentication:
+   - JWT token generation/validation (jsonwebtoken)
+   - User registration with Argon2 password hashing
+   - Device registration for mobile clients
+   - Auth middleware for protected routes
+3. Updated pricing in `crates/tiers/`:
+   - Pro tier: $4.99 → $0.99/month
+   - Added yearly pricing: $7.99/year (~33% discount)
+   - Added new premium features: vpn_access, family_controls, scheduled_filtering, realtime_threats
+4. Created landing page (`landing/index.html`):
+   - Modern responsive marketing site
+   - Feature showcase, pricing tables
+   - App Store/Play Store badge placeholders
+   - Open source section (MIT core)
+   - Running on http://localhost:4000
+
+**What was done in this session (2024-12-25) - Part 1**:
 1. Verified Docker stack running and healthy (3 containers: redis, api, frontend)
 2. Ran Playwright E2E tests - all 6 tests passing
 3. Ran cargo audit - 2 low-severity vulnerabilities in wasmtime (plugin-system dependency)
