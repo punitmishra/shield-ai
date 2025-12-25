@@ -27,18 +27,21 @@ Shield AI is an open-source, AI-powered DNS filtering system. It combines a high
 ```bash
 # Rust
 cargo build --release              # Production build
-cargo test                         # Run tests
+cargo test --workspace             # Run all tests (17 tests)
 cargo fmt                          # Format code
 cargo clippy                       # Lint
 
 # Frontend
+cd frontend
 npm install                        # Install dependencies
 npm run dev                        # Dev server on :3000
 npm run build                      # Production build
-npm run test                       # Run Vitest tests
+npm run test                       # Run Vitest unit tests (5 tests)
+npm run test:e2e                   # Run Playwright E2E tests
+npm run test:e2e:ui                # Run E2E tests with UI
 
 # Docker
-docker-compose up                  # Full stack (DNS, API, Redis, Prometheus, Grafana)
+cd docker && docker-compose up     # Full stack (DNS, API, Redis, Prometheus, Grafana)
 ```
 
 ## Architecture
@@ -120,9 +123,40 @@ AI settings in `ai-engine-rust.rs`:
 - Privacy: hashed domain storage, rotating client IP salts
 - DoH/DoT support for encrypted DNS
 
+## API Endpoints
+
+### Core
+- `GET /health` - Health check
+- `GET /metrics` - Prometheus metrics
+- `GET /ws` - WebSocket real-time updates
+- `GET /api/stats` - Query statistics
+- `GET /api/history` - Query history
+
+### DNS
+- `GET /api/dns/resolve/:domain` - DNS resolution
+- `GET /dns-query` - DNS-over-HTTPS (RFC 8484)
+
+### ML/AI Analysis
+- `GET /api/ml/analyze/:domain` - Deep ML analysis
+- `GET /api/ml/dga/:domain` - DGA detection
+- `GET /api/deep/:domain` - Combined AI+ML+Threat analysis
+- `GET /api/ai/analyze/:domain` - AI domain analysis
+
+### Management
+- `GET/POST /api/allowlist` - Allowlist management
+- `POST /api/blocklist` - Add to blocklist
+- `DELETE /api/blocklist/:domain` - Remove from blocklist
+- `GET /api/privacy-metrics` - Privacy dashboard data
+- `GET /api/devices` - Device list
+- `PUT /api/devices/:id` - Update device
+
+### Profiles & Tiers
+- `GET/POST /api/profiles` - Profile CRUD
+- `GET /api/tiers/pricing` - Pricing info
+
 ## Documentation
 
-- `system-architecture.md` - Detailed system design and data flows
-- `deployment_guide.md` - Deployment, Docker, security hardening
-- `project_structure.txt` - Workspace layout
-- `docker_setup.txt` - Docker Compose configuration
+- `CHECKPOINT.md` - Project state and session history
+- `docs/architecture.md` - System design and data flows
+- `docs/deployment.md` - Deployment and Docker setup
+- `docs/openapi.yaml` - OpenAPI 3.0 specification

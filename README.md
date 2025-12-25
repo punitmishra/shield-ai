@@ -258,6 +258,11 @@ curl -X POST https://your-domain.com/api/allowlist \
   -H "Content-Type: application/json" \
   -d '{"domain":"example.com"}'
 
+# Blocklist
+curl -X POST https://your-domain.com/api/blocklist \
+  -H "Content-Type: application/json" \
+  -d '{"domain":"bad-domain.com"}'
+
 # Statistics
 curl https://your-domain.com/api/stats
 # {"total_queries":1000,"blocked_queries":150,"cache_hit_rate":0.8}
@@ -265,6 +270,14 @@ curl https://your-domain.com/api/stats
 # Query History
 curl https://your-domain.com/api/history
 # {"queries":[{"timestamp":1703123456,"domain":"google.com","blocked":false}]}
+
+# Privacy Metrics
+curl https://your-domain.com/api/privacy-metrics
+# {"privacy_score":85,"trackers_blocked":1234,"privacy_grade":"A"}
+
+# Devices
+curl https://your-domain.com/api/devices
+# {"devices":[{"id":"1","name":"Device 1","ip_address":"192.168.1.100"}]}
 ```
 
 ### Profiles & Tiers
@@ -326,14 +339,21 @@ Benchmarks on Apple M1 (single core):
 
 ```bash
 # Run all tests
-cargo test --workspace     # 17 Rust tests
-cd frontend && npm test    # 5 Frontend tests
+cargo test --workspace        # 17 Rust tests
+cd frontend && npm test       # 5 Frontend unit tests
+cd frontend && npm run test:e2e  # Playwright E2E tests
 
 # Test breakdown by crate
 # - shield-ml-engine: 5 tests (DGA, risk scoring)
 # - shield-threat-intel: 5 tests (tunneling, domain intel)
 # - shield-plugin-system: 4 tests (WASM plugins)
 # - shield-tiers: 3 tests (subscriptions)
+
+# E2E tests cover:
+# - Dashboard loading
+# - Stats display
+# - Offline graceful degradation
+# - Theme toggle
 ```
 
 ## Development
@@ -388,6 +408,7 @@ GitHub Actions runs 9 jobs on every push:
 - [x] CI/CD pipeline
 - [x] Docker optimization
 - [x] OpenAPI documentation
+- [x] Playwright E2E tests
 - [ ] DNS-over-TLS (DoT)
 - [ ] Prometheus/Grafana integration
 - [ ] Kubernetes Helm chart
