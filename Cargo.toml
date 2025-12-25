@@ -10,6 +10,7 @@ members = [
     "crates/profiles",
     "crates/plugin-system",
     "crates/ml-engine",
+    "crates/auth",
 ]
 
 [workspace.package]

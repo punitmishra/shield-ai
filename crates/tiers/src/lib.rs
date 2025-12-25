@@ -40,6 +40,10 @@ impl Tier {
                 sso: false,
                 audit_logs: false,
                 priority_support: false,
+                vpn_access: false,
+                family_controls: false,
+                scheduled_filtering: false,
+                realtime_threats: false,
             },
             Tier::Pro => TierLimits {
                 queries_per_month: u64::MAX, // Unlimited
@@ -54,6 +58,10 @@ impl Tier {
                 sso: false,
                 audit_logs: false,
                 priority_support: true,
+                vpn_access: true,
+                family_controls: true,
+                scheduled_filtering: true,
+                realtime_threats: true,
             },
             Tier::Enterprise => TierLimits {
                 queries_per_month: u64::MAX,
@@ -68,6 +76,10 @@ impl Tier {
                 sso: true,
                 audit_logs: true,
                 priority_support: true,
+                vpn_access: true,
+                family_controls: true,
+                scheduled_filtering: true,
+                realtime_threats: true,
             },
         }
     }
@@ -76,7 +88,16 @@ impl Tier {
     pub fn price_cents(&self) -> u32 {
         match self {
             Tier::Free => 0,
-            Tier::Pro => 499,        // $4.99/month
+            Tier::Pro => 99,         // $0.99/month
+            Tier::Enterprise => 0,   // Custom pricing
+        }
+    }
+
+    /// Get yearly price in cents (with discount)
+    pub fn yearly_price_cents(&self) -> u32 {
+        match self {
+            Tier::Free => 0,
+            Tier::Pro => 799,        // $7.99/year (~33% discount)
             Tier::Enterprise => 0,   // Custom pricing
         }
     }
@@ -97,6 +118,11 @@ pub struct TierLimits {
     pub sso: bool,
     pub audit_logs: bool,
     pub priority_support: bool,
+    // Premium mobile features
+    pub vpn_access: bool,
+    pub family_controls: bool,
+    pub scheduled_filtering: bool,
+    pub realtime_threats: bool,
 }
 
 /// User subscription
@@ -251,6 +277,11 @@ impl TierManager {
             "sso" => (limits.sso, Some(Tier::Enterprise)),
             "audit_logs" => (limits.audit_logs, Some(Tier::Enterprise)),
             "priority_support" => (limits.priority_support, Some(Tier::Pro)),
+            // Mobile premium features
+            "vpn_access" => (limits.vpn_access, Some(Tier::Pro)),
+            "family_controls" => (limits.family_controls, Some(Tier::Pro)),
+            "scheduled_filtering" => (limits.scheduled_filtering, Some(Tier::Pro)),
+            "realtime_threats" => (limits.realtime_threats, Some(Tier::Pro)),
             _ => (true, None), // Unknown features are allowed
         };
 
@@ -333,6 +364,10 @@ impl TierManager {
                 api_access: limits.api_access,
                 sso: limits.sso,
                 audit_logs: limits.audit_logs,
+                vpn_access: limits.vpn_access,
+                family_controls: limits.family_controls,
+                scheduled_filtering: limits.scheduled_filtering,
+                realtime_threats: limits.realtime_threats,
             },
         }
     }
@@ -398,6 +433,10 @@ pub struct FeatureAvailability {
     pub api_access: bool,
     pub sso: bool,
     pub audit_logs: bool,
+    pub vpn_access: bool,
+    pub family_controls: bool,
+    pub scheduled_filtering: bool,
+    pub realtime_threats: bool,
 }
 
 /// Tier system errors

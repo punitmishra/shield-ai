@@ -1,0 +1,27 @@
+[package]
+name = "shield-auth"
+version.workspace = true
+edition.workspace = true
+description = "Authentication and authorization for Shield AI"
+
+[dependencies]
+serde = { workspace = true }
+serde_json = { workspace = true }
+chrono = { workspace = true }
+dashmap = { workspace = true }
+tracing = { workspace = true }
+uuid = { workspace = true }
+axum = { workspace = true }
+tower = { workspace = true }
+tokio = { workspace = true }
+thiserror = { workspace = true }
+rand = { workspace = true }
+
+# JWT handling
+jsonwebtoken = "9.2"
+
+# Password hashing
+argon2 = "0.5"
+
+# Base64 encoding
+base64 = "0.21"
