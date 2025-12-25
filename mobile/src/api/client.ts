@@ -133,6 +133,14 @@ export const api = {
     delete: (id: string) => apiClient.delete(`/api/profiles/${id}`),
     assignDevice: (profileId: string, deviceId: string) =>
       apiClient.post('/api/profiles/device', { profile_id: profileId, device_id: deviceId }),
+    getStats: () => apiClient.get('/api/profiles/stats'),
+  },
+
+  // Devices (network)
+  networkDevices: {
+    list: () => apiClient.get('/api/devices'),
+    update: (id: string, data: { name?: string; profile?: string }) =>
+      apiClient.put(`/api/devices/${id}`, data),
   },
 
   // Health

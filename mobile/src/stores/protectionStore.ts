@@ -26,6 +26,11 @@ export interface PrivacyMetrics {
   tracker_categories: { name: string; count: number }[];
 }
 
+export interface ListStats {
+  blocklistSize: number;
+  allowlistSize: number;
+}
+
 interface ProtectionState {
   // State
   isVPNConnected: boolean;
@@ -33,6 +38,7 @@ interface ProtectionState {
   isLoading: boolean;
   stats: Stats | null;
   privacyMetrics: PrivacyMetrics | null;
+  listStats: ListStats | null;
   error: string | null;
 
   // Actions
@@ -44,6 +50,7 @@ interface ProtectionState {
   // Data fetching
   fetchStats: () => Promise<void>;
   fetchPrivacyMetrics: () => Promise<void>;
+  fetchListStats: () => Promise<void>;
   refreshAll: () => Promise<void>;
 
   // VPN operations (stubs for native module integration)
@@ -59,6 +66,7 @@ export const useProtectionStore = create<ProtectionState>((set, get) => ({
   isLoading: false,
   stats: null,
   privacyMetrics: null,
+  listStats: null,
   error: null,
 
   // State setters
@@ -88,6 +96,21 @@ export const useProtectionStore = create<ProtectionState>((set, get) => ({
     }
   },
 
+  // Fetch blocklist/allowlist stats
+  fetchListStats: async () => {
+    try {
+      const response = await api.lists.getBlocklistStats();
+      set({
+        listStats: {
+          blocklistSize: response.data.total_blocked_domains || response.data.blocklist_size || 0,
+          allowlistSize: response.data.allowlist_size || 0,
+        },
+      });
+    } catch (error: any) {
+      console.error('Failed to fetch list stats:', error);
+    }
+  },
+
   // Refresh all data
   refreshAll: async () => {
     set({ isLoading: true });
@@ -95,6 +118,7 @@ export const useProtectionStore = create<ProtectionState>((set, get) => ({
       await Promise.all([
         get().fetchStats(),
         get().fetchPrivacyMetrics(),
+        get().fetchListStats(),
       ]);
     } finally {
       set({ isLoading: false });

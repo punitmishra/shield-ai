@@ -3,7 +3,7 @@
  * Query history, statistics, and charts
  */
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -11,21 +11,14 @@ import {
   ScrollView,
   TouchableOpacity,
   Dimensions,
+  RefreshControl,
+  ActivityIndicator,
 } from 'react-native';
+import { useAnalyticsStore, QueryLogEntry } from '../../stores/analyticsStore';
 
 const { width } = Dimensions.get('window');
 
 type TimeRange = '24h' | '7d' | '30d';
-
-interface QueryLogEntry {
-  id: string;
-  domain: string;
-  type: string;
-  status: 'allowed' | 'blocked';
-  category?: string;
-  timestamp: Date;
-  latency: number;
-}
 
 interface ChartData {
   label: string;
@@ -33,27 +26,28 @@ interface ChartData {
   color: string;
 }
 
-// Mock data for demonstration
-const mockQueryLog: QueryLogEntry[] = [
-  { id: '1', domain: 'google.com', type: 'A', status: 'allowed', timestamp: new Date(), latency: 12 },
-  { id: '2', domain: 'ads.doubleclick.net', type: 'A', status: 'blocked', category: 'Ads', timestamp: new Date(Date.now() - 60000), latency: 1 },
-  { id: '3', domain: 'api.github.com', type: 'A', status: 'allowed', timestamp: new Date(Date.now() - 120000), latency: 45 },
-  { id: '4', domain: 'tracker.analytics.com', type: 'A', status: 'blocked', category: 'Trackers', timestamp: new Date(Date.now() - 180000), latency: 1 },
-  { id: '5', domain: 'cdn.cloudflare.com', type: 'AAAA', status: 'allowed', timestamp: new Date(Date.now() - 240000), latency: 8 },
-  { id: '6', domain: 'malware.badsite.com', type: 'A', status: 'blocked', category: 'Malware', timestamp: new Date(Date.now() - 300000), latency: 1 },
-  { id: '7', domain: 'facebook.com', type: 'A', status: 'allowed', timestamp: new Date(Date.now() - 360000), latency: 23 },
-  { id: '8', domain: 'pixel.facebook.com', type: 'A', status: 'blocked', category: 'Trackers', timestamp: new Date(Date.now() - 420000), latency: 1 },
-];
-
-const categoryData: ChartData[] = [
-  { label: 'Ads', value: 45, color: '#ef4444' },
-  { label: 'Trackers', value: 32, color: '#f97316' },
-  { label: 'Malware', value: 8, color: '#dc2626' },
-  { label: 'Phishing', value: 3, color: '#7c3aed' },
-];
+// Category colors for chart
+const categoryColors: Record<string, string> = {
+  'Advertising': '#ef4444',
+  'Analytics': '#f97316',
+  'Social Media': '#7c3aed',
+  'Other': '#64748b',
+  'Ads': '#ef4444',
+  'Trackers': '#f97316',
+  'Malware': '#dc2626',
+  'Phishing': '#7c3aed',
+};
 
 function SimpleBarChart({ data }: { data: ChartData[] }) {
-  const maxValue = Math.max(...data.map(d => d.value));
+  if (data.length === 0) {
+    return (
+      <View style={styles.emptyChart}>
+        <Text style={styles.emptyText}>No data available</Text>
+      </View>
+    );
+  }
+
+  const maxValue = Math.max(...data.map(d => d.value), 1);
 
   return (
     <View style={styles.chartContainer}>
@@ -137,17 +131,65 @@ function formatTimeAgo(date: Date): string {
   return `${Math.floor(seconds / 86400)}d ago`;
 }
 
+function formatNumber(num: number): string {
+  if (num >= 1000000) return `${(num / 1000000).toFixed(1)}M`;
+  if (num >= 1000) return `${(num / 1000).toFixed(1)}K`;
+  return num.toLocaleString();
+}
+
 export default function AnalyticsScreen() {
   const [timeRange, setTimeRange] = useState<TimeRange>('24h');
   const [filter, setFilter] = useState<'all' | 'blocked' | 'allowed'>('all');
 
-  const filteredLog = mockQueryLog.filter(entry => {
+  const {
+    queryHistory,
+    analytics,
+    stats,
+    trackerCategories,
+    isLoading,
+    refreshAll,
+  } = useAnalyticsStore();
+
+  // Fetch data on mount
+  useEffect(() => {
+    refreshAll();
+  }, []);
+
+  // Filter query log
+  const filteredLog = queryHistory.filter(entry => {
     if (filter === 'all') return true;
     return entry.status === filter;
   });
 
+  // Map tracker categories to chart data
+  const categoryData: ChartData[] = trackerCategories.map(cat => ({
+    label: cat.name,
+    value: cat.count,
+    color: categoryColors[cat.name] || '#64748b',
+  }));
+
+  // Get top blocked domains from analytics
+  const topBlockedDomains = analytics?.topBlockedDomains || [];
+
+  // Calculate stats display values
+  const totalQueries = stats?.totalQueries || 0;
+  const blockedQueries = stats?.blockedQueries || 0;
+  const cacheHitRate = stats?.cacheHitRate || 0;
+  const blockRate = stats?.blockRate || 0;
+
   return (
-    <ScrollView style={styles.container} contentContainerStyle={styles.content}>
+    <ScrollView
+      style={styles.container}
+      contentContainerStyle={styles.content}
+      refreshControl={
+        <RefreshControl
+          refreshing={isLoading}
+          onRefresh={refreshAll}
+          tintColor="#3b82f6"
+          colors={['#3b82f6']}
+        />
+      }
+    >
       {/* Time Range Selector */}
       <View style={styles.timeRangeContainer}>
         {(['24h', '7d', '30d'] as TimeRange[]).map((range) => (
@@ -167,10 +209,30 @@ export default function AnalyticsScreen() {
       <View style={styles.section}>
         <Text style={styles.sectionTitle}>Overview</Text>
         <View style={styles.statsGrid}>
-          <StatCard label="Total Queries" value="12,847" subtext="+12% from yesterday" trend="up" />
-          <StatCard label="Blocked" value="1,234" subtext="9.6% of total" trend="down" />
-          <StatCard label="Avg Latency" value="8ms" subtext="P50 response time" trend="neutral" />
-          <StatCard label="Cache Hit" value="87%" subtext="Efficiency rate" trend="up" />
+          <StatCard
+            label="Total Queries"
+            value={formatNumber(totalQueries)}
+            subtext={`${blockRate.toFixed(1)}% blocked`}
+            trend="neutral"
+          />
+          <StatCard
+            label="Blocked"
+            value={formatNumber(blockedQueries)}
+            subtext={`${blockRate.toFixed(1)}% of total`}
+            trend={blockRate > 10 ? 'up' : 'down'}
+          />
+          <StatCard
+            label="Cache Hit"
+            value={`${(cacheHitRate * 100).toFixed(0)}%`}
+            subtext="Efficiency rate"
+            trend={cacheHitRate > 0.8 ? 'up' : 'neutral'}
+          />
+          <StatCard
+            label="Blocklist"
+            value={formatNumber(stats?.blocklistSize || 0)}
+            subtext="Domains blocked"
+            trend="neutral"
+          />
         </View>
       </View>
 
@@ -178,7 +240,11 @@ export default function AnalyticsScreen() {
       <View style={styles.section}>
         <Text style={styles.sectionTitle}>Blocked by Category</Text>
         <View style={styles.chartCard}>
-          <SimpleBarChart data={categoryData} />
+          {isLoading && categoryData.length === 0 ? (
+            <ActivityIndicator color="#3b82f6" />
+          ) : (
+            <SimpleBarChart data={categoryData} />
+          )}
         </View>
       </View>
 
@@ -186,19 +252,17 @@ export default function AnalyticsScreen() {
       <View style={styles.section}>
         <Text style={styles.sectionTitle}>Top Blocked Domains</Text>
         <View style={styles.topDomainsCard}>
-          {[
-            { domain: 'ads.doubleclick.net', count: 234 },
-            { domain: 'tracker.analytics.com', count: 189 },
-            { domain: 'pixel.facebook.com', count: 156 },
-            { domain: 'ad.server.com', count: 98 },
-            { domain: 'telemetry.microsoft.com', count: 67 },
-          ].map((item, index) => (
-            <View key={index} style={styles.topDomainRow}>
-              <Text style={styles.topDomainRank}>#{index + 1}</Text>
-              <Text style={styles.topDomainName} numberOfLines={1}>{item.domain}</Text>
-              <Text style={styles.topDomainCount}>{item.count}</Text>
-            </View>
-          ))}
+          {topBlockedDomains.length === 0 ? (
+            <Text style={styles.emptyText}>No blocked domains yet</Text>
+          ) : (
+            topBlockedDomains.slice(0, 5).map((item, index) => (
+              <View key={index} style={styles.topDomainRow}>
+                <Text style={styles.topDomainRank}>#{index + 1}</Text>
+                <Text style={styles.topDomainName} numberOfLines={1}>{item.domain}</Text>
+                <Text style={styles.topDomainCount}>{item.count}</Text>
+              </View>
+            ))
+          )}
         </View>
       </View>
 
@@ -222,9 +286,17 @@ export default function AnalyticsScreen() {
         </View>
 
         <View style={styles.logContainer}>
-          {filteredLog.map((entry) => (
-            <QueryLogItem key={entry.id} entry={entry} />
-          ))}
+          {filteredLog.length === 0 ? (
+            <View style={styles.emptyLog}>
+              <Text style={styles.emptyText}>
+                {isLoading ? 'Loading...' : 'No queries to display'}
+              </Text>
+            </View>
+          ) : (
+            filteredLog.slice(0, 20).map((entry) => (
+              <QueryLogItem key={entry.id} entry={entry} />
+            ))
+          )}
         </View>
       </View>
 
@@ -327,6 +399,7 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(255,255,255,0.05)',
     borderRadius: 12,
     padding: 16,
+    minHeight: 100,
   },
   chartContainer: {
     gap: 12,
@@ -339,7 +412,7 @@ const styles = StyleSheet.create({
   barLabel: {
     color: '#94a3b8',
     fontSize: 13,
-    width: 70,
+    width: 80,
   },
   barBackground: {
     flex: 1,
@@ -358,6 +431,15 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     width: 40,
     textAlign: 'right',
+  },
+  emptyChart: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 20,
+  },
+  emptyText: {
+    color: '#64748b',
+    fontSize: 14,
   },
   topDomainsCard: {
     backgroundColor: 'rgba(255,255,255,0.05)',
@@ -412,6 +494,10 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(255,255,255,0.05)',
     borderRadius: 12,
     overflow: 'hidden',
+  },
+  emptyLog: {
+    padding: 20,
+    alignItems: 'center',
   },
   logItem: {
     flexDirection: 'row',

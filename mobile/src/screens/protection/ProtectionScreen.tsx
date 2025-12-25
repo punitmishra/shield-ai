@@ -3,7 +3,7 @@
  * VPN toggle, DNS settings, and security controls
  */
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -12,6 +12,7 @@ import {
   TouchableOpacity,
   Switch,
   Alert,
+  RefreshControl,
 } from 'react-native';
 import { useProtectionStore } from '../../stores/protectionStore';
 import { useAuthStore } from '../../stores/authStore';
@@ -84,7 +85,14 @@ function SettingCard({ icon, title, description, enabled, onToggle, onPress, pre
 }
 
 export default function ProtectionScreen() {
-  const { isVPNConnected, isDNSEnabled, toggleVPN } = useProtectionStore();
+  const {
+    isVPNConnected,
+    isDNSEnabled,
+    toggleVPN,
+    listStats,
+    isLoading,
+    fetchListStats,
+  } = useProtectionStore();
   const { user } = useAuthStore();
 
   const [malwareBlocking, setMalwareBlocking] = useState(true);
@@ -96,8 +104,32 @@ export default function ProtectionScreen() {
 
   const isPro = user?.tier === 'pro' || user?.tier === 'enterprise';
 
+  // Fetch list stats on mount
+  useEffect(() => {
+    fetchListStats();
+  }, []);
+
+  // Format domain count for display
+  const formatDomainCount = (count: number): string => {
+    if (count >= 1000) {
+      return `${(count / 1000).toFixed(1)}K domains`;
+    }
+    return `${count} domain${count !== 1 ? 's' : ''}`;
+  };
+
   return (
-    <ScrollView style={styles.container} contentContainerStyle={styles.content}>
+    <ScrollView
+      style={styles.container}
+      contentContainerStyle={styles.content}
+      refreshControl={
+        <RefreshControl
+          refreshing={isLoading}
+          onRefresh={fetchListStats}
+          tintColor="#3b82f6"
+          colors={['#3b82f6']}
+        />
+      }
+    >
       {/* VPN Section */}
       <View style={styles.section}>
         <Text style={styles.sectionTitle}>VPN Protection</Text>
@@ -229,7 +261,9 @@ export default function ProtectionScreen() {
             <Text style={styles.listIcon}>🚫</Text>
             <View>
               <Text style={styles.listTitle}>Blocklist</Text>
-              <Text style={styles.listCount}>130 domains</Text>
+              <Text style={styles.listCount}>
+                {formatDomainCount(listStats?.blocklistSize ?? 0)}
+              </Text>
             </View>
           </View>
           <Text style={styles.chevron}>›</Text>
@@ -240,7 +274,9 @@ export default function ProtectionScreen() {
             <Text style={styles.listIcon}>✅</Text>
             <View>
               <Text style={styles.listTitle}>Allowlist</Text>
-              <Text style={styles.listCount}>5 domains</Text>
+              <Text style={styles.listCount}>
+                {formatDomainCount(listStats?.allowlistSize ?? 0)}
+              </Text>
             </View>
           </View>
           <Text style={styles.chevron}>›</Text>

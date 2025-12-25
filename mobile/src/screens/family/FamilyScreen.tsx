@@ -3,7 +3,7 @@
  * Profile management and parental controls
  */
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -13,91 +13,12 @@ import {
   Switch,
   Alert,
   Modal,
-  TextInput,
+  RefreshControl,
+  ActivityIndicator,
 } from 'react-native';
 import { useAuthStore } from '../../stores/authStore';
-
-interface FamilyProfile {
-  id: string;
-  name: string;
-  avatar: string;
-  type: 'adult' | 'teen' | 'child';
-  devices: number;
-  settings: ProfileSettings;
-}
-
-interface ProfileSettings {
-  safeSearch: boolean;
-  adultContentFilter: boolean;
-  gamblingFilter: boolean;
-  socialMediaFilter: boolean;
-  gamingFilter: boolean;
-  screenTimeLimit?: number; // minutes per day
-  bedtime?: { start: string; end: string };
-}
-
-const mockProfiles: FamilyProfile[] = [
-  {
-    id: '1',
-    name: 'Dad',
-    avatar: '👨',
-    type: 'adult',
-    devices: 3,
-    settings: {
-      safeSearch: false,
-      adultContentFilter: false,
-      gamblingFilter: false,
-      socialMediaFilter: false,
-      gamingFilter: false,
-    },
-  },
-  {
-    id: '2',
-    name: 'Mom',
-    avatar: '👩',
-    type: 'adult',
-    devices: 2,
-    settings: {
-      safeSearch: false,
-      adultContentFilter: false,
-      gamblingFilter: false,
-      socialMediaFilter: false,
-      gamingFilter: false,
-    },
-  },
-  {
-    id: '3',
-    name: 'Alex',
-    avatar: '👦',
-    type: 'teen',
-    devices: 2,
-    settings: {
-      safeSearch: true,
-      adultContentFilter: true,
-      gamblingFilter: true,
-      socialMediaFilter: false,
-      gamingFilter: false,
-      screenTimeLimit: 180,
-      bedtime: { start: '22:00', end: '07:00' },
-    },
-  },
-  {
-    id: '4',
-    name: 'Emma',
-    avatar: '👧',
-    type: 'child',
-    devices: 1,
-    settings: {
-      safeSearch: true,
-      adultContentFilter: true,
-      gamblingFilter: true,
-      socialMediaFilter: true,
-      gamingFilter: false,
-      screenTimeLimit: 120,
-      bedtime: { start: '20:00', end: '07:00' },
-    },
-  },
-];
+import { useFamilyStore, FamilyProfile, ProfileSettings } from '../../stores/familyStore';
+import { useProtectionStore } from '../../stores/protectionStore';
 
 function ProfileCard({ profile, onPress }: { profile: FamilyProfile; onPress: () => void }) {
   const typeColors = {
@@ -176,6 +97,12 @@ function ProfileEditor({
       gamingFilter: false,
     }
   );
+
+  useEffect(() => {
+    if (profile) {
+      setSettings(profile.settings);
+    }
+  }, [profile]);
 
   if (!profile) return null;
 
@@ -338,13 +265,19 @@ function ProfileEditor({
 
 export default function FamilyScreen() {
   const { user } = useAuthStore();
-  const [profiles, setProfiles] = useState(mockProfiles);
+  const { profiles, profileStats, isLoading, refreshAll, createProfile, deleteProfile } = useFamilyStore();
+  const { stats } = useProtectionStore();
   const [selectedProfile, setSelectedProfile] = useState<FamilyProfile | null>(null);
   const [isEditing, setIsEditing] = useState(false);
 
   const isPro = user?.tier === 'pro' || user?.tier === 'enterprise';
 
-  const handleAddProfile = () => {
+  // Fetch profiles on mount
+  useEffect(() => {
+    refreshAll();
+  }, []);
+
+  const handleAddProfile = async () => {
     if (!isPro && profiles.length >= 2) {
       Alert.alert(
         'Pro Feature',
@@ -356,8 +289,46 @@ export default function FamilyScreen() {
       );
       return;
     }
-    // TODO: Show add profile modal
-    Alert.alert('Add Profile', 'Profile creation coming soon!');
+
+    Alert.prompt(
+      'New Profile',
+      'Enter a name for the new profile:',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Create',
+          onPress: async (name: string | undefined) => {
+            if (name && name.trim()) {
+              const profile = await createProfile(name.trim(), 'kid');
+              if (profile) {
+                Alert.alert('Success', `Profile "${name}" created!`);
+              }
+            }
+          },
+        },
+      ],
+      'plain-text'
+    );
+  };
+
+  const handleDeleteProfile = (profile: FamilyProfile) => {
+    Alert.alert(
+      'Delete Profile',
+      `Are you sure you want to delete "${profile.name}"?`,
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Delete',
+          style: 'destructive',
+          onPress: async () => {
+            const success = await deleteProfile(profile.id);
+            if (success) {
+              Alert.alert('Deleted', `Profile "${profile.name}" has been deleted.`);
+            }
+          },
+        },
+      ]
+    );
   };
 
   const handleProfilePress = (profile: FamilyProfile) => {
@@ -366,15 +337,28 @@ export default function FamilyScreen() {
   };
 
   const handleSaveProfile = (updatedProfile: FamilyProfile) => {
-    setProfiles(prev =>
-      prev.map(p => p.id === updatedProfile.id ? updatedProfile : p)
-    );
+    // TODO: Implement profile update API
     setIsEditing(false);
     setSelectedProfile(null);
   };
 
+  // Calculate stats
+  const totalDevices = profileStats?.assignedDevices || profiles.reduce((sum, p) => sum + p.devices, 0);
+  const threatsBlocked = stats?.blocked_queries || 0;
+
   return (
-    <ScrollView style={styles.container} contentContainerStyle={styles.content}>
+    <ScrollView
+      style={styles.container}
+      contentContainerStyle={styles.content}
+      refreshControl={
+        <RefreshControl
+          refreshing={isLoading}
+          onRefresh={refreshAll}
+          tintColor="#3b82f6"
+          colors={['#3b82f6']}
+        />
+      }
+    >
       {/* Header */}
       <View style={styles.header}>
         <Text style={styles.headerTitle}>Family Profiles</Text>
@@ -392,13 +376,25 @@ export default function FamilyScreen() {
           </TouchableOpacity>
         </View>
 
-        {profiles.map((profile) => (
-          <ProfileCard
-            key={profile.id}
-            profile={profile}
-            onPress={() => handleProfilePress(profile)}
-          />
-        ))}
+        {isLoading && profiles.length === 0 ? (
+          <View style={styles.loadingContainer}>
+            <ActivityIndicator color="#3b82f6" />
+            <Text style={styles.loadingText}>Loading profiles...</Text>
+          </View>
+        ) : profiles.length === 0 ? (
+          <View style={styles.emptyContainer}>
+            <Text style={styles.emptyText}>No profiles yet</Text>
+            <Text style={styles.emptySubtext}>Create a profile to get started</Text>
+          </View>
+        ) : (
+          profiles.map((profile) => (
+            <ProfileCard
+              key={profile.id}
+              profile={profile}
+              onPress={() => handleProfilePress(profile)}
+            />
+          ))
+        )}
       </View>
 
       {/* Quick Actions */}
@@ -438,18 +434,18 @@ export default function FamilyScreen() {
         <Text style={styles.sectionTitle}>Today's Summary</Text>
         <View style={styles.statsCard}>
           <View style={styles.statItem}>
-            <Text style={styles.statValue}>247</Text>
+            <Text style={styles.statValue}>{threatsBlocked}</Text>
             <Text style={styles.statLabel}>Threats Blocked</Text>
           </View>
           <View style={styles.statDivider} />
           <View style={styles.statItem}>
-            <Text style={styles.statValue}>8</Text>
-            <Text style={styles.statLabel}>Devices Active</Text>
+            <Text style={styles.statValue}>{totalDevices}</Text>
+            <Text style={styles.statLabel}>Devices</Text>
           </View>
           <View style={styles.statDivider} />
           <View style={styles.statItem}>
-            <Text style={styles.statValue}>4h 23m</Text>
-            <Text style={styles.statLabel}>Avg Screen Time</Text>
+            <Text style={styles.statValue}>{profileStats?.totalProfiles || profiles.length}</Text>
+            <Text style={styles.statLabel}>Profiles</Text>
           </View>
         </View>
       </View>
@@ -517,6 +513,32 @@ const styles = StyleSheet.create({
     color: '#3b82f6',
     fontSize: 13,
     fontWeight: '600',
+  },
+  loadingContainer: {
+    backgroundColor: 'rgba(255,255,255,0.05)',
+    borderRadius: 16,
+    padding: 40,
+    alignItems: 'center',
+  },
+  loadingText: {
+    color: '#64748b',
+    marginTop: 12,
+  },
+  emptyContainer: {
+    backgroundColor: 'rgba(255,255,255,0.05)',
+    borderRadius: 16,
+    padding: 40,
+    alignItems: 'center',
+  },
+  emptyText: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  emptySubtext: {
+    color: '#64748b',
+    fontSize: 14,
+    marginTop: 4,
   },
   profileCard: {
     backgroundColor: 'rgba(255,255,255,0.05)',
