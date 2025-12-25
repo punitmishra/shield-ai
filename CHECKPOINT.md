@@ -275,8 +275,13 @@ docker-compose up -d
    - RUSTSEC-2025-0046: Host panic with fd_renumber WASIp1 function (severity 3.3)
    - RUSTSEC-2025-0118: Unsound API access to WebAssembly shared memory (severity 1.8)
    - 3 unmaintained warnings (fxhash, paste, rustls-pemfile)
-4. Initiated Railway deployment with latest code
-5. Test Summary:
+4. Fixed nightly Rust feature `is_multiple_of` → replaced with stable modulo check
+5. Rebuilt Docker images with latest code
+6. Deployed to Railway - all new endpoints verified working:
+   - `/api/privacy-metrics` ✅
+   - `/api/devices` ✅
+   - blocklist_size: 130 ✅
+7. Test Summary:
    - Rust: 17 tests passing
    - Frontend Vitest: 5 tests passing
    - Playwright E2E: 6 tests passing
@@ -331,7 +336,7 @@ docker-compose up -d
 - All tests green (17 Rust + 5 Frontend + 6 E2E = 28 total)
 - Frontend fully wired to backend API (36 endpoints)
 - Docker stack running and healthy (redis, api, frontend)
-- Railway deployment in progress
+- Railway deployment complete and verified (blocklist_size: 130)
 - Playwright E2E tests configured and passing
 - cargo audit: 2 low-severity vulnerabilities in wasmtime (plugin-system)
 - ESLint configured (warnings only, no errors)
