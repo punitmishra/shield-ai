@@ -178,33 +178,148 @@ curl https://shield-ai-production.up.railway.app/api/dns/resolve/google.com
 
 ## Architecture
 
+### System Overview
+
+```mermaid
+flowchart TB
+    subgraph Client["Client Layer"]
+        Browser["Browser/PWA"]
+        Mobile["Mobile App"]
+        CLI["CLI Tools"]
+    end
+
+    subgraph Frontend["Frontend (React/Vite :3000)"]
+        Dashboard["Dashboard"]
+        Stats["Real-time Stats"]
+        Analytics["Analytics Charts"]
+        Devices["Device Manager"]
+    end
+
+    subgraph API["API Gateway (Axum :8080)"]
+        REST["REST API"]
+        WS["WebSocket"]
+        DoH["DNS-over-HTTPS"]
+        RateLimit["Rate Limiter"]
+    end
+
+    subgraph Core["Core Services (9 Rust Crates)"]
+        DNS["DNS Engine"]
+        ML["ML Engine"]
+        AI["AI Engine"]
+        Threat["Threat Intel"]
+        Filter["Filter Engine"]
+        Profiles["Profiles"]
+        Tiers["Tiers"]
+        Plugins["Plugin System"]
+        Metrics["Metrics"]
+    end
+
+    subgraph Infra["Infrastructure"]
+        Redis["Redis Cache"]
+        Prometheus["Prometheus"]
+        Grafana["Grafana"]
+    end
+
+    Client --> Frontend
+    Frontend <--> API
+    API --> Core
+    Core --> Infra
+
+    Browser --> REST
+    Browser <--> WS
 ```
-┌─────────────────────────────────────────────────────────────────┐
-│                      Shield AI DNS Protection                   │
-├─────────────────────────────────────────────────────────────────┤
-│  Frontend (React/Vite :3000)                                    │
-│  ├── Real-time Dashboard with WebSocket                        │
-│  ├── 10+ Components (Stats, Threats, Analytics, Devices)       │
-│  ├── Dark Mode Theme                                            │
-│  └── PWA: Offline Support, Installable                         │
-├─────────────────────────────────────────────────────────────────┤
-│  API Gateway (Axum :8080)                                       │
-│  ├── REST: /api/*, /health, /metrics                           │
-│  ├── WebSocket: /ws (real-time updates)                        │
-│  ├── DoH: /dns-query (RFC 8484)                                │
-│  └── Rate Limiting + CORS                                       │
-├─────────────────────────────────────────────────────────────────┤
-│  Core Services (9 Rust Crates)                                  │
-│  ├── DNS Engine (Hickory DNS) - Resolution, Caching            │
-│  ├── ML Engine - DGA Detection, Risk Scoring                   │
-│  ├── AI Engine - Domain Analysis                               │
-│  ├── Threat Intel - Feed Aggregation, Anomaly Detection        │
-│  ├── Filter Engine - Blocklist/Allowlist, Live Updates         │
-│  ├── Profiles - User/Device Management                         │
-│  ├── Tiers - Subscription Management                           │
-│  ├── Plugin System - WASM Extensibility                        │
-│  └── Metrics - Prometheus Export                               │
-└─────────────────────────────────────────────────────────────────┘
+
+### DNS Query Flow
+
+```mermaid
+sequenceDiagram
+    participant C as Client
+    participant API as API Server
+    participant F as Filter Engine
+    participant ML as ML Engine
+    participant AI as AI Engine
+    participant Cache as DNS Cache
+    participant Up as Upstream DNS
+
+    C->>API: DNS Query (domain.com)
+    API->>F: Check Blocklist
+
+    alt Domain Blocked
+        F-->>API: BLOCKED
+        API-->>C: Empty Response (blocked)
+    else Domain Allowed
+        F-->>API: ALLOWED
+        API->>Cache: Check Cache
+
+        alt Cache Hit
+            Cache-->>API: Cached IP
+        else Cache Miss
+            API->>Up: Forward Query
+            Up-->>API: DNS Response
+            API->>Cache: Store Result
+        end
+
+        par Async Analysis
+            API->>ML: DGA Detection
+            API->>AI: Threat Scoring
+        end
+
+        API-->>C: DNS Response + Metadata
+    end
+```
+
+### Component Architecture
+
+```mermaid
+graph LR
+    subgraph Frontend
+        A[React App] --> B[Zustand Store]
+        A --> C[WebSocket Client]
+        A --> D[REST Client]
+    end
+
+    subgraph Backend
+        E[Axum Server] --> F[Handlers]
+        F --> G[DNS Core]
+        F --> H[ML Engine]
+        F --> I[AI Engine]
+        F --> J[Threat Intel]
+        F --> K[Filter]
+        F --> L[Metrics]
+    end
+
+    subgraph Storage
+        M[(Redis)]
+        N[(Blocklists)]
+    end
+
+    D --> E
+    C --> E
+    G --> M
+    K --> N
+```
+
+### Crate Dependencies
+
+```mermaid
+graph TD
+    API[shield-api-server] --> DNS[shield-dns-core]
+    API --> ML[shield-ml-engine]
+    API --> AI[shield-ai-engine]
+    API --> TI[shield-threat-intel]
+    API --> MET[shield-metrics]
+    API --> PRO[shield-profiles]
+    API --> TIER[shield-tiers]
+    API --> PLUG[shield-plugin-system]
+
+    DNS --> MET
+    ML --> TI
+    AI --> TI
+
+    style API fill:#f96,stroke:#333
+    style DNS fill:#9cf,stroke:#333
+    style ML fill:#9f9,stroke:#333
+    style AI fill:#f9f,stroke:#333
 ```
 
 ## API Reference
@@ -375,6 +490,44 @@ npm run lint             # ESLint
 
 # Docker
 docker-compose up -d     # Full stack
+```
+
+### Docker Deployment
+
+```mermaid
+graph TB
+    subgraph Docker["Docker Compose Stack"]
+        subgraph Services["Application Services"]
+            FE["Frontend<br/>:3000 → :80"]
+            API["API Server<br/>:8080"]
+        end
+
+        subgraph Data["Data Layer"]
+            Redis["Redis<br/>:6379"]
+        end
+
+        subgraph Monitoring["Monitoring (Optional)"]
+            Prom["Prometheus<br/>:9090"]
+            Graf["Grafana<br/>:3001"]
+        end
+    end
+
+    subgraph External["External"]
+        Client["Client"]
+        Upstream["Upstream DNS<br/>1.1.1.1, 8.8.8.8"]
+    end
+
+    Client --> FE
+    Client --> API
+    FE --> API
+    API --> Redis
+    API --> Upstream
+    Prom --> API
+    Graf --> Prom
+
+    style FE fill:#61dafb,stroke:#333
+    style API fill:#f96,stroke:#333
+    style Redis fill:#dc382d,stroke:#333
 ```
 
 ## CI/CD Pipeline

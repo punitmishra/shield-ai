@@ -7,41 +7,70 @@
 
 ## Architecture Overview
 
+```mermaid
+flowchart TB
+    subgraph Frontend["Frontend (React/Vite :3000)"]
+        direction LR
+        UI["Dashboard UI"]
+        WS["WebSocket Client"]
+        Store["Zustand Store"]
+    end
+
+    subgraph API["API Gateway (Axum :8080)"]
+        direction LR
+        REST["36 REST Endpoints"]
+        WSS["WebSocket Server"]
+        DoH["DNS-over-HTTPS"]
+    end
+
+    subgraph Core["Core Services (9 Rust Crates)"]
+        DNS["DNS Engine"]
+        ML["ML Engine"]
+        AI["AI Engine"]
+        TI["Threat Intel"]
+        Filter["Filter Engine"]
+        Metrics["Metrics"]
+    end
+
+    subgraph DevOps["DevOps & CI/CD"]
+        GHA["GitHub Actions (9 jobs)"]
+        Docker["Docker Multi-stage"]
+        E2E["Playwright E2E"]
+    end
+
+    Frontend <--> API
+    API --> Core
+    Core --> DevOps
 ```
-┌─────────────────────────────────────────────────────────────────┐
-│                      Shield AI DNS Protection                   │
-├─────────────────────────────────────────────────────────────────┤
-│  Frontend (React/Vite :3000)                                    │
-│  ├── DashboardStats, RiskAnalyzer, ThreatFeed                  │
-│  ├── NetworkGraph, DeviceList, AnalyticsChart                  │
-│  ├── Dark Mode Theme (ThemeProvider, ThemeToggle)              │
-│  ├── PWA: ServiceWorker, Offline Support                       │
-│  └── Vitest + React Testing Library (5 tests)                  │
-├─────────────────────────────────────────────────────────────────┤
-│  API Gateway (Axum :8080)                                       │
-│  ├── REST: /api/*, /health, /metrics                           │
-│  ├── WebSocket: /ws (real-time updates)                        │
-│  ├── ML: /api/ml/*, /api/deep/*                                │
-│  ├── OpenAPI 3.0.3 Documentation                               │
-│  └── Rate Limiting + CORS                                       │
-├─────────────────────────────────────────────────────────────────┤
-│  Core Services                                                   │
-│  ├── DNS Engine (Hickory DNS :53)                              │
-│  ├── ML Engine (DGA detection, Risk ranking) - 5+ tests        │
-│  ├── AI Engine (Domain analysis)                               │
-│  ├── Threat Intel (Feed aggregation, Anomaly detection)        │
-│  ├── Filter Engine (Blocklist/Allowlist, Live updates)         │
-│  ├── Profiles (User/device management)                         │
-│  ├── Tiers (Subscription management)                           │
-│  ├── Plugin System (WASM extensibility)                        │
-│  └── Metrics Collector                                          │
-├─────────────────────────────────────────────────────────────────┤
-│  DevOps & CI/CD                                                  │
-│  ├── GitHub Actions (9 jobs: test, lint, security, coverage)  │
-│  ├── Docker Multi-stage (cargo-chef optimization)              │
-│  ├── Playwright E2E Tests                                       │
-│  └── Release Workflow (multi-platform binaries)                │
-└─────────────────────────────────────────────────────────────────┘
+
+### Data Flow
+
+```mermaid
+sequenceDiagram
+    participant U as User
+    participant F as Frontend
+    participant A as API
+    participant C as Core Services
+    participant D as DNS/Cache
+
+    U->>F: Open Dashboard
+    F->>A: GET /api/stats
+    A->>C: Collect Metrics
+    C-->>A: Stats Data
+    A-->>F: JSON Response
+
+    F->>A: Connect WebSocket
+    loop Every 2s
+        A-->>F: Real-time Updates
+    end
+
+    U->>F: Analyze Domain
+    F->>A: GET /api/deep/domain.com
+    A->>C: ML + AI + Threat Analysis
+    C->>D: DNS Resolution
+    D-->>C: IP Addresses
+    C-->>A: Combined Analysis
+    A-->>F: Risk Assessment
 ```
 
 ---
@@ -336,13 +365,11 @@ docker-compose up -d
    cd frontend && npx playwright install && npm run test:e2e
    ```
 
-### Priority 4: Production Readiness
-1. **Docker validation** (needs Docker daemon running)
-   ```bash
-   cd docker && docker-compose up -d
-   curl http://localhost:8080/health
-   curl http://localhost:3000
-   ```
+### Priority 4: Production Readiness - COMPLETED ✅
+1. ~~**Docker validation**~~ - ✅ Done
+   - All 3 containers running and healthy
+   - Redis: :6379, API: :8080, Frontend: :3000
+   - Health checks passing
 
 2. **Performance testing**
    - Run load tests against DNS endpoint

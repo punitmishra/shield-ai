@@ -46,44 +46,85 @@ cd docker && docker-compose up     # Full stack (DNS, API, Redis, Prometheus, Gr
 
 ## Architecture
 
+```mermaid
+flowchart TD
+    subgraph Client
+        Browser["Browser/PWA :3000"]
+    end
+
+    subgraph API["API Gateway :8080"]
+        REST["REST API"]
+        WS["WebSocket"]
+        DoH["DNS-over-HTTPS"]
+    end
+
+    subgraph Core["Core Services"]
+        DNS["DNS Engine"]
+        AI["AI Engine"]
+        ML["ML Engine"]
+        Filter["Filter Engine"]
+        Metrics["Metrics"]
+    end
+
+    subgraph Infra["Infrastructure"]
+        Redis["Redis :6379"]
+        Prom["Prometheus :9090"]
+        Graf["Grafana :3001"]
+    end
+
+    Browser --> API
+    API --> Core
+    Core --> Infra
+    DNS --> Redis
+    Metrics --> Prom
+    Prom --> Graf
 ```
-Frontend (React/Vite :3000)
-         ↓
-API Gateway (Axum :8080)
-├── REST: /api/*, /health, /metrics
-├── WebSocket: /ws (real-time updates)
-└── Rate Limiting + CORS
-         ↓
-Core Services
-├── DNS Engine (Hickory DNS :53)
-│   └── Query → Filter → AI Analysis → Cache → Upstream → Response
-├── AI Engine (ONNX Runtime)
-│   └── Feature Extraction → Classification → Threat Score
-├── Filter Engine
-│   └── Exact hash table + Wildcard trie (O(1) lookups)
-└── Metrics Collector
-    └── Prometheus export
-         ↓
-Infrastructure
-├── Redis (:6379) - DNS cache
-├── Prometheus (:9090) - Metrics
-└── Grafana (:3001) - Visualization
+
+### Query Processing Flow
+
+```mermaid
+sequenceDiagram
+    Client->>API: DNS Query
+    API->>Filter: Check Blocklist
+    alt Blocked
+        Filter-->>API: BLOCKED
+        API-->>Client: Empty Response
+    else Allowed
+        API->>DNS: Resolve
+        DNS->>AI: Analyze Domain
+        DNS->>ML: DGA Detection
+        DNS-->>API: Response + Analysis
+        API-->>Client: Full Response
+    end
 ```
 
 ## Key Source Files
 
 | File | Purpose |
 |------|---------|
-| `dns_core_main.rs` | Core DNS resolver engine |
-| `api-server-rust.rs` | REST API server (Axum) |
-| `ai-engine-rust.rs` | AI inference engine (ONNX) |
-| `filter.rs` | Domain filtering with blocklists |
-| `dns_cache.rs` | High-performance caching layer |
-| `metrics_collector.rs` | Real-time metrics collection |
-| `resolver.rs` | DNS resolution logic |
-| `secure_resolver.rs` | Security-enhanced resolver |
-| `nextjs_dashboard_main.tsx` | Main dashboard component |
-| `mobile_pwa_app.tsx` | Mobile PWA application |
+| `crates/api-server/src/handlers.rs` | All 36 API endpoint handlers |
+| `crates/api-server/src/main.rs` | Axum server setup and routing |
+| `crates/dns-core/src/filter.rs` | Blocklist/allowlist filtering |
+| `crates/dns-core/src/resolver.rs` | DNS resolution logic |
+| `crates/ml-engine/src/lib.rs` | DGA detection, risk scoring |
+| `crates/ai-engine/src/lib.rs` | AI domain analysis |
+| `crates/threat-intel/src/lib.rs` | Threat feed aggregation |
+| `crates/metrics/src/lib.rs` | Query logging, statistics |
+| `frontend/src/App.tsx` | Main React dashboard |
+| `frontend/src/components/` | 10+ dashboard components |
+
+## Current Project State
+
+| Metric | Value |
+|--------|-------|
+| **Version** | v0.3.1-alpha |
+| **Completion** | 95% |
+| **Rust Tests** | 17 passing |
+| **Frontend Tests** | 5 passing |
+| **API Endpoints** | 36 |
+| **React Components** | 10+ |
+| **Clippy Warnings** | 0 |
+| **Build Warnings** | 0 |
 
 ## Performance Targets
 
