@@ -279,7 +279,7 @@ impl TierManager {
 
         let usage = self.usage
             .entry(user_id.to_string())
-            .or_insert_with(UsageTracker::new);
+            .or_default();
 
         let queries_used = usage.queries_used();
         let allowed = queries_used < limits.queries_per_month;
@@ -303,7 +303,7 @@ impl TierManager {
     pub fn record_query(&self, user_id: &str) {
         let usage = self.usage
             .entry(user_id.to_string())
-            .or_insert_with(UsageTracker::new);
+            .or_default();
         usage.increment_queries();
     }
 
@@ -314,7 +314,7 @@ impl TierManager {
 
         let usage = self.usage
             .entry(user_id.to_string())
-            .or_insert_with(UsageTracker::new);
+            .or_default();
 
         UsageStats {
             tier: sub.tier,

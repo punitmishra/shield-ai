@@ -68,8 +68,7 @@ impl FilterEngine {
     /// Check if domain matches a wildcard pattern
     #[inline(always)]
     fn matches_wildcard(&self, domain: &str, pattern: &str) -> bool {
-        if pattern.starts_with("*.") {
-            let suffix = &pattern[2..];
+        if let Some(suffix) = pattern.strip_prefix("*.") {
             domain.ends_with(suffix) || domain == &suffix[1..]
         } else {
             domain == pattern

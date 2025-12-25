@@ -1262,7 +1262,7 @@ pub async fn get_privacy_metrics(State(state): State<Arc<AppState>>) -> Json<Pri
     // Generate trend data (last 24 hours)
     let now = std::time::SystemTime::now()
         .duration_since(std::time::UNIX_EPOCH)
-        .unwrap()
+        .expect("system time before Unix epoch")
         .as_secs();
     let trend_data: Vec<PrivacyTrendPoint> = (0..24)
         .map(|i| {
@@ -1337,7 +1337,7 @@ pub async fn get_devices(State(state): State<Arc<AppState>>) -> Json<DevicesResp
     let history = state.metrics.get_query_history(1000);
     let now = std::time::SystemTime::now()
         .duration_since(std::time::UNIX_EPOCH)
-        .unwrap()
+        .expect("system time before Unix epoch")
         .as_secs();
 
     // Aggregate device stats from query history by client IP

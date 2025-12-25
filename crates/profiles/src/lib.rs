@@ -210,7 +210,7 @@ impl ProfileManager {
     pub fn get_device_profile(&self, device_id: &str) -> Option<Profile> {
         self.device_to_profile
             .get(device_id)
-            .and_then(|id| self.get_profile(&*id))
+            .and_then(|id| self.get_profile(&id))
     }
 
     pub fn is_domain_allowed_for_device(&self, device_id: &str, domain: &str) -> bool {

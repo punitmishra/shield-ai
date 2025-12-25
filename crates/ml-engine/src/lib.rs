@@ -425,7 +425,7 @@ impl MLEngine {
         let bigram_score = self.calculate_bigram_score(domain);
 
         // Length score (very long or very short = suspicious)
-        let length_score = if len < 5.0 || len > 30.0 {
+        let length_score = if !(5.0..=30.0).contains(&len) {
             0.5 + ((len - 15.0).abs() / 30.0).min(0.5)
         } else {
             (len - 15.0).abs() / 30.0

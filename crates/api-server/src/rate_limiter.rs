@@ -112,8 +112,8 @@ impl RateLimiter {
 
         let last = self.last_cleanup.load(std::sync::atomic::Ordering::Relaxed);
 
-        if now_secs - last > self.config.cleanup_interval.as_secs() {
-            if self.last_cleanup.compare_exchange(
+        if now_secs - last > self.config.cleanup_interval.as_secs()
+            && self.last_cleanup.compare_exchange(
                 last,
                 now_secs,
                 std::sync::atomic::Ordering::SeqCst,
@@ -125,7 +125,6 @@ impl RateLimiter {
                 });
                 debug!("Rate limiter cleanup completed, {} entries remaining", self.entries.len());
             }
-        }
     }
 
     /// Get stats about the rate limiter
