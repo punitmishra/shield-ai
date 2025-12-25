@@ -1,6 +1,6 @@
 # Shield AI - Project Checkpoint & Memory Context
 
-## Project State: v0.4.1-alpha (97% Feature Complete)
+## Project State: v0.4.2-alpha (98% Feature Complete)
 **Last Updated**: 2025-12-25
 
 ---
@@ -123,6 +123,9 @@ sequenceDiagram
 | **Stores** | | |
 | authStore | `src/stores/authStore.ts` | ✅ JWT token management |
 | protectionStore | `src/stores/protectionStore.ts` | ✅ VPN/DNS state |
+| notificationStore | `src/stores/notificationStore.ts` | ✅ Push notification state & preferences |
+| **Services** | | |
+| notifications | `src/services/notifications.ts` | ✅ Expo push token, listeners, channels |
 | **API** | | |
 | client | `src/api/client.ts` | ✅ Axios + token refresh |
 
@@ -240,7 +243,29 @@ All 8 auth endpoints tested and working:
 
 ## Session History
 
-### Session 2025-12-25 (Part 5 - Current)
+### Session 2025-12-25 (Part 6 - Current)
+**Push Notifications Implemented**
+1. Installed expo-notifications, expo-device, expo-constants
+2. Created notification service (`src/services/notifications.ts`):
+   - Expo push token registration
+   - Android notification channels (threats, reports, family)
+   - Local notification scheduling
+   - Foreground/background notification handlers
+3. Created notification store (`src/stores/notificationStore.ts`):
+   - Persisted preferences (enabled, threatAlerts, weeklyReports)
+   - Token sync with backend
+   - Notification response handling
+4. Updated App.tsx:
+   - Initialize notifications on auth
+   - Register device with push token
+   - Setup notification listeners
+5. Updated SettingsScreen:
+   - Wired notification toggles to store
+   - Clear token on logout
+6. Updated app.json with notification config, iOS/Android setup
+7. Committed and pushed: `a53795b`
+
+### Session 2025-12-25 (Part 5)
 **Mobile App Screens Complete**
 1. Created ProtectionScreen with:
    - VPN toggle with connection status and stats (256-bit encryption, server, latency)
@@ -321,7 +346,7 @@ All 8 auth endpoints tested and working:
 - [x] Complete Protection screen (VPN toggle, DNS settings)
 - [x] Complete Analytics screen (query history, charts)
 - [x] Complete Family screen (profiles, parental controls)
-- [ ] Add push notification support
+- [x] Add push notification support (Expo notifications, Android channels)
 - [ ] Implement VPN native module (iOS: NetworkExtension, Android: VpnService)
 - [ ] Wire real API data to replace mock data in screens
 
@@ -468,7 +493,8 @@ sheilds-ai/
 │   │   │   ├── analytics/ # Query history & charts
 │   │   │   ├── family/    # Profiles & parental controls
 │   │   │   └── settings/  # Account & logout
-│   │   └── stores/        # Zustand (auth, protection)
+│   │   ├── stores/        # Zustand (auth, protection, notifications)
+│   │   └── services/      # Notification service
 │   └── package.json
 ├── landing/               # Marketing landing page
 ├── docker/
@@ -489,7 +515,7 @@ sheilds-ai/
 | **Backend** | ✅ Production Ready | 10 crates, 44 endpoints, zero warnings |
 | **Auth** | ✅ Complete & Tested | JWT + refresh tokens, device registration |
 | **Web Frontend** | ✅ Complete | 10+ components, real-time updates |
-| **Mobile App** | 🟡 90% Complete | All 9 screens done, needs VPN native module + push |
+| **Mobile App** | 🟡 95% Complete | All screens + push notifications, needs VPN native module |
 | **CI/CD** | ✅ Complete | 9-job pipeline, Railway deployment |
 | **Docker** | ✅ Ready | Multi-stage build, health checks |
 | **Tests** | ✅ 32 Passing | 21 Rust + 5 Vitest + 6 E2E |
