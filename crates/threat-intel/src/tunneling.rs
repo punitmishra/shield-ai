@@ -195,7 +195,7 @@ impl TunnelingDetector {
         let ratio = matching as f32 / s.len() as f32;
 
         // High ratio of base64 characters and length divisible by 4 (or close)
-        ratio > 0.95 && (s.len().is_multiple_of(4) || s.len() % 4 == 1)
+        ratio > 0.95 && (s.len() % 4 == 0 || s.len() % 4 == 1)
     }
 
     /// Check if string looks like hex encoded data

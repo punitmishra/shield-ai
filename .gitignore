@@ -39,3 +39,7 @@ models/*.bin
 # Test coverage
 coverage/
 .nyc_output/
+
+# Playwright test artifacts
+playwright-report/
+test-results/
