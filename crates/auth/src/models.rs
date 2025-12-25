@@ -35,6 +35,9 @@ pub enum AuthError {
 
     #[error("JWT error: {0}")]
     JwtError(String),
+
+    #[error("Database error: {0}")]
+    DatabaseError(String),
 }
 
 /// User tier matching shield-tiers crate

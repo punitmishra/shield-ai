@@ -11,6 +11,7 @@ members = [
     "crates/plugin-system",
     "crates/ml-engine",
     "crates/auth",
+    "crates/db",
 ]
 
 [workspace.package]

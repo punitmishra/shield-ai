@@ -1,0 +1,32 @@
+[package]
+name = "shield-db"
+version.workspace = true
+edition.workspace = true
+description = "Database layer for Shield AI - SQLite + Qdrant"
+
+[dependencies]
+# SQLite
+rusqlite = { version = "0.31", features = ["bundled"] }
+
+# Qdrant vector database
+qdrant-client = "1.10"
+
+# Async runtime
+tokio = { workspace = true }
+
+# Serialization
+serde = { workspace = true }
+serde_json = { workspace = true }
+
+# Error handling
+thiserror = { workspace = true }
+anyhow = { workspace = true }
+
+# Utilities
+chrono = { workspace = true }
+uuid = { workspace = true }
+tracing = { workspace = true }
+
+# Connection pooling for SQLite
+r2d2 = "0.8"
+r2d2_sqlite = "0.24"

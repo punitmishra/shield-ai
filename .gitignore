@@ -31,6 +31,9 @@ Thumbs.db
 *.log
 logs/
 
+# Data directory (SQLite databases)
+data/
+
 # AI Models
 *.onnx
 *.pt

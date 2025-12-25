@@ -3,6 +3,7 @@
 use crate::rate_limiter::{RateLimiter, RateLimiterConfig};
 use shield_ai_engine::AIEngine;
 use shield_auth::AuthService;
+use shield_db::SqliteDb;
 use shield_dns_core::cache::DNSCache;
 use shield_dns_core::filter::FilterEngine;
 use shield_dns_core::resolver::Resolver;
@@ -29,6 +30,7 @@ pub struct AppState {
     pub tiers: Arc<TierManager>,
     pub ml_engine: Arc<MLEngine>,
     pub auth: Arc<AuthService>,
+    pub db: Arc<SqliteDb>,
 }
 
 impl AppState {
@@ -68,11 +70,17 @@ impl AppState {
         let ml_engine = Arc::new(MLEngine::new());
         info!("ML engine initialized");
 
-        // Initialize authentication service
+        // Initialize SQLite database
+        let db_path = std::env::var("DATABASE_PATH")
+            .unwrap_or_else(|_| "data/shield.db".to_string());
+        let db = Arc::new(SqliteDb::new(&db_path)?);
+        info!("SQLite database initialized: {}", db_path);
+
+        // Initialize authentication service with SQLite persistence
         let jwt_secret = std::env::var("JWT_SECRET")
             .unwrap_or_else(|_| "shield-ai-default-jwt-secret-change-in-production".to_string());
-        let auth = Arc::new(AuthService::new(&jwt_secret));
-        info!("Authentication service initialized");
+        let auth = Arc::new(AuthService::with_sqlite(&jwt_secret, db.clone()));
+        info!("Authentication service initialized (SQLite-backed)");
 
         // Initialize rate limiter (100 requests per minute per IP)
         let rate_limiter = Arc::new(RateLimiter::with_config(RateLimiterConfig {
@@ -99,6 +107,7 @@ impl AppState {
             tiers,
             ml_engine,
             auth,
+            db,
         })
     }
 

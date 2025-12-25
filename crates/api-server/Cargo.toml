@@ -13,6 +13,7 @@ shield-profiles = { path = "../profiles" }
 shield-tiers = { path = "../tiers" }
 shield-ml-engine = { path = "../ml-engine" }
 shield-auth = { path = "../auth" }
+shield-db = { path = "../db" }
 
 tokio = { workspace = true }
 anyhow = { workspace = true }

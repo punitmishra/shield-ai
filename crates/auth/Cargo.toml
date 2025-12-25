@@ -5,6 +5,8 @@ edition.workspace = true
 description = "Authentication and authorization for Shield AI"
 
 [dependencies]
+shield-db = { path = "../db" }
+
 serde = { workspace = true }
 serde_json = { workspace = true }
 chrono = { workspace = true }
