@@ -176,6 +176,7 @@ pub async fn get_my_devices(
 }
 
 /// DELETE /api/devices/:id - Unregister a device
+#[allow(unused_variables)]
 pub async fn unregister_device(
     State(auth): State<Arc<AuthService>>,
     Extension(claims): Extension<Claims>,

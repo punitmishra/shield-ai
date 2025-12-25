@@ -12,6 +12,7 @@ shield-threat-intel = { path = "../threat-intel" }
 shield-profiles = { path = "../profiles" }
 shield-tiers = { path = "../tiers" }
 shield-ml-engine = { path = "../ml-engine" }
+shield-auth = { path = "../auth" }
 
 tokio = { workspace = true }
 anyhow = { workspace = true }

@@ -1,6 +1,6 @@
 # Shield AI - Project Checkpoint & Memory Context
 
-## Project State: v0.3.1-alpha (92% Feature Complete)
+## Project State: v0.3.2-alpha (94% Feature Complete)
 **Last Updated**: 2024-12-24
 
 ---
@@ -88,9 +88,9 @@ sequenceDiagram
 | `shield-profiles` | User/device profile management | ✅ Complete | 0 |
 | `shield-tiers` | Subscription tier management | ✅ Complete | 3 |
 | `shield-plugin-system` | WASM extensibility framework | ✅ Complete | 4 |
-| `shield-auth` | JWT auth, device registration | ✅ NEW | 2 |
+| `shield-auth` | JWT auth, device registration | ✅ Complete | 4 |
 
-**Total Rust Tests**: 17 passing
+**Total Rust Tests**: 21 passing
 
 ---
 
@@ -177,10 +177,10 @@ sequenceDiagram
 
 | Component | Framework | Tests | Status |
 |-----------|-----------|-------|--------|
-| Rust Workspace | cargo test | 17 | ✅ Passing |
+| Rust Workspace | cargo test | 21 | ✅ Passing |
 | Frontend | Vitest | 5 | ✅ Passing |
 | E2E | Playwright | 6 | ✅ Passing |
-| **Total** | - | **28** | ✅ All Green |
+| **Total** | - | **32** | ✅ All Green |
 
 ---
 
@@ -268,6 +268,25 @@ docker-compose up -d
 ---
 
 ## Session Context
+
+**What was done in this session (2024-12-25) - Part 3**:
+1. Wired up auth crate to api-server:
+   - Added `shield-auth` dependency to api-server/Cargo.toml
+   - Added `AuthService` to `AppState` with JWT_SECRET env config
+   - Added 8 auth API endpoints to main.rs:
+     - Public: `/api/auth/register`, `/api/auth/login`, `/api/auth/refresh`, `/api/auth/logout`
+     - Protected: `/api/auth/me`, `/api/auth/devices`, `/api/auth/devices/register`, `/api/auth/devices/:id/push-token`
+   - Added auth middleware for JWT token validation
+2. Fixed all warnings in auth crate (iOS enum naming, unused variables)
+3. All 21 Rust tests passing (4 new auth tests)
+4. Fixed mobile app API paths:
+   - Changed device endpoints from `/api/devices/*` to `/api/auth/devices/*`
+   - Added `@react-native-async-storage/async-storage` dependency
+5. Created SettingsScreen with logout functionality:
+   - Account info display with tier badge
+   - Protection settings toggles
+   - Notification preferences
+   - Device info and logout button
 
 **What was done in this session (2024-12-25) - Part 2**:
 1. Created comprehensive native mobile app implementation plan

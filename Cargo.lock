@@ -2180,6 +2180,7 @@ dependencies = [
  "serde",
  "serde_json",
  "shield-ai-engine",
+ "shield-auth",
  "shield-dns-core",
  "shield-metrics",
  "shield-ml-engine",

@@ -1398,3 +1398,227 @@ pub struct DeviceUpdateResponse {
     pub name: Option<String>,
     pub profile: Option<String>,
 }
+
+// ============================================================================
+// Authentication Endpoints
+// ============================================================================
+
+use axum::{extract::Request, http::header, middleware::Next, response::Response as AxumResponse};
+use shield_auth::{
+    Claims, DeviceRegistrationRequest, LoginRequest, RefreshRequest, RegisterRequest,
+    UpdatePushTokenRequest, UserInfo,
+};
+
+/// Authentication middleware for protected routes
+pub async fn auth_middleware(
+    State(state): State<Arc<AppState>>,
+    mut request: Request,
+    next: Next,
+) -> Result<AxumResponse, (StatusCode, Json<serde_json::Value>)> {
+    // Get Authorization header
+    let auth_header = request
+        .headers()
+        .get(header::AUTHORIZATION)
+        .and_then(|h| h.to_str().ok());
+
+    let Some(auth_header) = auth_header else {
+        return Err((
+            StatusCode::UNAUTHORIZED,
+            Json(serde_json::json!({
+                "error": "missing_token",
+                "message": "Authorization header required"
+            })),
+        ));
+    };
+
+    // Extract Bearer token
+    let token = if auth_header.starts_with("Bearer ") {
+        &auth_header[7..]
+    } else {
+        return Err((
+            StatusCode::UNAUTHORIZED,
+            Json(serde_json::json!({
+                "error": "invalid_token_format",
+                "message": "Bearer token required"
+            })),
+        ));
+    };
+
+    // Validate token
+    match state.auth.validate_token(token) {
+        Ok(claims) => {
+            request.extensions_mut().insert(claims);
+            Ok(next.run(request).await)
+        }
+        Err(e) => {
+            warn!("Token validation failed: {}", e);
+            Err((
+                StatusCode::UNAUTHORIZED,
+                Json(serde_json::json!({
+                    "error": "invalid_token",
+                    "message": "Invalid or expired token"
+                })),
+            ))
+        }
+    }
+}
+
+/// POST /api/auth/register - Register a new user
+pub async fn auth_register(
+    State(state): State<Arc<AppState>>,
+    Json(request): Json<RegisterRequest>,
+) -> (StatusCode, Json<serde_json::Value>) {
+    match state.auth.register(&request.email, &request.password) {
+        Ok(user) => {
+            let user_info: UserInfo = user.into();
+            (StatusCode::CREATED, Json(serde_json::json!({
+                "success": true,
+                "user": user_info
+            })))
+        }
+        Err(e) => {
+            warn!("Registration failed: {}", e);
+            (StatusCode::BAD_REQUEST, Json(serde_json::json!({
+                "success": false,
+                "error": e.to_string()
+            })))
+        }
+    }
+}
+
+/// POST /api/auth/login - Login with email and password
+pub async fn auth_login(
+    State(state): State<Arc<AppState>>,
+    Json(request): Json<LoginRequest>,
+) -> (StatusCode, Json<serde_json::Value>) {
+    match state.auth.login(&request.email, &request.password) {
+        Ok(tokens) => {
+            info!("User logged in: {}", request.email);
+            (StatusCode::OK, Json(serde_json::json!({
+                "success": true,
+                "tokens": tokens
+            })))
+        }
+        Err(e) => {
+            warn!("Login failed for {}: {}", request.email, e);
+            (StatusCode::UNAUTHORIZED, Json(serde_json::json!({
+                "success": false,
+                "error": "Invalid credentials"
+            })))
+        }
+    }
+}
+
+/// POST /api/auth/refresh - Refresh access token
+pub async fn auth_refresh(
+    State(state): State<Arc<AppState>>,
+    Json(request): Json<RefreshRequest>,
+) -> (StatusCode, Json<serde_json::Value>) {
+    match state.auth.refresh(&request.refresh_token) {
+        Ok(tokens) => {
+            (StatusCode::OK, Json(serde_json::json!({
+                "success": true,
+                "tokens": tokens
+            })))
+        }
+        Err(e) => {
+            warn!("Token refresh failed: {}", e);
+            (StatusCode::UNAUTHORIZED, Json(serde_json::json!({
+                "success": false,
+                "error": "Invalid or expired refresh token"
+            })))
+        }
+    }
+}
+
+/// POST /api/auth/logout - Logout and invalidate refresh token
+pub async fn auth_logout(
+    State(state): State<Arc<AppState>>,
+    Json(request): Json<RefreshRequest>,
+) -> (StatusCode, Json<serde_json::Value>) {
+    let _ = state.auth.logout(&request.refresh_token);
+    (StatusCode::OK, Json(serde_json::json!({
+        "success": true,
+        "message": "Logged out successfully"
+    })))
+}
+
+/// GET /api/auth/me - Get current user info (requires auth)
+pub async fn auth_me(
+    State(state): State<Arc<AppState>>,
+    axum::Extension(claims): axum::Extension<Claims>,
+) -> (StatusCode, Json<serde_json::Value>) {
+    match state.auth.get_user(&claims.sub) {
+        Some(user) => {
+            let user_info: UserInfo = user.into();
+            (StatusCode::OK, Json(serde_json::json!({
+                "success": true,
+                "user": user_info
+            })))
+        }
+        None => {
+            (StatusCode::NOT_FOUND, Json(serde_json::json!({
+                "success": false,
+                "error": "User not found"
+            })))
+        }
+    }
+}
+
+/// POST /api/auth/devices/register - Register a new device (requires auth)
+pub async fn auth_register_device(
+    State(state): State<Arc<AppState>>,
+    axum::Extension(claims): axum::Extension<Claims>,
+    Json(request): Json<DeviceRegistrationRequest>,
+) -> (StatusCode, Json<serde_json::Value>) {
+    match state.auth.register_device(&claims.sub, request) {
+        Ok(device) => {
+            (StatusCode::CREATED, Json(serde_json::json!({
+                "success": true,
+                "device": device
+            })))
+        }
+        Err(e) => {
+            warn!("Device registration failed: {}", e);
+            (StatusCode::BAD_REQUEST, Json(serde_json::json!({
+                "success": false,
+                "error": e.to_string()
+            })))
+        }
+    }
+}
+
+/// GET /api/auth/devices - Get all devices for current user (requires auth)
+pub async fn auth_get_devices(
+    State(state): State<Arc<AppState>>,
+    axum::Extension(claims): axum::Extension<Claims>,
+) -> (StatusCode, Json<serde_json::Value>) {
+    let devices = state.auth.get_user_devices(&claims.sub);
+    (StatusCode::OK, Json(serde_json::json!({
+        "success": true,
+        "devices": devices
+    })))
+}
+
+/// PUT /api/auth/devices/:id/push-token - Update push notification token
+pub async fn auth_update_push_token(
+    State(state): State<Arc<AppState>>,
+    Path(device_id): Path<String>,
+    Json(request): Json<UpdatePushTokenRequest>,
+) -> (StatusCode, Json<serde_json::Value>) {
+    match state.auth.update_push_token(&device_id, &request.push_token) {
+        Ok(_) => {
+            (StatusCode::OK, Json(serde_json::json!({
+                "success": true,
+                "message": "Push token updated"
+            })))
+        }
+        Err(e) => {
+            warn!("Push token update failed: {}", e);
+            (StatusCode::NOT_FOUND, Json(serde_json::json!({
+                "success": false,
+                "error": e.to_string()
+            })))
+        }
+    }
+}

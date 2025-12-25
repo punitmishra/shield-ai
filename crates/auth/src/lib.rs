@@ -21,6 +21,7 @@ use tracing::info;
 pub struct AuthService {
     jwt_manager: JwtManager,
     users: DashMap<String, User>,
+    #[allow(dead_code)] // Reserved for session management
     sessions: DashMap<String, Session>,
     devices: DashMap<String, DeviceRegistration>,
     refresh_tokens: DashMap<String, RefreshToken>,

@@ -10,7 +10,7 @@ use std::net::SocketAddr;
 use std::sync::Arc;
 
 use anyhow::Result;
-use axum::{routing::{delete, get, post, put}, Router};
+use axum::{middleware, routing::{delete, get, post, put}, Router};
 use tower_http::{
     cors::{Any, CorsLayer},
     trace::{DefaultMakeSpan, DefaultOnResponse, TraceLayer},
@@ -90,8 +90,23 @@ async fn main() -> Result<()> {
         .route("/api/deep/:domain", get(handlers::deep_analysis))
         // WebSocket for real-time updates
         .route("/ws", get(handlers::ws_handler))
+        // Public auth routes (no auth required)
+        .route("/api/auth/register", post(handlers::auth_register))
+        .route("/api/auth/login", post(handlers::auth_login))
+        .route("/api/auth/refresh", post(handlers::auth_refresh))
+        .route("/api/auth/logout", post(handlers::auth_logout))
         // Shared state
-        .with_state(app_state)
+        .with_state(app_state.clone())
+        // Protected auth routes (requires JWT auth)
+        .merge(
+            Router::new()
+                .route("/api/auth/me", get(handlers::auth_me))
+                .route("/api/auth/devices", get(handlers::auth_get_devices))
+                .route("/api/auth/devices/register", post(handlers::auth_register_device))
+                .route("/api/auth/devices/:id/push-token", put(handlers::auth_update_push_token))
+                .layer(middleware::from_fn_with_state(app_state.clone(), handlers::auth_middleware))
+                .with_state(app_state)
+        )
         // Request tracing
         .layer(
             TraceLayer::new_for_http()

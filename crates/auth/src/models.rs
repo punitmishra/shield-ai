@@ -146,6 +146,7 @@ pub struct AuthTokens {
 /// Platform type for device registration
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 #[serde(rename_all = "lowercase")]
+#[allow(non_camel_case_types)]
 pub enum Platform {
     iOS,
     Android,
