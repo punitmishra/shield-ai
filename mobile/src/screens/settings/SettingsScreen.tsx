@@ -14,7 +14,7 @@ import {
   Alert,
 } from 'react-native';
 import { useAuthStore } from '../../stores/authStore';
-import { api } from '../../api/client';
+import { useNotificationStore } from '../../stores/notificationStore';
 
 interface SettingRowProps {
   icon: string;
@@ -56,8 +56,20 @@ function SettingRow({ icon, label, onPress, value, toggle, toggleValue, onToggle
 
 export default function SettingsScreen() {
   const { user, logout, device } = useAuthStore();
-  const [notificationsEnabled, setNotificationsEnabled] = useState(true);
+  const { preferences, updatePreferences, setEnabled, clearToken } = useNotificationStore();
   const [autoBlockThreats, setAutoBlockThreats] = useState(true);
+
+  const handleNotificationToggle = async (value: boolean) => {
+    await setEnabled(value);
+  };
+
+  const handleThreatAlertsToggle = (value: boolean) => {
+    updatePreferences({ threatAlerts: value });
+  };
+
+  const handleWeeklyReportsToggle = (value: boolean) => {
+    updatePreferences({ weeklyReports: value });
+  };
 
   const handleLogout = () => {
     Alert.alert(
@@ -70,6 +82,7 @@ export default function SettingsScreen() {
           style: 'destructive',
           onPress: async () => {
             try {
+              clearToken(); // Clear push notification token
               await logout();
             } catch (error) {
               console.error('Logout error:', error);
@@ -147,11 +160,23 @@ export default function SettingsScreen() {
             icon="🔔"
             label="Push Notifications"
             toggle
-            toggleValue={notificationsEnabled}
-            onToggle={setNotificationsEnabled}
+            toggleValue={preferences.enabled}
+            onToggle={handleNotificationToggle}
           />
-          <SettingRow icon="⚠️" label="Threat Alerts" />
-          <SettingRow icon="📊" label="Weekly Reports" />
+          <SettingRow
+            icon="⚠️"
+            label="Threat Alerts"
+            toggle
+            toggleValue={preferences.threatAlerts}
+            onToggle={handleThreatAlertsToggle}
+          />
+          <SettingRow
+            icon="📊"
+            label="Weekly Reports"
+            toggle
+            toggleValue={preferences.weeklyReports}
+            onToggle={handleWeeklyReportsToggle}
+          />
         </View>
       </View>
 
