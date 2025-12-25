@@ -55,6 +55,14 @@ async fn main() -> Result<()> {
         // Allowlist management endpoints
         .route("/api/allowlist", get(handlers::get_allowlist).post(handlers::add_to_allowlist))
         .route("/api/allowlist/:domain", delete(handlers::remove_from_allowlist))
+        // Blocklist management endpoints
+        .route("/api/blocklist", post(handlers::add_to_blocklist))
+        .route("/api/blocklist/:domain", delete(handlers::remove_from_blocklist))
+        // Privacy metrics endpoint
+        .route("/api/privacy-metrics", get(handlers::get_privacy_metrics))
+        // Device management endpoints
+        .route("/api/devices", get(handlers::get_devices))
+        .route("/api/devices/:id", put(handlers::update_device))
         // Rate limit stats
         .route("/api/rate-limit/stats", get(handlers::rate_limit_stats))
         // Threat intelligence endpoints

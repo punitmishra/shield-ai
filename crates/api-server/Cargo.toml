@@ -25,6 +25,7 @@ tracing-subscriber = { workspace = true }
 chrono = { workspace = true }
 uuid = { workspace = true }
 dashmap = { workspace = true }
+rand = { workspace = true }
 futures = "0.3"
 
 [[bin]]

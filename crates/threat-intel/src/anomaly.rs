@@ -29,6 +29,7 @@ struct ClientHistory {
 }
 
 #[derive(Clone)]
+#[allow(dead_code)] // Fields reserved for enhanced anomaly analysis
 struct QueryRecord {
     domain: String,
     timestamp: DateTime<Utc>,
@@ -36,6 +37,7 @@ struct QueryRecord {
 }
 
 #[derive(Clone)]
+#[allow(dead_code)] // Fields reserved for adaptive baseline feature
 struct BaselineStats {
     avg_queries_per_minute: f32,
     avg_unique_domains_per_hour: f32,

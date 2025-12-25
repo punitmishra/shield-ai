@@ -19,6 +19,7 @@ pub struct ThreatFeedManager {
 }
 
 #[derive(Clone)]
+#[allow(dead_code)] // Fields reserved for feed refresh/update feature
 struct ThreatEntry {
     category: ThreatCategory,
     source: String,
@@ -28,6 +29,7 @@ struct ThreatEntry {
 }
 
 #[derive(Clone)]
+#[allow(dead_code)] // Fields reserved for feed sync/status feature
 struct FeedSource {
     name: String,
     url: String,

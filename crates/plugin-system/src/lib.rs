@@ -68,6 +68,7 @@ pub struct Plugin {
 }
 
 /// Plugin execution state
+#[allow(dead_code)] // Reserved for WASM memory limiting feature
 struct PluginState {
     memory_limit: usize,
     execution_count: u64,

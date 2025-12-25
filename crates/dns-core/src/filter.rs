@@ -86,6 +86,16 @@ impl FilterEngine {
         }
     }
 
+    /// Remove domain from blocklist
+    pub fn remove_from_blocklist(&self, domain: &str) {
+        let domain_lower = domain.to_lowercase();
+        if domain_lower.starts_with("*.") {
+            self.wildcard_blocklist.write().retain(|d| d != &domain_lower);
+        } else {
+            self.blocklist.write().remove(&domain_lower);
+        }
+    }
+
     /// Add domain to allowlist
     pub fn add_to_allowlist(&self, domain: &str) {
         self.allowlist.write().insert(domain.to_lowercase());

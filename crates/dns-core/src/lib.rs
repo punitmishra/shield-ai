@@ -36,6 +36,7 @@ impl Default for DNSConfig {
 }
 
 pub struct DNSEngine {
+    #[allow(dead_code)] // Reserved for future DNS server implementation
     config: Arc<DNSConfig>,
 }
 

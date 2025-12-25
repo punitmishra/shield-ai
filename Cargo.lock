@@ -2056,6 +2056,7 @@ dependencies = [
  "chrono",
  "dashmap",
  "futures",
+ "rand",
  "serde",
  "serde_json",
  "shield-ai-engine",

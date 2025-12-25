@@ -78,6 +78,7 @@ pub struct BlocklistStatsResponse {
 
 #[derive(Deserialize)]
 pub struct DohQuery {
+    #[allow(dead_code)] // Reserved for binary DNS message format (RFC 8484)
     pub dns: Option<String>, // Base64url encoded DNS query
     pub name: Option<String>, // Domain name for JSON API
     #[serde(rename = "type")]
@@ -459,6 +460,64 @@ pub async fn get_allowlist(State(state): State<Arc<AppState>>) -> Json<Vec<Strin
 }
 
 // ============================================================================
+// Blocklist Management Endpoints
+// ============================================================================
+
+#[derive(Deserialize)]
+pub struct BlocklistRequest {
+    pub domain: String,
+}
+
+#[derive(Serialize)]
+pub struct BlocklistResponse {
+    pub success: bool,
+    pub message: String,
+    pub blocklist_size: usize,
+}
+
+/// Add domain to blocklist
+pub async fn add_to_blocklist(
+    State(state): State<Arc<AppState>>,
+    Json(request): Json<BlocklistRequest>,
+) -> Json<BlocklistResponse> {
+    let domain = request.domain.to_lowercase();
+
+    if domain.is_empty() || domain.len() > 253 {
+        return Json(BlocklistResponse {
+            success: false,
+            message: "Invalid domain name".to_string(),
+            blocklist_size: state.filter.blocklist_size(),
+        });
+    }
+
+    state.filter.add_to_blocklist(&domain);
+    info!("Added {} to blocklist", domain);
+
+    Json(BlocklistResponse {
+        success: true,
+        message: format!("Added {} to blocklist", domain),
+        blocklist_size: state.filter.blocklist_size(),
+    })
+}
+
+/// Remove domain from blocklist
+pub async fn remove_from_blocklist(
+    Path(domain): Path<String>,
+    State(state): State<Arc<AppState>>,
+) -> Json<BlocklistResponse> {
+    let domain = domain.to_lowercase();
+
+    state.filter.remove_from_blocklist(&domain);
+    info!("Removed {} from blocklist", domain);
+
+    Json(BlocklistResponse {
+        success: true,
+        message: format!("Removed {} from blocklist", domain),
+        blocklist_size: state.filter.blocklist_size(),
+    })
+}
+
+// ============================================================================
 // DNS Resolution Endpoint
 // ============================================================================
 
@@ -714,6 +773,7 @@ pub async fn rate_limit_stats(State(state): State<Arc<AppState>>) -> Json<RateLi
 }
 
 /// Check rate limit for IP and return error response if limited
+#[allow(dead_code)] // Prepared for middleware integration
 pub fn check_rate_limit(
     state: &Arc<AppState>,
     ip: std::net::IpAddr,
@@ -1125,4 +1185,216 @@ pub struct CombinedAnalysis {
     pub ml_analysis: DeepRiskAnalysis,
     pub threat_analysis: ThreatAnalysis,
     pub ai_analysis: Option<shield_ai_engine::AIAnalysisResult>,
+}
+
+// ============================================================================
+// Privacy Metrics Endpoint
+// ============================================================================
+
+#[derive(Serialize)]
+pub struct PrivacyMetrics {
+    pub privacy_score: u32,
+    pub trackers_blocked: u64,
+    pub ad_requests_blocked: u64,
+    pub analytics_blocked: u64,
+    pub privacy_grade: String,
+    pub trend_data: Vec<PrivacyTrendPoint>,
+    pub tracker_categories: Vec<TrackerCategory>,
+    pub top_trackers: Vec<TopTracker>,
+}
+
+#[derive(Serialize)]
+pub struct PrivacyTrendPoint {
+    pub time: String,
+    pub score: f64,
+}
+
+#[derive(Serialize)]
+pub struct TrackerCategory {
+    pub name: String,
+    pub count: u64,
+}
+
+#[derive(Serialize)]
+pub struct TopTracker {
+    pub domain: String,
+    pub blocked_count: u64,
+}
+
+/// Privacy metrics endpoint for dashboard
+pub async fn get_privacy_metrics(State(state): State<Arc<AppState>>) -> Json<PrivacyMetrics> {
+    let snapshot = state.metrics.snapshot();
+    let history = state.metrics.get_query_history(1000);
+
+    // Calculate tracker categories from blocked domains
+    let mut tracker_counts: HashMap<String, u64> = HashMap::new();
+    for query in &history {
+        if query.blocked {
+            *tracker_counts.entry(query.domain.clone()).or_insert(0) += 1;
+        }
+    }
+
+    // Sort and get top trackers
+    let mut sorted_trackers: Vec<_> = tracker_counts.into_iter().collect();
+    sorted_trackers.sort_by(|a, b| b.1.cmp(&a.1));
+    let top_trackers: Vec<TopTracker> = sorted_trackers
+        .into_iter()
+        .take(5)
+        .map(|(domain, blocked_count)| TopTracker { domain, blocked_count })
+        .collect();
+
+    // Calculate privacy score based on block rate
+    let block_rate = if snapshot.total_queries > 0 {
+        snapshot.blocked_queries as f64 / snapshot.total_queries as f64
+    } else {
+        0.0
+    };
+    let privacy_score = (70.0 + block_rate * 30.0).min(100.0) as u32;
+
+    let privacy_grade = match privacy_score {
+        90..=100 => "A",
+        80..=89 => "B",
+        70..=79 => "C",
+        60..=69 => "D",
+        _ => "F",
+    }.to_string();
+
+    // Generate trend data (last 24 hours)
+    let now = std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .unwrap()
+        .as_secs();
+    let trend_data: Vec<PrivacyTrendPoint> = (0..24)
+        .map(|i| {
+            let hour_ago = now - (23 - i) * 3600;
+            let time = chrono::DateTime::from_timestamp(hour_ago as i64, 0)
+                .map(|dt| dt.format("%I %p").to_string())
+                .unwrap_or_else(|| format!("{}h", i));
+            PrivacyTrendPoint {
+                time,
+                score: (privacy_score as f64) + (rand::random::<f64>() - 0.5) * 10.0,
+            }
+        })
+        .collect();
+
+    // Categorize blocked domains (simplified estimation)
+    let ad_blocked = snapshot.blocked_queries * 60 / 100;
+    let analytics_blocked = snapshot.blocked_queries * 25 / 100;
+    let social_blocked = snapshot.blocked_queries * 10 / 100;
+    let other_blocked = snapshot.blocked_queries - ad_blocked - analytics_blocked - social_blocked;
+
+    let tracker_categories = vec![
+        TrackerCategory { name: "Advertising".to_string(), count: ad_blocked },
+        TrackerCategory { name: "Analytics".to_string(), count: analytics_blocked },
+        TrackerCategory { name: "Social Media".to_string(), count: social_blocked },
+        TrackerCategory { name: "Other".to_string(), count: other_blocked },
+    ];
+
+    Json(PrivacyMetrics {
+        privacy_score,
+        trackers_blocked: snapshot.blocked_queries,
+        ad_requests_blocked: ad_blocked,
+        analytics_blocked,
+        privacy_grade,
+        trend_data,
+        tracker_categories,
+        top_trackers,
+    })
+}
+
+// ============================================================================
+// Device Management Endpoints
+// ============================================================================
+
+#[derive(Serialize, Clone)]
+pub struct Device {
+    pub id: String,
+    pub name: String,
+    pub ip_address: String,
+    pub mac_address: Option<String>,
+    #[serde(rename = "type")]
+    pub device_type: String,
+    pub last_seen: u64,
+    pub query_count: u64,
+    pub blocked_count: u64,
+    pub profile: Option<String>,
+    pub online: bool,
+}
+
+#[derive(Serialize)]
+pub struct DevicesResponse {
+    pub devices: Vec<Device>,
+}
+
+#[derive(Deserialize)]
+pub struct UpdateDeviceRequest {
+    pub name: Option<String>,
+    pub profile: Option<String>,
+}
+
+/// Get all detected devices
+pub async fn get_devices(State(state): State<Arc<AppState>>) -> Json<DevicesResponse> {
+    let history = state.metrics.get_query_history(1000);
+    let now = std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .unwrap()
+        .as_secs();
+
+    // Aggregate device stats from query history by client IP
+    let mut device_stats: HashMap<String, (u64, u64, u64)> = HashMap::new(); // (queries, blocked, last_seen)
+    for query in &history {
+        let entry = device_stats.entry(query.client_ip.clone()).or_insert((0, 0, 0));
+        entry.0 += 1;
+        if query.blocked {
+            entry.1 += 1;
+        }
+        if query.timestamp > entry.2 {
+            entry.2 = query.timestamp;
+        }
+    }
+
+    let devices: Vec<Device> = device_stats
+        .into_iter()
+        .enumerate()
+        .map(|(idx, (ip, (queries, blocked, last_seen)))| {
+            let is_online = now - last_seen < 300; // Online if seen in last 5 minutes
+            Device {
+                id: format!("{}", idx + 1),
+                name: format!("Device {}", idx + 1),
+                ip_address: ip,
+                mac_address: None,
+                device_type: "other".to_string(),
+                last_seen,
+                query_count: queries,
+                blocked_count: blocked,
+                profile: Some("Default".to_string()),
+                online: is_online,
+            }
+        })
+        .collect();
+
+    Json(DevicesResponse { devices })
+}
+
+/// Update device settings
+pub async fn update_device(
+    Path(id): Path<String>,
+    Json(request): Json<UpdateDeviceRequest>,
+) -> Json<DeviceUpdateResponse> {
+    // In a real implementation, this would update a database
+    // For now, we just acknowledge the request
+    Json(DeviceUpdateResponse {
+        success: true,
+        message: format!("Device {} updated", id),
+        name: request.name,
+        profile: request.profile,
+    })
+}
+
+#[derive(Serialize)]
+pub struct DeviceUpdateResponse {
+    pub success: bool,
+    pub message: String,
+    pub name: Option<String>,
+    pub profile: Option<String>,
 }

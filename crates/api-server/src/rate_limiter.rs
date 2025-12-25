@@ -2,6 +2,8 @@
 //!
 //! Implements a sliding window rate limiter with configurable limits per IP.
 
+#![allow(dead_code)] // Rate limiter is prepared for future middleware integration
+
 use axum::{
     http::StatusCode,
     response::{IntoResponse, Response},

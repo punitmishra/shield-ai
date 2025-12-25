@@ -220,13 +220,13 @@ impl TunnelingDetector {
         }
 
         let mut digit_count = 0;
-        let mut alpha_count = 0;
+        let mut _alpha_count = 0; // Reserved for future character analysis
 
         for c in s.chars() {
             if c.is_ascii_digit() {
                 digit_count += 1;
             } else if c.is_ascii_alphabetic() {
-                alpha_count += 1;
+                _alpha_count += 1;
             }
         }
 

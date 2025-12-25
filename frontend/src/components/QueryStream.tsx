@@ -141,7 +141,7 @@ export default function QueryStream({ className = '' }: QueryStreamProps) {
 
   const handleAddToBlocklist = async (domain: string) => {
     try {
-      await fetch(`${API_BASE}/api/blocklist/add`, {
+      await fetch(`${API_BASE}/api/blocklist`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ domain })
@@ -153,7 +153,7 @@ export default function QueryStream({ className = '' }: QueryStreamProps) {
 
   const handleAddToAllowlist = async (domain: string) => {
     try {
-      await fetch(`${API_BASE}/api/allowlist/add`, {
+      await fetch(`${API_BASE}/api/allowlist`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ domain })

@@ -133,6 +133,7 @@ pub enum BillingCycle {
 #[derive(Debug)]
 pub struct UsageTracker {
     queries_this_month: AtomicU64,
+    #[allow(dead_code)] // Reserved for monthly usage reset feature
     month_start: DateTime<Utc>,
     profiles_count: AtomicU64,
     devices_count: AtomicU64,
