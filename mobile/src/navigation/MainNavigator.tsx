@@ -5,36 +5,14 @@
 
 import React from 'react';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
-import { View, Text, StyleSheet } from 'react-native';
+import { Text, StyleSheet } from 'react-native';
 
 // Screens
 import HomeScreen from '../screens/dashboard/HomeScreen';
 import SettingsScreen from '../screens/settings/SettingsScreen';
-
-// Placeholder screens (to be implemented)
-const ProtectionScreen = () => (
-  <View style={styles.placeholder}>
-    <Text style={styles.placeholderIcon}>🔒</Text>
-    <Text style={styles.placeholderText}>Protection</Text>
-    <Text style={styles.placeholderSubtext}>VPN & DNS Settings</Text>
-  </View>
-);
-
-const AnalyticsScreen = () => (
-  <View style={styles.placeholder}>
-    <Text style={styles.placeholderIcon}>📊</Text>
-    <Text style={styles.placeholderText}>Analytics</Text>
-    <Text style={styles.placeholderSubtext}>Query History & Stats</Text>
-  </View>
-);
-
-const FamilyScreen = () => (
-  <View style={styles.placeholder}>
-    <Text style={styles.placeholderIcon}>👨‍👩‍👧</Text>
-    <Text style={styles.placeholderText}>Family</Text>
-    <Text style={styles.placeholderSubtext}>Profiles & Controls</Text>
-  </View>
-);
+import ProtectionScreen from '../screens/protection/ProtectionScreen';
+import AnalyticsScreen from '../screens/analytics/AnalyticsScreen';
+import FamilyScreen from '../screens/family/FamilyScreen';
 
 const Tab = createBottomTabNavigator();
 
@@ -112,25 +90,5 @@ const styles = StyleSheet.create({
   },
   tabIconFocused: {
     opacity: 1,
-  },
-  placeholder: {
-    flex: 1,
-    backgroundColor: '#0f172a',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  placeholderIcon: {
-    fontSize: 64,
-    marginBottom: 16,
-  },
-  placeholderText: {
-    color: '#fff',
-    fontSize: 24,
-    fontWeight: '700',
-    marginBottom: 8,
-  },
-  placeholderSubtext: {
-    color: '#64748b',
-    fontSize: 16,
   },
 });
