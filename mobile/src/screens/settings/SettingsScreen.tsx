@@ -3,7 +3,7 @@
  * Account, preferences, and app settings
  */
 
-import React, { useState } from 'react';
+import React, { useState, ReactNode } from 'react';
 import {
   View,
   Text,
@@ -15,9 +15,25 @@ import {
 } from 'react-native';
 import { useAuthStore } from '../../stores/authStore';
 import { useNotificationStore } from '../../stores/notificationStore';
+import {
+  ShieldIcon,
+  BlockIcon,
+  AllowIcon,
+  FamilyIcon,
+  BellIcon,
+  AlertIcon,
+  ChartIcon,
+  DeviceIcon,
+  LinkIcon,
+  InfoIcon,
+  DocumentIcon,
+  LockIcon,
+  MessageIcon,
+  LogoutIcon,
+} from '../../components/icons';
 
 interface SettingRowProps {
-  icon: string;
+  icon: ReactNode;
   label: string;
   onPress?: () => void;
   value?: string;
@@ -35,7 +51,7 @@ function SettingRow({ icon, label, onPress, value, toggle, toggleValue, onToggle
       disabled={toggle}
     >
       <View style={styles.settingLeft}>
-        <Text style={styles.settingIcon}>{icon}</Text>
+        <View style={styles.settingIconWrap}>{icon}</View>
         <Text style={[styles.settingLabel, danger && styles.dangerText]}>{label}</Text>
       </View>
       {toggle ? (
@@ -140,15 +156,15 @@ export default function SettingsScreen() {
         <Text style={styles.sectionTitle}>Protection</Text>
         <View style={styles.sectionContent}>
           <SettingRow
-            icon="🛡️"
+            icon={<ShieldIcon size={20} color="#22c55e" />}
             label="Auto-block Threats"
             toggle
             toggleValue={autoBlockThreats}
             onToggle={setAutoBlockThreats}
           />
-          <SettingRow icon="🚫" label="Blocked Domains" value="130" />
-          <SettingRow icon="✅" label="Allowed Domains" value="5" />
-          <SettingRow icon="👨‍👩‍👧" label="Family Profiles" />
+          <SettingRow icon={<BlockIcon size={20} color="#ef4444" />} label="Blocked Domains" value="130" />
+          <SettingRow icon={<AllowIcon size={20} color="#22c55e" />} label="Allowed Domains" value="5" />
+          <SettingRow icon={<FamilyIcon size={20} color="#f59e0b" />} label="Family Profiles" />
         </View>
       </View>
 
@@ -157,21 +173,21 @@ export default function SettingsScreen() {
         <Text style={styles.sectionTitle}>Notifications</Text>
         <View style={styles.sectionContent}>
           <SettingRow
-            icon="🔔"
+            icon={<BellIcon size={20} color="#3b82f6" />}
             label="Push Notifications"
             toggle
             toggleValue={preferences.enabled}
             onToggle={handleNotificationToggle}
           />
           <SettingRow
-            icon="⚠️"
+            icon={<AlertIcon size={20} color="#f59e0b" />}
             label="Threat Alerts"
             toggle
             toggleValue={preferences.threatAlerts}
             onToggle={handleThreatAlertsToggle}
           />
           <SettingRow
-            icon="📊"
+            icon={<ChartIcon size={20} color="#8b5cf6" />}
             label="Weekly Reports"
             toggle
             toggleValue={preferences.weeklyReports}
@@ -185,11 +201,11 @@ export default function SettingsScreen() {
         <Text style={styles.sectionTitle}>Device</Text>
         <View style={styles.sectionContent}>
           <SettingRow
-            icon="📱"
+            icon={<DeviceIcon size={20} color="#3b82f6" />}
             label="Device Name"
             value={device?.device_name || 'Not registered'}
           />
-          <SettingRow icon="🔗" label="Manage Devices" />
+          <SettingRow icon={<LinkIcon size={20} color="#3b82f6" />} label="Manage Devices" />
         </View>
       </View>
 
@@ -197,10 +213,10 @@ export default function SettingsScreen() {
       <View style={styles.section}>
         <Text style={styles.sectionTitle}>About</Text>
         <View style={styles.sectionContent}>
-          <SettingRow icon="ℹ️" label="Version" value="1.0.0" />
-          <SettingRow icon="📜" label="Terms of Service" />
-          <SettingRow icon="🔒" label="Privacy Policy" />
-          <SettingRow icon="💬" label="Send Feedback" />
+          <SettingRow icon={<InfoIcon size={20} color="#3b82f6" />} label="Version" value="1.0.0" />
+          <SettingRow icon={<DocumentIcon size={20} color="#64748b" />} label="Terms of Service" />
+          <SettingRow icon={<LockIcon size={20} color="#22c55e" />} label="Privacy Policy" />
+          <SettingRow icon={<MessageIcon size={20} color="#22c55e" />} label="Send Feedback" />
         </View>
       </View>
 
@@ -208,7 +224,7 @@ export default function SettingsScreen() {
       <View style={styles.section}>
         <View style={styles.sectionContent}>
           <SettingRow
-            icon="🚪"
+            icon={<LogoutIcon size={20} color="#ef4444" />}
             label="Log Out"
             onPress={handleLogout}
             danger
@@ -312,8 +328,11 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: 12,
   },
-  settingIcon: {
-    fontSize: 20,
+  settingIconWrap: {
+    width: 28,
+    height: 28,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   settingLabel: {
     color: '#fff',

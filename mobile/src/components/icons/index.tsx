@@ -1422,6 +1422,288 @@ const styles = StyleSheet.create({
 // EXPORT ALL
 // ============================================================================
 
+/**
+ * Chart/Stats Icon
+ */
+export const ChartIcon = ({
+  size = 24,
+  color = '#3b82f6',
+}: IconProps) => {
+  const scale = size / 24;
+
+  return (
+    <View style={[styles.iconContainer, { width: size, height: size }]}>
+      {/* Bars */}
+      <View style={{ position: 'absolute', left: 4 * scale, bottom: 4 * scale, width: 4 * scale, height: 8 * scale, backgroundColor: color + '60', borderRadius: 2 * scale }} />
+      <View style={{ position: 'absolute', left: 10 * scale, bottom: 4 * scale, width: 4 * scale, height: 14 * scale, backgroundColor: color, borderRadius: 2 * scale }} />
+      <View style={{ position: 'absolute', left: 16 * scale, bottom: 4 * scale, width: 4 * scale, height: 10 * scale, backgroundColor: color + '80', borderRadius: 2 * scale }} />
+      {/* Trend arrow */}
+      <View style={{ position: 'absolute', top: 3 * scale, right: 3 * scale, width: 5 * scale, height: 5 * scale, borderTopWidth: 2 * scale, borderRightWidth: 2 * scale, borderColor: '#22c55e', transform: [{ rotate: '-45deg' }] }} />
+    </View>
+  );
+};
+
+/**
+ * Clock/Time Icon
+ */
+export const ClockIcon = ({
+  size = 24,
+  color = '#f59e0b',
+}: IconProps) => {
+  const scale = size / 24;
+
+  return (
+    <View style={[styles.iconContainer, { width: size, height: size }]}>
+      <View style={{ width: 18 * scale, height: 18 * scale, borderRadius: 9 * scale, borderWidth: 2 * scale, borderColor: color, alignItems: 'center', justifyContent: 'center' }}>
+        <View style={{ width: 2 * scale, height: 6 * scale, backgroundColor: color, borderRadius: 1 * scale, position: 'absolute', top: 3 * scale }} />
+        <View style={{ width: 5 * scale, height: 2 * scale, backgroundColor: color, borderRadius: 1 * scale, position: 'absolute', right: 3 * scale }} />
+        <View style={{ width: 3 * scale, height: 3 * scale, borderRadius: 1.5 * scale, backgroundColor: color }} />
+      </View>
+    </View>
+  );
+};
+
+/**
+ * Moon/Bedtime Icon
+ */
+export const MoonIcon = ({
+  size = 24,
+  color = '#8b5cf6',
+}: IconProps) => {
+  const scale = size / 24;
+
+  return (
+    <View style={[styles.iconContainer, { width: size, height: size }]}>
+      <View style={{ width: 16 * scale, height: 16 * scale, borderRadius: 8 * scale, borderWidth: 2.5 * scale, borderColor: color, borderRightColor: 'transparent', borderBottomColor: 'transparent', transform: [{ rotate: '-45deg' }] }} />
+      {/* Stars */}
+      <View style={{ position: 'absolute', top: 3 * scale, right: 5 * scale, width: 3 * scale, height: 3 * scale, backgroundColor: color + '80', borderRadius: 1.5 * scale }} />
+      <View style={{ position: 'absolute', top: 8 * scale, right: 3 * scale, width: 2 * scale, height: 2 * scale, backgroundColor: color + '60', borderRadius: 1 * scale }} />
+    </View>
+  );
+};
+
+/**
+ * Pause Icon
+ */
+export const PauseIcon = ({
+  size = 24,
+  color = '#ef4444',
+}: IconProps) => {
+  const scale = size / 24;
+
+  return (
+    <View style={[styles.iconContainer, { width: size, height: size }]}>
+      <View style={{ width: 18 * scale, height: 18 * scale, borderRadius: 9 * scale, borderWidth: 2 * scale, borderColor: color, alignItems: 'center', justifyContent: 'center', flexDirection: 'row', gap: 3 * scale }}>
+        <View style={{ width: 3 * scale, height: 8 * scale, backgroundColor: color, borderRadius: 1 * scale }} />
+        <View style={{ width: 3 * scale, height: 8 * scale, backgroundColor: color, borderRadius: 1 * scale }} />
+      </View>
+    </View>
+  );
+};
+
+/**
+ * Alert/Warning Icon
+ */
+export const AlertIcon = ({
+  size = 24,
+  color = '#f59e0b',
+}: IconProps) => {
+  const scale = size / 24;
+
+  return (
+    <View style={[styles.iconContainer, { width: size, height: size }]}>
+      {/* Triangle */}
+      <View style={{ width: 0, height: 0, borderLeftWidth: 10 * scale, borderRightWidth: 10 * scale, borderBottomWidth: 16 * scale, borderLeftColor: 'transparent', borderRightColor: 'transparent', borderBottomColor: color + '25', position: 'absolute', top: 2 * scale }} />
+      <View style={{ width: 0, height: 0, borderLeftWidth: 9 * scale, borderRightWidth: 9 * scale, borderBottomWidth: 14 * scale, borderLeftColor: 'transparent', borderRightColor: 'transparent', borderBottomColor: color, position: 'absolute', top: 3 * scale }} />
+      {/* Exclamation */}
+      <View style={{ position: 'absolute', bottom: 6 * scale, width: 2 * scale, height: 6 * scale, backgroundColor: '#0f172a', borderRadius: 1 * scale }} />
+      <View style={{ position: 'absolute', bottom: 3 * scale, width: 2.5 * scale, height: 2.5 * scale, backgroundColor: '#0f172a', borderRadius: 1.25 * scale }} />
+    </View>
+  );
+};
+
+/**
+ * Device/Phone Icon
+ */
+export const DeviceIcon = ({
+  size = 24,
+  color = '#3b82f6',
+}: IconProps) => {
+  const scale = size / 24;
+
+  return (
+    <View style={[styles.iconContainer, { width: size, height: size }]}>
+      <View style={{ width: 14 * scale, height: 20 * scale, borderWidth: 2 * scale, borderColor: color, borderRadius: 4 * scale, alignItems: 'center' }}>
+        {/* Screen */}
+        <View style={{ width: 8 * scale, height: 12 * scale, backgroundColor: color + '30', borderRadius: 1 * scale, marginTop: 2 * scale }} />
+        {/* Home button */}
+        <View style={{ width: 4 * scale, height: 2 * scale, backgroundColor: color, borderRadius: 1 * scale, marginTop: 1 * scale }} />
+      </View>
+    </View>
+  );
+};
+
+/**
+ * User/Person Icon
+ */
+export const UserIcon = ({
+  size = 24,
+  color = '#64748b',
+}: IconProps) => {
+  const scale = size / 24;
+
+  return (
+    <View style={[styles.iconContainer, { width: size, height: size }]}>
+      {/* Head */}
+      <View style={{ width: 10 * scale, height: 10 * scale, borderRadius: 5 * scale, borderWidth: 2 * scale, borderColor: color, position: 'absolute', top: 2 * scale }} />
+      {/* Body */}
+      <View style={{ width: 16 * scale, height: 8 * scale, borderTopLeftRadius: 8 * scale, borderTopRightRadius: 8 * scale, borderWidth: 2 * scale, borderBottomWidth: 0, borderColor: color, position: 'absolute', bottom: 2 * scale }} />
+    </View>
+  );
+};
+
+/**
+ * Logout/Exit Icon
+ */
+export const LogoutIcon = ({
+  size = 24,
+  color = '#ef4444',
+}: IconProps) => {
+  const scale = size / 24;
+
+  return (
+    <View style={[styles.iconContainer, { width: size, height: size }]}>
+      {/* Door frame */}
+      <View style={{ width: 12 * scale, height: 16 * scale, borderWidth: 2 * scale, borderRightWidth: 0, borderColor: color, borderRadius: 2 * scale, position: 'absolute', left: 3 * scale }} />
+      {/* Arrow */}
+      <View style={{ width: 8 * scale, height: 2 * scale, backgroundColor: color, position: 'absolute', right: 3 * scale }} />
+      <View style={{ width: 0, height: 0, borderTopWidth: 4 * scale, borderBottomWidth: 4 * scale, borderLeftWidth: 5 * scale, borderTopColor: 'transparent', borderBottomColor: 'transparent', borderLeftColor: color, position: 'absolute', right: 2 * scale }} />
+    </View>
+  );
+};
+
+/**
+ * Info Icon
+ */
+export const InfoIcon = ({
+  size = 24,
+  color = '#3b82f6',
+}: IconProps) => {
+  const scale = size / 24;
+
+  return (
+    <View style={[styles.iconContainer, { width: size, height: size }]}>
+      <View style={{ width: 18 * scale, height: 18 * scale, borderRadius: 9 * scale, borderWidth: 2 * scale, borderColor: color, alignItems: 'center' }}>
+        <View style={{ width: 2.5 * scale, height: 2.5 * scale, backgroundColor: color, borderRadius: 1.25 * scale, marginTop: 3 * scale }} />
+        <View style={{ width: 2 * scale, height: 6 * scale, backgroundColor: color, borderRadius: 1 * scale, marginTop: 1 * scale }} />
+      </View>
+    </View>
+  );
+};
+
+/**
+ * Document/Terms Icon
+ */
+export const DocumentIcon = ({
+  size = 24,
+  color = '#64748b',
+}: IconProps) => {
+  const scale = size / 24;
+
+  return (
+    <View style={[styles.iconContainer, { width: size, height: size }]}>
+      <View style={{ width: 14 * scale, height: 18 * scale, borderWidth: 2 * scale, borderColor: color, borderRadius: 2 * scale, alignItems: 'center', paddingTop: 3 * scale, gap: 2 * scale }}>
+        <View style={{ width: 8 * scale, height: 2 * scale, backgroundColor: color + '60', borderRadius: 1 * scale }} />
+        <View style={{ width: 8 * scale, height: 2 * scale, backgroundColor: color + '60', borderRadius: 1 * scale }} />
+        <View style={{ width: 5 * scale, height: 2 * scale, backgroundColor: color + '60', borderRadius: 1 * scale }} />
+      </View>
+    </View>
+  );
+};
+
+/**
+ * Message/Feedback Icon
+ */
+export const MessageIcon = ({
+  size = 24,
+  color = '#22c55e',
+}: IconProps) => {
+  const scale = size / 24;
+
+  return (
+    <View style={[styles.iconContainer, { width: size, height: size }]}>
+      <View style={{ width: 18 * scale, height: 14 * scale, borderWidth: 2 * scale, borderColor: color, borderRadius: 4 * scale, position: 'absolute', top: 3 * scale }} />
+      {/* Tail */}
+      <View style={{ position: 'absolute', bottom: 2 * scale, left: 5 * scale, width: 0, height: 0, borderTopWidth: 5 * scale, borderRightWidth: 5 * scale, borderTopColor: color, borderRightColor: 'transparent' }} />
+    </View>
+  );
+};
+
+/**
+ * Link/Chain Icon
+ */
+export const LinkIcon = ({
+  size = 24,
+  color = '#3b82f6',
+}: IconProps) => {
+  const scale = size / 24;
+
+  return (
+    <View style={[styles.iconContainer, { width: size, height: size }]}>
+      <View style={{ width: 10 * scale, height: 6 * scale, borderWidth: 2 * scale, borderColor: color, borderRadius: 3 * scale, position: 'absolute', top: 6 * scale, left: 3 * scale, transform: [{ rotate: '-45deg' }] }} />
+      <View style={{ width: 10 * scale, height: 6 * scale, borderWidth: 2 * scale, borderColor: color, borderRadius: 3 * scale, position: 'absolute', bottom: 6 * scale, right: 3 * scale, transform: [{ rotate: '-45deg' }] }} />
+    </View>
+  );
+};
+
+/**
+ * Social/Share Icon
+ */
+export const SocialIcon = ({
+  size = 24,
+  color = '#8b5cf6',
+}: IconProps) => {
+  const scale = size / 24;
+
+  return (
+    <View style={[styles.iconContainer, { width: size, height: size }]}>
+      {/* Phone shape */}
+      <View style={{ width: 12 * scale, height: 18 * scale, borderWidth: 2 * scale, borderColor: color, borderRadius: 3 * scale, alignItems: 'center', justifyContent: 'center' }}>
+        <View style={{ width: 6 * scale, height: 6 * scale, borderRadius: 3 * scale, backgroundColor: color + '40' }} />
+      </View>
+      {/* Notification dot */}
+      <View style={{ position: 'absolute', top: 2 * scale, right: 4 * scale, width: 5 * scale, height: 5 * scale, borderRadius: 2.5 * scale, backgroundColor: color }} />
+    </View>
+  );
+};
+
+/**
+ * Gaming/Controller Icon
+ */
+export const GamingIcon = ({
+  size = 24,
+  color = '#22c55e',
+}: IconProps) => {
+  const scale = size / 24;
+
+  return (
+    <View style={[styles.iconContainer, { width: size, height: size }]}>
+      <View style={{ width: 20 * scale, height: 12 * scale, borderWidth: 2 * scale, borderColor: color, borderRadius: 6 * scale, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 3 * scale }}>
+        {/* D-pad */}
+        <View style={{ width: 6 * scale, height: 6 * scale, alignItems: 'center', justifyContent: 'center' }}>
+          <View style={{ width: 6 * scale, height: 2 * scale, backgroundColor: color, position: 'absolute' }} />
+          <View style={{ width: 2 * scale, height: 6 * scale, backgroundColor: color, position: 'absolute' }} />
+        </View>
+        {/* Buttons */}
+        <View style={{ flexDirection: 'row', gap: 2 * scale }}>
+          <View style={{ width: 3 * scale, height: 3 * scale, borderRadius: 1.5 * scale, backgroundColor: color }} />
+          <View style={{ width: 3 * scale, height: 3 * scale, borderRadius: 1.5 * scale, backgroundColor: color + '60' }} />
+        </View>
+      </View>
+    </View>
+  );
+};
+
 export default {
   ShieldIcon,
   ShieldLockIcon,
@@ -1445,4 +1727,18 @@ export default {
   TrackerIcon,
   TipIcon,
   BellIcon,
+  ChartIcon,
+  ClockIcon,
+  MoonIcon,
+  PauseIcon,
+  AlertIcon,
+  DeviceIcon,
+  UserIcon,
+  LogoutIcon,
+  InfoIcon,
+  DocumentIcon,
+  MessageIcon,
+  LinkIcon,
+  SocialIcon,
+  GamingIcon,
 };

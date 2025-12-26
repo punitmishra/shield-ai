@@ -3,7 +3,7 @@
  * Profile management and parental controls
  */
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, ReactNode } from 'react';
 import {
   View,
   Text,
@@ -19,6 +19,18 @@ import {
 import { useAuthStore } from '../../stores/authStore';
 import { useFamilyStore, FamilyProfile, ProfileSettings } from '../../stores/familyStore';
 import { useProtectionStore } from '../../stores/protectionStore';
+import {
+  ClockIcon,
+  MoonIcon,
+  BlockIcon,
+  SearchIcon,
+  SocialIcon,
+  GamingIcon,
+  PauseIcon,
+  ChartIcon,
+  AlertIcon,
+  UserIcon,
+} from '../../components/icons';
 
 function ProfileCard({ profile, onPress }: { profile: FamilyProfile; onPress: () => void }) {
   const typeColors = {
@@ -51,13 +63,13 @@ function ProfileCard({ profile, onPress }: { profile: FamilyProfile; onPress: ()
         <View style={styles.profileControls}>
           {profile.settings.screenTimeLimit && (
             <View style={styles.controlChip}>
-              <Text style={styles.controlIcon}>⏱️</Text>
+              <ClockIcon size={14} color="#f59e0b" />
               <Text style={styles.controlText}>{profile.settings.screenTimeLimit / 60}h limit</Text>
             </View>
           )}
           {profile.settings.bedtime && (
             <View style={styles.controlChip}>
-              <Text style={styles.controlIcon}>🌙</Text>
+              <MoonIcon size={14} color="#8b5cf6" />
               <Text style={styles.controlText}>
                 {profile.settings.bedtime.start} - {profile.settings.bedtime.end}
               </Text>
@@ -67,11 +79,11 @@ function ProfileCard({ profile, onPress }: { profile: FamilyProfile; onPress: ()
       )}
 
       <View style={styles.filterSummary}>
-        {profile.settings.adultContentFilter && <Text style={styles.filterDot}>🔞</Text>}
-        {profile.settings.gamblingFilter && <Text style={styles.filterDot}>🎰</Text>}
-        {profile.settings.socialMediaFilter && <Text style={styles.filterDot}>📱</Text>}
-        {profile.settings.gamingFilter && <Text style={styles.filterDot}>🎮</Text>}
-        {profile.settings.safeSearch && <Text style={styles.filterDot}>🔍</Text>}
+        {profile.settings.adultContentFilter && <BlockIcon size={16} color="#ef4444" />}
+        {profile.settings.gamblingFilter && <BlockIcon size={16} color="#f59e0b" />}
+        {profile.settings.socialMediaFilter && <SocialIcon size={16} color="#8b5cf6" />}
+        {profile.settings.gamingFilter && <GamingIcon size={16} color="#22c55e" />}
+        {profile.settings.safeSearch && <SearchIcon size={16} color="#3b82f6" />}
       </View>
     </TouchableOpacity>
   );
@@ -138,7 +150,9 @@ function ProfileEditor({
 
             <View style={styles.settingRow}>
               <View style={styles.settingInfo}>
-                <Text style={styles.settingIcon}>🔍</Text>
+                <View style={styles.settingIconWrap}>
+                  <SearchIcon size={20} color="#3b82f6" />
+                </View>
                 <View>
                   <Text style={styles.settingLabel}>Safe Search</Text>
                   <Text style={styles.settingDesc}>Force safe search on Google, Bing, etc.</Text>
@@ -154,7 +168,9 @@ function ProfileEditor({
 
             <View style={styles.settingRow}>
               <View style={styles.settingInfo}>
-                <Text style={styles.settingIcon}>🔞</Text>
+                <View style={styles.settingIconWrap}>
+                  <BlockIcon size={20} color="#ef4444" />
+                </View>
                 <View>
                   <Text style={styles.settingLabel}>Adult Content</Text>
                   <Text style={styles.settingDesc}>Block adult and explicit websites</Text>
@@ -170,7 +186,9 @@ function ProfileEditor({
 
             <View style={styles.settingRow}>
               <View style={styles.settingInfo}>
-                <Text style={styles.settingIcon}>🎰</Text>
+                <View style={styles.settingIconWrap}>
+                  <BlockIcon size={20} color="#f59e0b" />
+                </View>
                 <View>
                   <Text style={styles.settingLabel}>Gambling Sites</Text>
                   <Text style={styles.settingDesc}>Block betting and gambling websites</Text>
@@ -186,7 +204,9 @@ function ProfileEditor({
 
             <View style={styles.settingRow}>
               <View style={styles.settingInfo}>
-                <Text style={styles.settingIcon}>📱</Text>
+                <View style={styles.settingIconWrap}>
+                  <SocialIcon size={20} color="#8b5cf6" />
+                </View>
                 <View>
                   <Text style={styles.settingLabel}>Social Media</Text>
                   <Text style={styles.settingDesc}>Block social media platforms</Text>
@@ -202,7 +222,9 @@ function ProfileEditor({
 
             <View style={styles.settingRow}>
               <View style={styles.settingInfo}>
-                <Text style={styles.settingIcon}>🎮</Text>
+                <View style={styles.settingIconWrap}>
+                  <GamingIcon size={20} color="#22c55e" />
+                </View>
                 <View>
                   <Text style={styles.settingLabel}>Gaming Sites</Text>
                   <Text style={styles.settingDesc}>Block gaming and entertainment sites</Text>
@@ -224,7 +246,9 @@ function ProfileEditor({
 
               <TouchableOpacity style={styles.timeControl}>
                 <View style={styles.settingInfo}>
-                  <Text style={styles.settingIcon}>⏱️</Text>
+                  <View style={styles.settingIconWrap}>
+                    <ClockIcon size={20} color="#f59e0b" />
+                  </View>
                   <View>
                     <Text style={styles.settingLabel}>Daily Screen Time</Text>
                     <Text style={styles.settingDesc}>Maximum time allowed per day</Text>
@@ -240,7 +264,9 @@ function ProfileEditor({
 
               <TouchableOpacity style={styles.timeControl}>
                 <View style={styles.settingInfo}>
-                  <Text style={styles.settingIcon}>🌙</Text>
+                  <View style={styles.settingIconWrap}>
+                    <MoonIcon size={20} color="#8b5cf6" />
+                  </View>
                   <View>
                     <Text style={styles.settingLabel}>Bedtime</Text>
                     <Text style={styles.settingDesc}>Block internet during sleep hours</Text>
@@ -402,7 +428,9 @@ export default function FamilyScreen() {
         <Text style={styles.sectionTitle}>Quick Actions</Text>
 
         <TouchableOpacity style={styles.actionCard}>
-          <Text style={styles.actionIcon}>⏸️</Text>
+          <View style={styles.actionIconWrap}>
+            <PauseIcon size={24} color="#ef4444" />
+          </View>
           <View style={styles.actionContent}>
             <Text style={styles.actionTitle}>Pause Internet</Text>
             <Text style={styles.actionDesc}>Temporarily disable internet for all kids</Text>
@@ -411,7 +439,9 @@ export default function FamilyScreen() {
         </TouchableOpacity>
 
         <TouchableOpacity style={styles.actionCard}>
-          <Text style={styles.actionIcon}>📊</Text>
+          <View style={styles.actionIconWrap}>
+            <ChartIcon size={24} color="#8b5cf6" />
+          </View>
           <View style={styles.actionContent}>
             <Text style={styles.actionTitle}>Activity Report</Text>
             <Text style={styles.actionDesc}>View weekly usage summary</Text>
@@ -420,7 +450,9 @@ export default function FamilyScreen() {
         </TouchableOpacity>
 
         <TouchableOpacity style={styles.actionCard}>
-          <Text style={styles.actionIcon}>🚨</Text>
+          <View style={styles.actionIconWrap}>
+            <AlertIcon size={24} color="#f59e0b" />
+          </View>
           <View style={styles.actionContent}>
             <Text style={styles.actionTitle}>Alert Settings</Text>
             <Text style={styles.actionDesc}>Configure notifications for blocked content</Text>
@@ -612,20 +644,14 @@ const styles = StyleSheet.create({
     borderRadius: 16,
     gap: 4,
   },
-  controlIcon: {
-    fontSize: 12,
-  },
   controlText: {
     color: '#94a3b8',
     fontSize: 12,
   },
   filterSummary: {
     flexDirection: 'row',
-    gap: 6,
+    gap: 8,
     marginTop: 12,
-  },
-  filterDot: {
-    fontSize: 14,
   },
   actionCard: {
     backgroundColor: 'rgba(255,255,255,0.05)',
@@ -635,8 +661,11 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginBottom: 8,
   },
-  actionIcon: {
-    fontSize: 24,
+  actionIconWrap: {
+    width: 32,
+    height: 32,
+    alignItems: 'center',
+    justifyContent: 'center',
     marginRight: 12,
   },
   actionContent: {
@@ -759,8 +788,11 @@ const styles = StyleSheet.create({
     flex: 1,
     gap: 12,
   },
-  settingIcon: {
-    fontSize: 24,
+  settingIconWrap: {
+    width: 28,
+    height: 28,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   settingLabel: {
     color: '#fff',
