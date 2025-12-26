@@ -5,6 +5,7 @@
 
 import { create } from 'zustand';
 import { api } from '../api/client';
+import { VPN, VPNStatus, VPNStats } from '../../modules/vpn-module/src';
 
 export interface Stats {
   total_queries: number;
@@ -34,6 +35,8 @@ export interface ListStats {
 interface ProtectionState {
   // State
   isVPNConnected: boolean;
+  vpnStatus: VPNStatus;
+  vpnStats: VPNStats | null;
   isDNSEnabled: boolean;
   isLoading: boolean;
   stats: Stats | null;
@@ -43,6 +46,8 @@ interface ProtectionState {
 
   // Actions
   setVPNConnected: (connected: boolean) => void;
+  setVPNStatus: (status: VPNStatus) => void;
+  setVPNStats: (stats: VPNStats) => void;
   setDNSEnabled: (enabled: boolean) => void;
   setLoading: (loading: boolean) => void;
   setError: (error: string | null) => void;
@@ -53,7 +58,8 @@ interface ProtectionState {
   fetchListStats: () => Promise<void>;
   refreshAll: () => Promise<void>;
 
-  // VPN operations (stubs for native module integration)
+  // VPN operations
+  initializeVPN: () => Promise<void>;
   connectVPN: () => Promise<void>;
   disconnectVPN: () => Promise<void>;
   toggleVPN: () => Promise<void>;
@@ -62,6 +68,8 @@ interface ProtectionState {
 export const useProtectionStore = create<ProtectionState>((set, get) => ({
   // Initial state
   isVPNConnected: false,
+  vpnStatus: 'disconnected',
+  vpnStats: null,
   isDNSEnabled: false,
   isLoading: false,
   stats: null,
@@ -71,6 +79,12 @@ export const useProtectionStore = create<ProtectionState>((set, get) => ({
 
   // State setters
   setVPNConnected: (isVPNConnected) => set({ isVPNConnected }),
+  setVPNStatus: (vpnStatus) => set({
+    vpnStatus,
+    isVPNConnected: vpnStatus === 'connected',
+    isDNSEnabled: vpnStatus === 'connected',
+  }),
+  setVPNStats: (vpnStats) => set({ vpnStats }),
   setDNSEnabled: (isDNSEnabled) => set({ isDNSEnabled }),
   setLoading: (isLoading) => set({ isLoading }),
   setError: (error) => set({ error }),
@@ -125,15 +139,72 @@ export const useProtectionStore = create<ProtectionState>((set, get) => ({
     }
   },
 
-  // VPN operations (to be implemented with native modules)
+  // Initialize VPN module and set up listeners
+  initializeVPN: async () => {
+    try {
+      const isSupported = await VPN.isSupported();
+      if (!isSupported) {
+        console.log('VPN not supported on this device');
+        return;
+      }
+
+      // Get initial status
+      const status = await VPN.getStatus();
+      set({
+        vpnStatus: status,
+        isVPNConnected: status === 'connected',
+        isDNSEnabled: status === 'connected',
+      });
+
+      // Set up status listener
+      VPN.addStatusListener((newStatus) => {
+        set({
+          vpnStatus: newStatus,
+          isVPNConnected: newStatus === 'connected',
+          isDNSEnabled: newStatus === 'connected',
+        });
+      });
+
+      // Set up stats listener
+      VPN.addStatsListener((stats) => {
+        set({ vpnStats: stats });
+      });
+    } catch (error) {
+      console.error('Failed to initialize VPN:', error);
+    }
+  },
+
+  // VPN operations using native module
   connectVPN: async () => {
     set({ isLoading: true, error: null });
     try {
-      // TODO: Implement native VPN connection
-      // await NativeModules.VPNModule.connect();
-      set({ isVPNConnected: true, isDNSEnabled: true });
+      // Check if VPN is supported
+      const isSupported = await VPN.isSupported();
+      if (!isSupported) {
+        throw new Error('VPN not supported on this device');
+      }
+
+      // Request permission if needed
+      const hasPermission = await VPN.hasPermission();
+      if (!hasPermission) {
+        const granted = await VPN.requestPermission();
+        if (!granted) {
+          throw new Error('VPN permission denied');
+        }
+      }
+
+      // Configure VPN with Shield AI DNS servers
+      await VPN.configure({
+        serverAddress: 'shield-ai-dns.example.com', // Replace with actual server
+        dnsServers: ['1.1.1.1', '8.8.8.8'], // Cloudflare + Google as fallback
+        mtu: 1400,
+        splitTunnel: true, // Only route DNS traffic
+      });
+
+      // Connect
+      await VPN.connect();
     } catch (error: any) {
-      set({ error: 'Failed to connect VPN' });
+      set({ error: error.message || 'Failed to connect VPN' });
       throw error;
     } finally {
       set({ isLoading: false });
@@ -143,11 +214,9 @@ export const useProtectionStore = create<ProtectionState>((set, get) => ({
   disconnectVPN: async () => {
     set({ isLoading: true, error: null });
     try {
-      // TODO: Implement native VPN disconnection
-      // await NativeModules.VPNModule.disconnect();
-      set({ isVPNConnected: false });
+      await VPN.disconnect();
     } catch (error: any) {
-      set({ error: 'Failed to disconnect VPN' });
+      set({ error: error.message || 'Failed to disconnect VPN' });
       throw error;
     } finally {
       set({ isLoading: false });
@@ -155,11 +224,12 @@ export const useProtectionStore = create<ProtectionState>((set, get) => ({
   },
 
   toggleVPN: async () => {
-    const { isVPNConnected } = get();
-    if (isVPNConnected) {
+    const { vpnStatus } = get();
+    if (vpnStatus === 'connected') {
       await get().disconnectVPN();
-    } else {
+    } else if (vpnStatus === 'disconnected') {
       await get().connectVPN();
     }
+    // If connecting/disconnecting, do nothing (already in transition)
   },
 }));

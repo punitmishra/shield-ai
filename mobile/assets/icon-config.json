@@ -1,0 +1,58 @@
+{
+  "description": "Shield AI App Icon Configuration",
+  "brand": {
+    "primaryColor": "#3b82f6",
+    "backgroundColor": "#0f172a",
+    "accentColor": "#22c55e"
+  },
+  "design": {
+    "style": "Shield with AI neural network pattern",
+    "elements": [
+      "Shield shape (security/protection)",
+      "Neural network nodes (AI/ML)",
+      "Gradient from blue (#3b82f6) to green (#22c55e)",
+      "Dark background (#0f172a)"
+    ],
+    "guidelines": [
+      "Keep design simple and recognizable at small sizes",
+      "No text in icon",
+      "Safe zone: 66% of icon size for Android adaptive icons",
+      "Avoid fine details that get lost at small sizes"
+    ]
+  },
+  "sizes": {
+    "ios": {
+      "appIcon": "1024x1024 (App Store)",
+      "spotlight": "40x40 @1x, @2x, @3x",
+      "settings": "29x29 @1x, @2x, @3x",
+      "notification": "20x20 @1x, @2x, @3x",
+      "iphone": "60x60 @2x, @3x",
+      "ipad": "76x76 @1x, @2x, 83.5x83.5 @2x"
+    },
+    "android": {
+      "playStore": "512x512",
+      "launcher": {
+        "mdpi": "48x48",
+        "hdpi": "72x72",
+        "xhdpi": "96x96",
+        "xxhdpi": "144x144",
+        "xxxhdpi": "192x192"
+      },
+      "adaptiveForeground": {
+        "mdpi": "108x108",
+        "hdpi": "162x162",
+        "xhdpi": "216x216",
+        "xxhdpi": "324x324",
+        "xxxhdpi": "432x432"
+      }
+    }
+  },
+  "files": {
+    "source": "icon-source.png (1024x1024 or larger)",
+    "expo": {
+      "icon": "assets/icon.png (1024x1024)",
+      "adaptiveIcon": "assets/adaptive-icon.png (1024x1024)",
+      "splash": "assets/splash-icon.png"
+    }
+  }
+}

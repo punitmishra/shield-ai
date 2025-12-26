@@ -1,0 +1,49 @@
+buildscript {
+    ext.kotlin_version = '1.9.10'
+    repositories {
+        google()
+        mavenCentral()
+    }
+    dependencies {
+        classpath "org.jetbrains.kotlin:kotlin-gradle-plugin:$kotlin_version"
+    }
+}
+
+apply plugin: 'com.android.library'
+apply plugin: 'kotlin-android'
+
+android {
+    namespace "com.shieldai.vpn"
+    compileSdkVersion 34
+
+    defaultConfig {
+        minSdkVersion 24
+        targetSdkVersion 34
+    }
+
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_17
+        targetCompatibility JavaVersion.VERSION_17
+    }
+
+    kotlinOptions {
+        jvmTarget = '17'
+    }
+
+    sourceSets {
+        main {
+            java.srcDirs = ['src/main/java']
+        }
+    }
+}
+
+repositories {
+    google()
+    mavenCentral()
+}
+
+dependencies {
+    implementation "org.jetbrains.kotlin:kotlin-stdlib:$kotlin_version"
+    implementation "com.facebook.react:react-native:+"
+    implementation "androidx.core:core-ktx:1.12.0"
+}
