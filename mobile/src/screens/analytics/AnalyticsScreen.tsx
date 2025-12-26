@@ -14,6 +14,7 @@ import {
   RefreshControl,
   ActivityIndicator,
 } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useAnalyticsStore, QueryLogEntry } from '../../stores/analyticsStore';
 import { AnalyticsScreenSkeleton } from '../../components/Skeleton';
 
@@ -139,6 +140,7 @@ function formatNumber(num: number): string {
 }
 
 export default function AnalyticsScreen() {
+  const insets = useSafeAreaInsets();
   const [timeRange, setTimeRange] = useState<TimeRange>('24h');
   const [filter, setFilter] = useState<'all' | 'blocked' | 'allowed'>('all');
   const [initialLoad, setInitialLoad] = useState(true);
@@ -164,7 +166,7 @@ export default function AnalyticsScreen() {
   // Show skeleton during initial load
   if (initialLoad) {
     return (
-      <View style={styles.container}>
+      <View style={[styles.container, { paddingTop: insets.top }]}>
         <AnalyticsScreenSkeleton />
       </View>
     );
@@ -195,7 +197,7 @@ export default function AnalyticsScreen() {
   return (
     <ScrollView
       style={styles.container}
-      contentContainerStyle={styles.content}
+      contentContainerStyle={[styles.content, { paddingTop: insets.top + 16 }]}
       refreshControl={
         <RefreshControl
           refreshing={isLoading}

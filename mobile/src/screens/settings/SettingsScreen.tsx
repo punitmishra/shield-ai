@@ -13,6 +13,7 @@ import {
   Switch,
   Alert,
 } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useAuthStore } from '../../stores/authStore';
 import { useNotificationStore } from '../../stores/notificationStore';
 import {
@@ -72,6 +73,7 @@ function SettingRow({ icon, label, onPress, value, toggle, toggleValue, onToggle
 }
 
 export default function SettingsScreen() {
+  const insets = useSafeAreaInsets();
   const { user, logout, device } = useAuthStore();
   const { preferences, updatePreferences, setEnabled, clearToken } = useNotificationStore();
   const [autoBlockThreats, setAutoBlockThreats] = useState(true);
@@ -122,7 +124,10 @@ export default function SettingsScreen() {
   };
 
   return (
-    <ScrollView style={styles.container}>
+    <ScrollView
+      style={styles.container}
+      contentContainerStyle={{ paddingTop: insets.top + 16 }}
+    >
       {/* Account Section */}
       <View style={styles.section}>
         <Text style={styles.sectionTitle}>Account</Text>

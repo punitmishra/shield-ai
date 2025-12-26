@@ -16,6 +16,7 @@ import {
   RefreshControl,
   ActivityIndicator,
 } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useAuthStore } from '../../stores/authStore';
 import { useFamilyStore, FamilyProfile, ProfileSettings } from '../../stores/familyStore';
 import { useProtectionStore } from '../../stores/protectionStore';
@@ -291,6 +292,7 @@ function ProfileEditor({
 }
 
 export default function FamilyScreen() {
+  const insets = useSafeAreaInsets();
   const { user } = useAuthStore();
   const { profiles, profileStats, isLoading, refreshAll, createProfile, deleteProfile } = useFamilyStore();
   const { stats } = useProtectionStore();
@@ -312,7 +314,7 @@ export default function FamilyScreen() {
   // Show skeleton during initial load
   if (initialLoad) {
     return (
-      <View style={styles.container}>
+      <View style={[styles.container, { paddingTop: insets.top }]}>
         <FamilyScreenSkeleton />
       </View>
     );
@@ -390,7 +392,7 @@ export default function FamilyScreen() {
   return (
     <ScrollView
       style={styles.container}
-      contentContainerStyle={styles.content}
+      contentContainerStyle={[styles.content, { paddingTop: insets.top + 16 }]}
       refreshControl={
         <RefreshControl
           refreshing={isLoading}
