@@ -6,20 +6,20 @@
 //! - Threat feed integration
 //! - Behavioral anomaly detection
 
-pub mod domain_intel;
-pub mod tunneling;
-pub mod threat_feeds;
 pub mod anomaly;
+pub mod domain_intel;
+pub mod threat_feeds;
+pub mod tunneling;
 
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 use std::sync::Arc;
 use tracing::info;
 
-pub use domain_intel::DomainIntelligence;
-pub use tunneling::TunnelingDetector;
-pub use threat_feeds::ThreatFeedManager;
 pub use anomaly::AnomalyDetector;
+pub use domain_intel::DomainIntelligence;
+pub use threat_feeds::ThreatFeedManager;
+pub use tunneling::TunnelingDetector;
 
 /// Comprehensive threat analysis result
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -28,7 +28,7 @@ pub struct ThreatAnalysis {
     pub timestamp: DateTime<Utc>,
 
     // Overall risk assessment
-    pub risk_score: f32,           // 0.0 - 1.0
+    pub risk_score: f32, // 0.0 - 1.0
     pub risk_level: RiskLevel,
     pub risk_factors: Vec<RiskFactor>,
 
@@ -162,7 +162,10 @@ impl ThreatIntelEngine {
                 risk_factors.push(RiskFactor {
                     factor: "newly_registered".to_string(),
                     severity: 0.4,
-                    description: format!("Domain registered {} days ago", intel.age_days.unwrap_or(0)),
+                    description: format!(
+                        "Domain registered {} days ago",
+                        intel.age_days.unwrap_or(0)
+                    ),
                 });
                 total_risk += 0.3;
             }

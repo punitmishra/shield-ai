@@ -111,16 +111,20 @@ impl Plugin {
         let mut linker = Linker::new(&self.engine);
 
         // Add host functions that plugins can call
-        linker.func_wrap("env", "log_message", |mut caller: Caller<'_, PluginState>, ptr: i32, len: i32| {
-            if let Some(memory) = caller.get_export("memory").and_then(|e| e.into_memory()) {
-                let data = memory.data(&caller);
-                if let Some(slice) = data.get(ptr as usize..(ptr + len) as usize) {
-                    if let Ok(msg) = std::str::from_utf8(slice) {
-                        debug!("Plugin log: {}", msg);
+        linker.func_wrap(
+            "env",
+            "log_message",
+            |mut caller: Caller<'_, PluginState>, ptr: i32, len: i32| {
+                if let Some(memory) = caller.get_export("memory").and_then(|e| e.into_memory()) {
+                    let data = memory.data(&caller);
+                    if let Some(slice) = data.get(ptr as usize..(ptr + len) as usize) {
+                        if let Ok(msg) = std::str::from_utf8(slice) {
+                            debug!("Plugin log: {}", msg);
+                        }
                     }
                 }
-            }
-        })?;
+            },
+        )?;
 
         linker.func_wrap("env", "get_time", || -> i64 {
             std::time::SystemTime::now()
@@ -133,7 +137,11 @@ impl Plugin {
         self.instance = Some(instance);
 
         // Call plugin's init function if it exists
-        if let Some(init) = self.instance.as_ref().and_then(|i| i.get_func(&mut self.store, "init")) {
+        if let Some(init) = self
+            .instance
+            .as_ref()
+            .and_then(|i| i.get_func(&mut self.store, "init"))
+        {
             let init = init.typed::<(), ()>(&self.store)?;
             init.call(&mut self.store, ())?;
         }
@@ -143,7 +151,10 @@ impl Plugin {
 
     /// Check if a domain should be blocked
     pub fn check_domain(&mut self, domain: &str) -> Result<PluginDomainResult> {
-        let instance = self.instance.as_ref().ok_or_else(|| anyhow!("Plugin not initialized"))?;
+        let instance = self
+            .instance
+            .as_ref()
+            .ok_or_else(|| anyhow!("Plugin not initialized"))?;
 
         // Get the check_domain function
         let check_fn = instance
@@ -242,7 +253,11 @@ impl PluginManager {
     pub fn set_enabled(&self, id: &Uuid, enabled: bool) -> bool {
         if let Some(mut plugin) = self.plugins.get_mut(id) {
             plugin.metadata.enabled = enabled;
-            info!("Plugin {} {}", id, if enabled { "enabled" } else { "disabled" });
+            info!(
+                "Plugin {} {}",
+                id,
+                if enabled { "enabled" } else { "disabled" }
+            );
             true
         } else {
             false
@@ -254,7 +269,12 @@ impl PluginManager {
         let mut results = Vec::new();
 
         for mut entry in self.plugins.iter_mut() {
-            if entry.metadata.enabled && entry.metadata.capabilities.contains(&PluginCapability::DomainFilter) {
+            if entry.metadata.enabled
+                && entry
+                    .metadata
+                    .capabilities
+                    .contains(&PluginCapability::DomainFilter)
+            {
                 match entry.check_domain(domain) {
                     Ok(result) => results.push((*entry.key(), result)),
                     Err(e) => error!("Plugin {} error: {}", entry.key(), e),
@@ -267,7 +287,9 @@ impl PluginManager {
 
     /// Should domain be blocked based on any plugin?
     pub fn should_block(&self, domain: &str) -> bool {
-        self.check_domain(domain).iter().any(|(_, r)| r.should_block)
+        self.check_domain(domain)
+            .iter()
+            .any(|(_, r)| r.should_block)
     }
 
     /// List all plugins
@@ -285,7 +307,11 @@ impl PluginManager {
         PluginManagerStats {
             total_plugins: self.plugins.len(),
             enabled_plugins: self.plugins.iter().filter(|p| p.metadata.enabled).count(),
-            total_executions: self.plugins.iter().map(|p| p.store.data().execution_count).sum(),
+            total_executions: self
+                .plugins
+                .iter()
+                .map(|p| p.store.data().execution_count)
+                .sum(),
         }
     }
 }

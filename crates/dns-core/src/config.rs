@@ -1,8 +1,8 @@
 //! DNS Configuration management
 
+use anyhow::{anyhow, Result};
 use serde::{Deserialize, Serialize};
 use std::path::PathBuf;
-use anyhow::{Result, anyhow};
 
 /// Main DNS configuration
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -52,10 +52,7 @@ impl Default for ConfigManager {
     fn default() -> Self {
         Self {
             dns: DnsSettings {
-                upstream_servers: vec![
-                    "1.1.1.1:53".to_string(),
-                    "8.8.8.8:53".to_string(),
-                ],
+                upstream_servers: vec!["1.1.1.1:53".to_string(), "8.8.8.8:53".to_string()],
                 bind_address: "0.0.0.0".to_string(),
                 bind_port: 53,
                 enable_dnssec: true,
@@ -92,8 +89,8 @@ impl ConfigManager {
 
     pub fn from_file(path: &PathBuf) -> Result<Self> {
         let content = std::fs::read_to_string(path)?;
-        let config: ConfigManager = serde_json::from_str(&content)
-            .map_err(|e| anyhow!("Failed to parse config: {}", e))?;
+        let config: ConfigManager =
+            serde_json::from_str(&content).map_err(|e| anyhow!("Failed to parse config: {}", e))?;
         Ok(config)
     }
 

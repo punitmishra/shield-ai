@@ -25,7 +25,14 @@ pub enum ProtectionLevel {
 impl ProtectionLevel {
     pub fn default_block_categories(&self) -> Vec<&'static str> {
         match self {
-            ProtectionLevel::Kid => vec!["adult", "gambling", "violence", "malware", "phishing", "social-media"],
+            ProtectionLevel::Kid => vec![
+                "adult",
+                "gambling",
+                "violence",
+                "malware",
+                "phishing",
+                "social-media",
+            ],
             ProtectionLevel::Teen => vec!["adult", "gambling", "malware", "phishing"],
             ProtectionLevel::Adult => vec!["malware", "phishing"],
             ProtectionLevel::Custom => vec![],
@@ -135,12 +142,20 @@ impl Profile {
         }
 
         // Allowlist has highest priority
-        if self.custom_allowlists.iter().any(|p| domain == p || domain.ends_with(p)) {
+        if self
+            .custom_allowlists
+            .iter()
+            .any(|p| domain == p || domain.ends_with(p))
+        {
             return true;
         }
 
         // Check blocklist
-        if self.custom_blocklists.iter().any(|p| domain == p || domain.ends_with(p)) {
+        if self
+            .custom_blocklists
+            .iter()
+            .any(|p| domain == p || domain.ends_with(p))
+        {
             return false;
         }
 

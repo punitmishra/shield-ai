@@ -81,16 +81,17 @@ impl AnomalyDetector {
     pub fn record_query(&self, client_id: &str, domain: &str, blocked: bool) {
         let now = Utc::now();
 
-        let mut entry = self.client_history.entry(client_id.to_string()).or_insert_with(|| {
-            ClientHistory {
+        let mut entry = self
+            .client_history
+            .entry(client_id.to_string())
+            .or_insert_with(|| ClientHistory {
                 recent_queries: VecDeque::with_capacity(self.config.history_size),
                 total_queries: 0,
                 blocked_queries: 0,
                 unique_domains: std::collections::HashSet::new(),
                 first_seen: now,
                 last_seen: now,
-            }
-        });
+            });
 
         // Update history
         entry.recent_queries.push_back(QueryRecord {
@@ -203,7 +204,11 @@ impl AnomalyDetector {
         }
 
         if !anomalies.is_empty() {
-            debug!("Detected {} anomalies for client {}", anomalies.len(), client_id);
+            debug!(
+                "Detected {} anomalies for client {}",
+                anomalies.len(),
+                client_id
+            );
         }
 
         anomalies
@@ -220,7 +225,10 @@ impl AnomalyDetector {
         }
     }
 
-    fn count_domain_frequency(&self, queries: &[&QueryRecord]) -> std::collections::HashMap<String, usize> {
+    fn count_domain_frequency(
+        &self,
+        queries: &[&QueryRecord],
+    ) -> std::collections::HashMap<String, usize> {
         let mut counts = std::collections::HashMap::new();
         for q in queries {
             *counts.entry(q.domain.clone()).or_insert(0) += 1;

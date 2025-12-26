@@ -89,7 +89,9 @@ impl FilterEngine {
     pub fn remove_from_blocklist(&self, domain: &str) {
         let domain_lower = domain.to_lowercase();
         if domain_lower.starts_with("*.") {
-            self.wildcard_blocklist.write().retain(|d| d != &domain_lower);
+            self.wildcard_blocklist
+                .write()
+                .retain(|d| d != &domain_lower);
         } else {
             self.blocklist.write().remove(&domain_lower);
         }

@@ -18,22 +18,66 @@ use tracing::info;
 // Pre-trained weights for character embeddings (simplified neural approach)
 // These approximate a character-level LSTM's learned representations
 const CHAR_WEIGHTS: [(char, f32); 36] = [
-    ('a', 0.1), ('b', 0.15), ('c', 0.12), ('d', 0.14), ('e', 0.08),
-    ('f', 0.16), ('g', 0.17), ('h', 0.11), ('i', 0.09), ('j', 0.22),
-    ('k', 0.21), ('l', 0.10), ('m', 0.13), ('n', 0.11), ('o', 0.07),
-    ('p', 0.18), ('q', 0.35), ('r', 0.12), ('s', 0.10), ('t', 0.09),
-    ('u', 0.14), ('v', 0.19), ('w', 0.18), ('x', 0.28), ('y', 0.16),
-    ('z', 0.30), ('0', 0.25), ('1', 0.24), ('2', 0.23), ('3', 0.22),
-    ('4', 0.21), ('5', 0.20), ('6', 0.21), ('7', 0.22), ('8', 0.23),
+    ('a', 0.1),
+    ('b', 0.15),
+    ('c', 0.12),
+    ('d', 0.14),
+    ('e', 0.08),
+    ('f', 0.16),
+    ('g', 0.17),
+    ('h', 0.11),
+    ('i', 0.09),
+    ('j', 0.22),
+    ('k', 0.21),
+    ('l', 0.10),
+    ('m', 0.13),
+    ('n', 0.11),
+    ('o', 0.07),
+    ('p', 0.18),
+    ('q', 0.35),
+    ('r', 0.12),
+    ('s', 0.10),
+    ('t', 0.09),
+    ('u', 0.14),
+    ('v', 0.19),
+    ('w', 0.18),
+    ('x', 0.28),
+    ('y', 0.16),
+    ('z', 0.30),
+    ('0', 0.25),
+    ('1', 0.24),
+    ('2', 0.23),
+    ('3', 0.22),
+    ('4', 0.21),
+    ('5', 0.20),
+    ('6', 0.21),
+    ('7', 0.22),
+    ('8', 0.23),
     ('9', 0.24),
 ];
 
 // Bigram weights for DGA detection (learned from malware samples)
 const DGA_BIGRAM_WEIGHTS: [(&str, f32); 20] = [
-    ("qx", 0.9), ("xz", 0.85), ("zq", 0.88), ("jq", 0.87), ("qj", 0.86),
-    ("vx", 0.82), ("xv", 0.81), ("wq", 0.80), ("qw", 0.79), ("zx", 0.84),
-    ("kx", 0.78), ("xk", 0.77), ("jx", 0.83), ("xj", 0.82), ("vz", 0.76),
-    ("zv", 0.75), ("bx", 0.74), ("xb", 0.73), ("qz", 0.89), ("zj", 0.80),
+    ("qx", 0.9),
+    ("xz", 0.85),
+    ("zq", 0.88),
+    ("jq", 0.87),
+    ("qj", 0.86),
+    ("vx", 0.82),
+    ("xv", 0.81),
+    ("wq", 0.80),
+    ("qw", 0.79),
+    ("zx", 0.84),
+    ("kx", 0.78),
+    ("xk", 0.77),
+    ("jx", 0.83),
+    ("xj", 0.82),
+    ("vz", 0.76),
+    ("zv", 0.75),
+    ("bx", 0.74),
+    ("xb", 0.73),
+    ("qz", 0.89),
+    ("zj", 0.80),
 ];
 
 /// Risk level classification
@@ -204,8 +248,11 @@ impl MLEngine {
             .map(|(s, w)| (s.to_string(), w))
             .collect();
 
-        info!("ML Engine initialized - char embeddings: {}, bigram weights: {}",
-              char_weights.len(), bigram_weights.len());
+        info!(
+            "ML Engine initialized - char embeddings: {}, bigram weights: {}",
+            char_weights.len(),
+            bigram_weights.len()
+        );
 
         Self {
             char_weights,
@@ -404,9 +451,15 @@ impl MLEngine {
 
         // Calculate character ratios
         let vowels = ['a', 'e', 'i', 'o', 'u'];
-        let vowel_count = chars.iter().filter(|c| vowels.contains(&c.to_ascii_lowercase())).count();
+        let vowel_count = chars
+            .iter()
+            .filter(|c| vowels.contains(&c.to_ascii_lowercase()))
+            .count();
         let digit_count = chars.iter().filter(|c| c.is_numeric()).count();
-        let consonant_count = chars.iter().filter(|c| c.is_alphabetic() && !vowels.contains(&c.to_ascii_lowercase())).count();
+        let consonant_count = chars
+            .iter()
+            .filter(|c| c.is_alphabetic() && !vowels.contains(&c.to_ascii_lowercase()))
+            .count();
 
         let vowel_consonant_ratio = if consonant_count > 0 {
             vowel_count as f32 / consonant_count as f32
@@ -503,7 +556,11 @@ impl MLEngine {
         let mut prev_weight = 0.0f32;
 
         for c in chars {
-            let weight = self.char_weights.get(&c.to_ascii_lowercase()).copied().unwrap_or(0.15);
+            let weight = self
+                .char_weights
+                .get(&c.to_ascii_lowercase())
+                .copied()
+                .unwrap_or(0.15);
 
             // Simulate LSTM-like sequential processing
             score += weight * (1.0 + prev_weight * 0.3);
@@ -552,7 +609,9 @@ impl MLEngine {
 
     /// Calculate TLD risk score
     fn calculate_tld_risk(&self, domain: &str) -> f32 {
-        let high_risk_tlds = [".tk", ".ml", ".ga", ".cf", ".gq", ".xyz", ".top", ".loan", ".work", ".click"];
+        let high_risk_tlds = [
+            ".tk", ".ml", ".ga", ".cf", ".gq", ".xyz", ".top", ".loan", ".work", ".click",
+        ];
         let medium_risk_tlds = [".info", ".biz", ".online", ".site", ".website", ".space"];
 
         for tld in &high_risk_tlds {
@@ -601,7 +660,8 @@ impl MLEngine {
         use std::sync::atomic::Ordering;
 
         self.total_analyzed.fetch_add(1, Ordering::Relaxed);
-        self.total_inference_time_us.fetch_add(result.inference_time_us, Ordering::Relaxed);
+        self.total_inference_time_us
+            .fetch_add(result.inference_time_us, Ordering::Relaxed);
 
         if result.dga_analysis.is_dga {
             self.dga_detected.fetch_add(1, Ordering::Relaxed);
@@ -614,7 +674,10 @@ impl MLEngine {
             _ => {}
         }
 
-        if matches!(result.recommendation, Recommendation::Block | Recommendation::Quarantine) {
+        if matches!(
+            result.recommendation,
+            Recommendation::Block | Recommendation::Quarantine
+        ) {
             self.blocked_count.fetch_add(1, Ordering::Relaxed);
         }
 
@@ -657,7 +720,8 @@ impl MLEngine {
         }
 
         // Get top threats
-        let mut threats: Vec<_> = self.analytics
+        let mut threats: Vec<_> = self
+            .analytics
             .iter()
             .filter(|e| e.risk_score > 0.5)
             .map(|e| ThreatEntry {
@@ -667,7 +731,11 @@ impl MLEngine {
                 last_seen: e.last_seen,
             })
             .collect();
-        threats.sort_by(|a, b| b.risk_score.partial_cmp(&a.risk_score).unwrap_or(std::cmp::Ordering::Equal));
+        threats.sort_by(|a, b| {
+            b.risk_score
+                .partial_cmp(&a.risk_score)
+                .unwrap_or(std::cmp::Ordering::Equal)
+        });
         threats.truncate(10);
 
         AnalyticsSnapshot {
@@ -675,7 +743,11 @@ impl MLEngine {
             dga_detected: self.dga_detected.load(Ordering::Relaxed),
             high_risk_count: self.high_risk_count.load(Ordering::Relaxed),
             blocked_count: self.blocked_count.load(Ordering::Relaxed),
-            avg_inference_time_us: if total > 0 { total_time as f64 / total as f64 } else { 0.0 },
+            avg_inference_time_us: if total > 0 {
+                total_time as f64 / total as f64
+            } else {
+                0.0
+            },
             risk_distribution: distribution,
             top_threats: threats,
             hourly_stats: Vec::new(), // Would be populated from time-series data
@@ -686,7 +758,10 @@ impl MLEngine {
     #[inline]
     pub fn should_block(&self, domain: &str) -> bool {
         let result = self.analyze(domain);
-        matches!(result.recommendation, Recommendation::Block | Recommendation::Quarantine)
+        matches!(
+            result.recommendation,
+            Recommendation::Block | Recommendation::Quarantine
+        )
     }
 
     /// Clear cache
@@ -741,9 +816,15 @@ mod tests {
         // Simulate DGA-like domain with very high entropy and suspicious patterns
         let result = engine.analyze("qxzjkwvbpmlr38459xyzqj.tk");
         // DGA domains should have elevated risk due to entropy and TLD
-        assert!(result.overall_risk > 0.3, "Risk should be elevated for suspicious domain");
+        assert!(
+            result.overall_risk > 0.3,
+            "Risk should be elevated for suspicious domain"
+        );
         // Check that TLD risk is detected
-        assert!(result.factors.iter().any(|f| f.name == "TLD Risk" && f.score > 0.5));
+        assert!(result
+            .factors
+            .iter()
+            .any(|f| f.name == "TLD Risk" && f.score > 0.5));
     }
 
     #[test]

@@ -6,9 +6,9 @@ pub mod config;
 pub mod filter;
 pub mod resolver;
 
-use std::sync::Arc;
 use anyhow::Result;
 use serde::{Deserialize, Serialize};
+use std::sync::Arc;
 use tracing::info;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -23,10 +23,7 @@ pub struct DNSConfig {
 impl Default for DNSConfig {
     fn default() -> Self {
         Self {
-            upstream_servers: vec![
-                "1.1.1.1:53".to_string(),
-                "8.8.8.8:53".to_string(),
-            ],
+            upstream_servers: vec!["1.1.1.1:53".to_string(), "8.8.8.8:53".to_string()],
             bind_address: "0.0.0.0".to_string(),
             bind_port: 53,
             cache_ttl: 300,

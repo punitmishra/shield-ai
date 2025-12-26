@@ -5,10 +5,10 @@
 //! - Pattern matching for known threat indicators
 //! - Real-time threat scoring
 
-use std::time::Instant;
 use anyhow::Result;
 use dashmap::DashMap;
 use serde::{Deserialize, Serialize};
+use std::time::Instant;
 use tracing::{debug, info};
 
 /// Result of AI domain analysis
@@ -111,25 +111,105 @@ impl AIEngine {
         info!("Initializing Shield AI Engine");
 
         let threat_patterns = vec![
-            ThreatPattern { pattern: "malware".into(), threat_type: ThreatType::Malware, score: 0.9 },
-            ThreatPattern { pattern: "phishing".into(), threat_type: ThreatType::Phishing, score: 0.85 },
-            ThreatPattern { pattern: "tracker".into(), threat_type: ThreatType::Tracking, score: 0.7 },
-            ThreatPattern { pattern: "ads".into(), threat_type: ThreatType::Advertising, score: 0.6 },
-            ThreatPattern { pattern: "crypto".into(), threat_type: ThreatType::Cryptomining, score: 0.8 },
+            ThreatPattern {
+                pattern: "malware".into(),
+                threat_type: ThreatType::Malware,
+                score: 0.9,
+            },
+            ThreatPattern {
+                pattern: "phishing".into(),
+                threat_type: ThreatType::Phishing,
+                score: 0.85,
+            },
+            ThreatPattern {
+                pattern: "tracker".into(),
+                threat_type: ThreatType::Tracking,
+                score: 0.7,
+            },
+            ThreatPattern {
+                pattern: "ads".into(),
+                threat_type: ThreatType::Advertising,
+                score: 0.6,
+            },
+            ThreatPattern {
+                pattern: "crypto".into(),
+                threat_type: ThreatType::Cryptomining,
+                score: 0.8,
+            },
         ];
 
         // Known privacy-invasive patterns
         let privacy_patterns = vec![
-            PrivacyPattern { pattern: "facebook.com".into(), tracking: true, fingerprinting: true, data_collection: DataCollectionLevel::Aggressive, penalty: 40 },
-            PrivacyPattern { pattern: "google-analytics".into(), tracking: true, fingerprinting: false, data_collection: DataCollectionLevel::Extensive, penalty: 30 },
-            PrivacyPattern { pattern: "doubleclick".into(), tracking: true, fingerprinting: true, data_collection: DataCollectionLevel::Aggressive, penalty: 45 },
-            PrivacyPattern { pattern: "hotjar".into(), tracking: true, fingerprinting: true, data_collection: DataCollectionLevel::Extensive, penalty: 35 },
-            PrivacyPattern { pattern: "mixpanel".into(), tracking: true, fingerprinting: false, data_collection: DataCollectionLevel::Extensive, penalty: 25 },
-            PrivacyPattern { pattern: "amplitude".into(), tracking: true, fingerprinting: false, data_collection: DataCollectionLevel::Moderate, penalty: 20 },
-            PrivacyPattern { pattern: "segment".into(), tracking: true, fingerprinting: false, data_collection: DataCollectionLevel::Extensive, penalty: 25 },
-            PrivacyPattern { pattern: "fingerprint".into(), tracking: false, fingerprinting: true, data_collection: DataCollectionLevel::Moderate, penalty: 30 },
-            PrivacyPattern { pattern: "telemetry".into(), tracking: true, fingerprinting: false, data_collection: DataCollectionLevel::Moderate, penalty: 15 },
-            PrivacyPattern { pattern: "pixel".into(), tracking: true, fingerprinting: false, data_collection: DataCollectionLevel::Minimal, penalty: 10 },
+            PrivacyPattern {
+                pattern: "facebook.com".into(),
+                tracking: true,
+                fingerprinting: true,
+                data_collection: DataCollectionLevel::Aggressive,
+                penalty: 40,
+            },
+            PrivacyPattern {
+                pattern: "google-analytics".into(),
+                tracking: true,
+                fingerprinting: false,
+                data_collection: DataCollectionLevel::Extensive,
+                penalty: 30,
+            },
+            PrivacyPattern {
+                pattern: "doubleclick".into(),
+                tracking: true,
+                fingerprinting: true,
+                data_collection: DataCollectionLevel::Aggressive,
+                penalty: 45,
+            },
+            PrivacyPattern {
+                pattern: "hotjar".into(),
+                tracking: true,
+                fingerprinting: true,
+                data_collection: DataCollectionLevel::Extensive,
+                penalty: 35,
+            },
+            PrivacyPattern {
+                pattern: "mixpanel".into(),
+                tracking: true,
+                fingerprinting: false,
+                data_collection: DataCollectionLevel::Extensive,
+                penalty: 25,
+            },
+            PrivacyPattern {
+                pattern: "amplitude".into(),
+                tracking: true,
+                fingerprinting: false,
+                data_collection: DataCollectionLevel::Moderate,
+                penalty: 20,
+            },
+            PrivacyPattern {
+                pattern: "segment".into(),
+                tracking: true,
+                fingerprinting: false,
+                data_collection: DataCollectionLevel::Extensive,
+                penalty: 25,
+            },
+            PrivacyPattern {
+                pattern: "fingerprint".into(),
+                tracking: false,
+                fingerprinting: true,
+                data_collection: DataCollectionLevel::Moderate,
+                penalty: 30,
+            },
+            PrivacyPattern {
+                pattern: "telemetry".into(),
+                tracking: true,
+                fingerprinting: false,
+                data_collection: DataCollectionLevel::Moderate,
+                penalty: 15,
+            },
+            PrivacyPattern {
+                pattern: "pixel".into(),
+                tracking: true,
+                fingerprinting: false,
+                data_collection: DataCollectionLevel::Minimal,
+                penalty: 10,
+            },
         ];
 
         Ok(Self {
@@ -250,8 +330,16 @@ impl AIEngine {
         let features = DomainFeatures {
             length,
             entropy: self.calculate_entropy(domain),
-            digit_ratio: if length > 0 { digit_count as f32 / length as f32 } else { 0.0 },
-            consonant_ratio: if length > 0 { consonant_count as f32 / length as f32 } else { 0.0 },
+            digit_ratio: if length > 0 {
+                digit_count as f32 / length as f32
+            } else {
+                0.0
+            },
+            consonant_ratio: if length > 0 {
+                consonant_count as f32 / length as f32
+            } else {
+                0.0
+            },
             has_suspicious_tld,
             subdomain_count: labels.len().saturating_sub(2),
             max_label_length: labels.iter().map(|l| l.len()).max().unwrap_or(0),
@@ -259,7 +347,8 @@ impl AIEngine {
         };
 
         // Cache features
-        self.feature_cache.insert(domain.to_string(), features.clone());
+        self.feature_cache
+            .insert(domain.to_string(), features.clone());
 
         features
     }

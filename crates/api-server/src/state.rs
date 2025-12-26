@@ -71,8 +71,8 @@ impl AppState {
         info!("ML engine initialized");
 
         // Initialize SQLite database
-        let db_path = std::env::var("DATABASE_PATH")
-            .unwrap_or_else(|_| "data/shield.db".to_string());
+        let db_path =
+            std::env::var("DATABASE_PATH").unwrap_or_else(|_| "data/shield.db".to_string());
         let db = Arc::new(SqliteDb::new(&db_path)?);
         info!("SQLite database initialized: {}", db_path);
 

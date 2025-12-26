@@ -33,9 +33,7 @@ impl SqliteDb {
         }
 
         let manager = SqliteConnectionManager::file(path);
-        let pool = Pool::builder()
-            .max_size(10)
-            .build(manager)?;
+        let pool = Pool::builder().max_size(10).build(manager)?;
 
         let db = Self { pool };
         db.init_schema()?;
@@ -52,7 +50,8 @@ impl SqliteDb {
     fn init_schema(&self) -> Result<(), DbError> {
         let conn = self.conn()?;
 
-        conn.execute_batch(r#"
+        conn.execute_batch(
+            r#"
             -- Users table
             CREATE TABLE IF NOT EXISTS users (
                 id TEXT PRIMARY KEY,
@@ -132,7 +131,8 @@ impl SqliteDb {
                 FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
             );
             CREATE INDEX IF NOT EXISTS idx_profiles_user ON profiles(user_id);
-        "#)?;
+        "#,
+        )?;
 
         info!("SQLite schema initialized");
         Ok(())
@@ -167,22 +167,26 @@ impl SqliteDb {
         let conn = self.conn()?;
         let mut stmt = conn.prepare(
             "SELECT id, email, password_hash, tier, email_verified, created_at, updated_at
-             FROM users WHERE id = ?1"
+             FROM users WHERE id = ?1",
         )?;
 
-        let user = stmt.query_row(params![id], |row| {
-            Ok(DbUser {
-                id: row.get(0)?,
-                email: row.get(1)?,
-                password_hash: row.get(2)?,
-                tier: row.get(3)?,
-                email_verified: row.get(4)?,
-                created_at: DateTime::parse_from_rfc3339(&row.get::<_, String>(5)?)
-                    .unwrap().with_timezone(&Utc),
-                updated_at: DateTime::parse_from_rfc3339(&row.get::<_, String>(6)?)
-                    .unwrap().with_timezone(&Utc),
+        let user = stmt
+            .query_row(params![id], |row| {
+                Ok(DbUser {
+                    id: row.get(0)?,
+                    email: row.get(1)?,
+                    password_hash: row.get(2)?,
+                    tier: row.get(3)?,
+                    email_verified: row.get(4)?,
+                    created_at: DateTime::parse_from_rfc3339(&row.get::<_, String>(5)?)
+                        .unwrap()
+                        .with_timezone(&Utc),
+                    updated_at: DateTime::parse_from_rfc3339(&row.get::<_, String>(6)?)
+                        .unwrap()
+                        .with_timezone(&Utc),
+                })
             })
-        }).optional()?;
+            .optional()?;
 
         Ok(user)
     }
@@ -192,22 +196,26 @@ impl SqliteDb {
         let conn = self.conn()?;
         let mut stmt = conn.prepare(
             "SELECT id, email, password_hash, tier, email_verified, created_at, updated_at
-             FROM users WHERE email = ?1"
+             FROM users WHERE email = ?1",
         )?;
 
-        let user = stmt.query_row(params![email], |row| {
-            Ok(DbUser {
-                id: row.get(0)?,
-                email: row.get(1)?,
-                password_hash: row.get(2)?,
-                tier: row.get(3)?,
-                email_verified: row.get(4)?,
-                created_at: DateTime::parse_from_rfc3339(&row.get::<_, String>(5)?)
-                    .unwrap().with_timezone(&Utc),
-                updated_at: DateTime::parse_from_rfc3339(&row.get::<_, String>(6)?)
-                    .unwrap().with_timezone(&Utc),
+        let user = stmt
+            .query_row(params![email], |row| {
+                Ok(DbUser {
+                    id: row.get(0)?,
+                    email: row.get(1)?,
+                    password_hash: row.get(2)?,
+                    tier: row.get(3)?,
+                    email_verified: row.get(4)?,
+                    created_at: DateTime::parse_from_rfc3339(&row.get::<_, String>(5)?)
+                        .unwrap()
+                        .with_timezone(&Utc),
+                    updated_at: DateTime::parse_from_rfc3339(&row.get::<_, String>(6)?)
+                        .unwrap()
+                        .with_timezone(&Utc),
+                })
             })
-        }).optional()?;
+            .optional()?;
 
         Ok(user)
     }
@@ -244,7 +252,10 @@ impl SqliteDb {
                 device.created_at.to_rfc3339(),
             ],
         )?;
-        debug!("Created device: {} for user {}", device.device_name, device.user_id);
+        debug!(
+            "Created device: {} for user {}",
+            device.device_name, device.user_id
+        );
         Ok(())
     }
 
@@ -256,21 +267,25 @@ impl SqliteDb {
              FROM devices WHERE user_id = ?1"
         )?;
 
-        let devices = stmt.query_map(params![user_id], |row| {
-            Ok(DbDevice {
-                id: row.get(0)?,
-                user_id: row.get(1)?,
-                device_name: row.get(2)?,
-                platform: row.get(3)?,
-                push_token: row.get(4)?,
-                os_version: row.get(5)?,
-                app_version: row.get(6)?,
-                last_seen: DateTime::parse_from_rfc3339(&row.get::<_, String>(7)?)
-                    .unwrap().with_timezone(&Utc),
-                created_at: DateTime::parse_from_rfc3339(&row.get::<_, String>(8)?)
-                    .unwrap().with_timezone(&Utc),
-            })
-        })?.collect::<Result<Vec<_>, _>>()?;
+        let devices = stmt
+            .query_map(params![user_id], |row| {
+                Ok(DbDevice {
+                    id: row.get(0)?,
+                    user_id: row.get(1)?,
+                    device_name: row.get(2)?,
+                    platform: row.get(3)?,
+                    push_token: row.get(4)?,
+                    os_version: row.get(5)?,
+                    app_version: row.get(6)?,
+                    last_seen: DateTime::parse_from_rfc3339(&row.get::<_, String>(7)?)
+                        .unwrap()
+                        .with_timezone(&Utc),
+                    created_at: DateTime::parse_from_rfc3339(&row.get::<_, String>(8)?)
+                        .unwrap()
+                        .with_timezone(&Utc),
+                })
+            })?
+            .collect::<Result<Vec<_>, _>>()?;
 
         Ok(devices)
     }
@@ -319,19 +334,23 @@ impl SqliteDb {
     pub fn get_refresh_token(&self, token: &str) -> Result<Option<DbRefreshToken>, DbError> {
         let conn = self.conn()?;
         let mut stmt = conn.prepare(
-            "SELECT token, user_id, expires_at, created_at FROM refresh_tokens WHERE token = ?1"
+            "SELECT token, user_id, expires_at, created_at FROM refresh_tokens WHERE token = ?1",
         )?;
 
-        let token = stmt.query_row(params![token], |row| {
-            Ok(DbRefreshToken {
-                token: row.get(0)?,
-                user_id: row.get(1)?,
-                expires_at: DateTime::parse_from_rfc3339(&row.get::<_, String>(2)?)
-                    .unwrap().with_timezone(&Utc),
-                created_at: DateTime::parse_from_rfc3339(&row.get::<_, String>(3)?)
-                    .unwrap().with_timezone(&Utc),
+        let token = stmt
+            .query_row(params![token], |row| {
+                Ok(DbRefreshToken {
+                    token: row.get(0)?,
+                    user_id: row.get(1)?,
+                    expires_at: DateTime::parse_from_rfc3339(&row.get::<_, String>(2)?)
+                        .unwrap()
+                        .with_timezone(&Utc),
+                    created_at: DateTime::parse_from_rfc3339(&row.get::<_, String>(3)?)
+                        .unwrap()
+                        .with_timezone(&Utc),
+                })
             })
-        }).optional()?;
+            .optional()?;
 
         Ok(token)
     }
@@ -339,7 +358,10 @@ impl SqliteDb {
     /// Delete refresh token
     pub fn delete_refresh_token(&self, token: &str) -> Result<(), DbError> {
         let conn = self.conn()?;
-        conn.execute("DELETE FROM refresh_tokens WHERE token = ?1", params![token])?;
+        conn.execute(
+            "DELETE FROM refresh_tokens WHERE token = ?1",
+            params![token],
+        )?;
         Ok(())
     }
 
@@ -363,7 +385,12 @@ impl SqliteDb {
         conn.execute(
             "INSERT OR REPLACE INTO blocklist (domain, category, source, added_at)
              VALUES (?1, ?2, ?3, ?4)",
-            params![entry.domain, entry.category, entry.source, entry.added_at.to_rfc3339()],
+            params![
+                entry.domain,
+                entry.category,
+                entry.source,
+                entry.added_at.to_rfc3339()
+            ],
         )?;
         Ok(())
     }
@@ -387,15 +414,18 @@ impl SqliteDb {
         let conn = self.conn()?;
         let mut stmt = conn.prepare("SELECT domain, category, source, added_at FROM blocklist")?;
 
-        let entries = stmt.query_map([], |row| {
-            Ok(DbBlocklistEntry {
-                domain: row.get(0)?,
-                category: row.get(1)?,
-                source: row.get(2)?,
-                added_at: DateTime::parse_from_rfc3339(&row.get::<_, String>(3)?)
-                    .unwrap().with_timezone(&Utc),
-            })
-        })?.collect::<Result<Vec<_>, _>>()?;
+        let entries = stmt
+            .query_map([], |row| {
+                Ok(DbBlocklistEntry {
+                    domain: row.get(0)?,
+                    category: row.get(1)?,
+                    source: row.get(2)?,
+                    added_at: DateTime::parse_from_rfc3339(&row.get::<_, String>(3)?)
+                        .unwrap()
+                        .with_timezone(&Utc),
+                })
+            })?
+            .collect::<Result<Vec<_>, _>>()?;
 
         Ok(entries)
     }
@@ -470,21 +500,24 @@ impl SqliteDb {
         let conn = self.conn()?;
         let mut stmt = conn.prepare(
             "SELECT id, domain, client_ip, blocked, cached, response_time_ms, timestamp
-             FROM query_log ORDER BY timestamp DESC LIMIT ?1"
+             FROM query_log ORDER BY timestamp DESC LIMIT ?1",
         )?;
 
-        let logs = stmt.query_map(params![limit as i64], |row| {
-            Ok(DbQueryLog {
-                id: row.get(0)?,
-                domain: row.get(1)?,
-                client_ip: row.get(2)?,
-                blocked: row.get(3)?,
-                cached: row.get(4)?,
-                response_time_ms: row.get(5)?,
-                timestamp: DateTime::parse_from_rfc3339(&row.get::<_, String>(6)?)
-                    .unwrap().with_timezone(&Utc),
-            })
-        })?.collect::<Result<Vec<_>, _>>()?;
+        let logs = stmt
+            .query_map(params![limit as i64], |row| {
+                Ok(DbQueryLog {
+                    id: row.get(0)?,
+                    domain: row.get(1)?,
+                    client_ip: row.get(2)?,
+                    blocked: row.get(3)?,
+                    cached: row.get(4)?,
+                    response_time_ms: row.get(5)?,
+                    timestamp: DateTime::parse_from_rfc3339(&row.get::<_, String>(6)?)
+                        .unwrap()
+                        .with_timezone(&Utc),
+                })
+            })?
+            .collect::<Result<Vec<_>, _>>()?;
 
         Ok(logs)
     }
@@ -494,8 +527,15 @@ impl SqliteDb {
         let conn = self.conn()?;
 
         let total: i64 = conn.query_row("SELECT COUNT(*) FROM query_log", [], |r| r.get(0))?;
-        let blocked: i64 = conn.query_row("SELECT COUNT(*) FROM query_log WHERE blocked = 1", [], |r| r.get(0))?;
-        let cached: i64 = conn.query_row("SELECT COUNT(*) FROM query_log WHERE cached = 1", [], |r| r.get(0))?;
+        let blocked: i64 = conn.query_row(
+            "SELECT COUNT(*) FROM query_log WHERE blocked = 1",
+            [],
+            |r| r.get(0),
+        )?;
+        let cached: i64 =
+            conn.query_row("SELECT COUNT(*) FROM query_log WHERE cached = 1", [], |r| {
+                r.get(0)
+            })?;
 
         Ok(QueryStats {
             total_queries: total as u64,

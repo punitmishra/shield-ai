@@ -149,7 +149,11 @@ impl DNSCache {
         let hits = self.hits.load(Ordering::Relaxed) as f64;
         let misses = self.misses.load(Ordering::Relaxed) as f64;
         let total = hits + misses;
-        if total > 0.0 { hits / total } else { 0.0 }
+        if total > 0.0 {
+            hits / total
+        } else {
+            0.0
+        }
     }
 
     /// Get current cache size

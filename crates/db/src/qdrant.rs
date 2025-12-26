@@ -9,9 +9,8 @@ use crate::error::DbError;
 use crate::models::{DomainEmbedding, ThreatVector};
 use qdrant_client::prelude::*;
 use qdrant_client::qdrant::{
-    vectors_config::Config, CreateCollection, Distance, PointStruct,
-    SearchPoints, VectorParams, VectorsConfig, Filter, Condition, FieldCondition, Match,
-    value::Kind, Value as QdrantValue,
+    value::Kind, vectors_config::Config, Condition, CreateCollection, Distance, FieldCondition,
+    Filter, Match, PointStruct, SearchPoints, Value as QdrantValue, VectorParams, VectorsConfig,
 };
 use std::collections::HashMap;
 use tracing::{debug, info, warn};
@@ -68,9 +67,9 @@ impl QdrantDb {
 
     /// Get client reference
     fn client(&self) -> Result<&QdrantClient, DbError> {
-        self.client.as_ref().ok_or_else(|| {
-            DbError::ConnectionFailed("Qdrant not connected".to_string())
-        })
+        self.client
+            .as_ref()
+            .ok_or_else(|| DbError::ConnectionFailed("Qdrant not connected".to_string()))
     }
 
     /// Initialize collections
@@ -132,24 +131,41 @@ impl QdrantDb {
     // =========================================================================
 
     /// Store domain embedding
-    pub async fn upsert_domain_embedding(&self, embedding: &DomainEmbedding) -> Result<(), DbError> {
+    pub async fn upsert_domain_embedding(
+        &self,
+        embedding: &DomainEmbedding,
+    ) -> Result<(), DbError> {
         let client = self.client()?;
 
         let point_id = Self::domain_to_id(&embedding.domain);
         let mut payload: HashMap<String, QdrantValue> = HashMap::new();
 
-        payload.insert("domain".to_string(), QdrantValue {
-            kind: Some(Kind::StringValue(embedding.domain.clone())),
-        });
-        payload.insert("risk_score".to_string(), QdrantValue {
-            kind: Some(Kind::DoubleValue(embedding.risk_score as f64)),
-        });
-        payload.insert("categories".to_string(), QdrantValue {
-            kind: Some(Kind::StringValue(serde_json::to_string(&embedding.categories).unwrap())),
-        });
-        payload.insert("last_analyzed".to_string(), QdrantValue {
-            kind: Some(Kind::StringValue(embedding.last_analyzed.to_rfc3339())),
-        });
+        payload.insert(
+            "domain".to_string(),
+            QdrantValue {
+                kind: Some(Kind::StringValue(embedding.domain.clone())),
+            },
+        );
+        payload.insert(
+            "risk_score".to_string(),
+            QdrantValue {
+                kind: Some(Kind::DoubleValue(embedding.risk_score as f64)),
+            },
+        );
+        payload.insert(
+            "categories".to_string(),
+            QdrantValue {
+                kind: Some(Kind::StringValue(
+                    serde_json::to_string(&embedding.categories).unwrap(),
+                )),
+            },
+        );
+        payload.insert(
+            "last_analyzed".to_string(),
+            QdrantValue {
+                kind: Some(Kind::StringValue(embedding.last_analyzed.to_rfc3339())),
+            },
+        );
 
         let point = PointStruct::new(point_id, embedding.vector.clone(), payload);
 
@@ -187,11 +203,10 @@ impl QdrantDb {
             .result
             .into_iter()
             .filter_map(|point| {
-                let domain = point.payload.get("domain")
-                    .and_then(|v| match &v.kind {
-                        Some(Kind::StringValue(s)) => Some(s.clone()),
-                        _ => None,
-                    })?;
+                let domain = point.payload.get("domain").and_then(|v| match &v.kind {
+                    Some(Kind::StringValue(s)) => Some(s.clone()),
+                    _ => None,
+                })?;
                 Some((domain, point.score))
             })
             .collect();
@@ -223,8 +238,8 @@ impl QdrantDb {
                                         ..Default::default()
                                     }),
                                     ..Default::default()
-                                }
-                            )
+                                },
+                            ),
                         ),
                     }],
                     ..Default::default()
@@ -247,27 +262,35 @@ impl QdrantDb {
     }
 
     /// Convert point to domain embedding
-    fn point_to_domain_embedding(&self, point: qdrant_client::qdrant::RetrievedPoint) -> Option<DomainEmbedding> {
-        let domain = point.payload.get("domain")
-            .and_then(|v| match &v.kind {
-                Some(Kind::StringValue(s)) => Some(s.clone()),
-                _ => None,
-            })?;
+    fn point_to_domain_embedding(
+        &self,
+        point: qdrant_client::qdrant::RetrievedPoint,
+    ) -> Option<DomainEmbedding> {
+        let domain = point.payload.get("domain").and_then(|v| match &v.kind {
+            Some(Kind::StringValue(s)) => Some(s.clone()),
+            _ => None,
+        })?;
 
-        let risk_score = point.payload.get("risk_score")
+        let risk_score = point
+            .payload
+            .get("risk_score")
             .and_then(|v| match &v.kind {
                 Some(Kind::DoubleValue(f)) => Some(*f as f32),
                 _ => None,
             })?;
 
-        let categories: Vec<String> = point.payload.get("categories")
+        let categories: Vec<String> = point
+            .payload
+            .get("categories")
             .and_then(|v| match &v.kind {
                 Some(Kind::StringValue(s)) => serde_json::from_str(s).ok(),
                 _ => None,
             })
             .unwrap_or_default();
 
-        let last_analyzed = point.payload.get("last_analyzed")
+        let last_analyzed = point
+            .payload
+            .get("last_analyzed")
             .and_then(|v| match &v.kind {
                 Some(Kind::StringValue(s)) => chrono::DateTime::parse_from_rfc3339(s).ok(),
                 _ => None,
@@ -276,12 +299,10 @@ impl QdrantDb {
             .unwrap_or_else(chrono::Utc::now);
 
         let vector = match point.vectors {
-            Some(vectors) => {
-                match vectors.vectors_options {
-                    Some(qdrant_client::qdrant::vectors_output::VectorsOptions::Vector(v)) => v.data,
-                    _ => return None,
-                }
-            }
+            Some(vectors) => match vectors.vectors_options {
+                Some(qdrant_client::qdrant::vectors_output::VectorsOptions::Vector(v)) => v.data,
+                _ => return None,
+            },
             None => return None,
         };
 
@@ -305,18 +326,32 @@ impl QdrantDb {
         let point_id = Self::domain_to_id(&threat.domain);
         let mut payload: HashMap<String, QdrantValue> = HashMap::new();
 
-        payload.insert("domain".to_string(), QdrantValue {
-            kind: Some(Kind::StringValue(threat.domain.clone())),
-        });
-        payload.insert("threat_type".to_string(), QdrantValue {
-            kind: Some(Kind::StringValue(threat.threat_type.clone())),
-        });
-        payload.insert("confidence".to_string(), QdrantValue {
-            kind: Some(Kind::DoubleValue(threat.confidence as f64)),
-        });
-        payload.insert("indicators".to_string(), QdrantValue {
-            kind: Some(Kind::StringValue(serde_json::to_string(&threat.indicators).unwrap())),
-        });
+        payload.insert(
+            "domain".to_string(),
+            QdrantValue {
+                kind: Some(Kind::StringValue(threat.domain.clone())),
+            },
+        );
+        payload.insert(
+            "threat_type".to_string(),
+            QdrantValue {
+                kind: Some(Kind::StringValue(threat.threat_type.clone())),
+            },
+        );
+        payload.insert(
+            "confidence".to_string(),
+            QdrantValue {
+                kind: Some(Kind::DoubleValue(threat.confidence as f64)),
+            },
+        );
+        payload.insert(
+            "indicators".to_string(),
+            QdrantValue {
+                kind: Some(Kind::StringValue(
+                    serde_json::to_string(&threat.indicators).unwrap(),
+                )),
+            },
+        );
 
         let point = PointStruct::new(point_id, threat.embedding.clone(), payload);
 
@@ -353,25 +388,30 @@ impl QdrantDb {
             .result
             .into_iter()
             .filter_map(|point| {
-                let domain = point.payload.get("domain")
+                let domain = point.payload.get("domain").and_then(|v| match &v.kind {
+                    Some(Kind::StringValue(s)) => Some(s.clone()),
+                    _ => None,
+                })?;
+
+                let threat_type = point
+                    .payload
+                    .get("threat_type")
                     .and_then(|v| match &v.kind {
                         Some(Kind::StringValue(s)) => Some(s.clone()),
                         _ => None,
                     })?;
 
-                let threat_type = point.payload.get("threat_type")
-                    .and_then(|v| match &v.kind {
-                        Some(Kind::StringValue(s)) => Some(s.clone()),
-                        _ => None,
-                    })?;
-
-                let confidence = point.payload.get("confidence")
+                let confidence = point
+                    .payload
+                    .get("confidence")
                     .and_then(|v| match &v.kind {
                         Some(Kind::DoubleValue(f)) => Some(*f as f32),
                         _ => None,
                     })?;
 
-                let indicators: Vec<String> = point.payload.get("indicators")
+                let indicators: Vec<String> = point
+                    .payload
+                    .get("indicators")
                     .and_then(|v| match &v.kind {
                         Some(Kind::StringValue(s)) => serde_json::from_str(s).ok(),
                         _ => None,
@@ -414,12 +454,18 @@ impl QdrantDb {
         let client = self.client()?;
 
         let domain_count = match client.collection_info(DOMAIN_COLLECTION).await {
-            Ok(info) => info.result.map(|r| r.points_count.unwrap_or(0)).unwrap_or(0),
+            Ok(info) => info
+                .result
+                .map(|r| r.points_count.unwrap_or(0))
+                .unwrap_or(0),
             Err(_) => 0,
         };
 
         let threat_count = match client.collection_info(THREAT_COLLECTION).await {
-            Ok(info) => info.result.map(|r| r.points_count.unwrap_or(0)).unwrap_or(0),
+            Ok(info) => info
+                .result
+                .map(|r| r.points_count.unwrap_or(0))
+                .unwrap_or(0),
             Err(_) => 0,
         };
 

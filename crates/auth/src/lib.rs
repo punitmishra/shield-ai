@@ -7,19 +7,19 @@
 //! - In-memory (DashMap) for testing
 //! - SQLite for production persistence
 
-pub mod jwt;
 pub mod handlers;
+pub mod jwt;
 pub mod middleware;
 pub mod models;
 
-pub use jwt::{JwtManager, Claims};
 pub use handlers::*;
+pub use jwt::{Claims, JwtManager};
 pub use middleware::auth_middleware;
 pub use models::*;
 
 use chrono::Utc;
 use dashmap::DashMap;
-use shield_db::{SqliteDb, DbUser, DbDevice, DbRefreshToken};
+use shield_db::{DbDevice, DbRefreshToken, DbUser, SqliteDb};
 use std::sync::Arc;
 use tracing::info;
 
@@ -95,7 +95,11 @@ impl AuthService {
             }
             AuthStorage::Sqlite(db) => {
                 // Check if user exists
-                if db.get_user_by_email(email).map_err(|e| AuthError::DatabaseError(e.to_string()))?.is_some() {
+                if db
+                    .get_user_by_email(email)
+                    .map_err(|e| AuthError::DatabaseError(e.to_string()))?
+                    .is_some()
+                {
                     return Err(AuthError::UserExists);
                 }
 
@@ -109,7 +113,8 @@ impl AuthService {
                     created_at: user.created_at,
                     updated_at: user.updated_at,
                 };
-                db.create_user(&db_user).map_err(|e| AuthError::DatabaseError(e.to_string()))?;
+                db.create_user(&db_user)
+                    .map_err(|e| AuthError::DatabaseError(e.to_string()))?;
                 info!("User registered (SQLite): {}", email);
                 Ok(user)
             }
@@ -118,14 +123,17 @@ impl AuthService {
 
     /// Login with email and password, returns access and refresh tokens
     pub fn login(&self, email: &str, password: &str) -> Result<AuthTokens, AuthError> {
-        let user = self.get_user_by_email(email)?
+        let user = self
+            .get_user_by_email(email)?
             .ok_or(AuthError::InvalidCredentials)?;
 
         if !user.verify_password(password)? {
             return Err(AuthError::InvalidCredentials);
         }
 
-        let access_token = self.jwt_manager.generate_access_token(&user.id, &user.tier)?;
+        let access_token = self
+            .jwt_manager
+            .generate_access_token(&user.id, &user.tier)?;
         let refresh_token = self.jwt_manager.generate_refresh_token(&user.id)?;
 
         // Store refresh token
@@ -147,7 +155,10 @@ impl AuthService {
                 Ok(users.iter().find(|u| u.email == email).map(|u| u.clone()))
             }
             AuthStorage::Sqlite(db) => {
-                match db.get_user_by_email(email).map_err(|e| AuthError::DatabaseError(e.to_string()))? {
+                match db
+                    .get_user_by_email(email)
+                    .map_err(|e| AuthError::DatabaseError(e.to_string()))?
+                {
                     Some(db_user) => Ok(Some(self.db_user_to_user(db_user))),
                     None => Ok(None),
                 }
@@ -169,14 +180,16 @@ impl AuthService {
                     expires_at: token.expires_at,
                     created_at: token.created_at,
                 };
-                db.store_refresh_token(&db_token).map_err(|e| AuthError::DatabaseError(e.to_string()))
+                db.store_refresh_token(&db_token)
+                    .map_err(|e| AuthError::DatabaseError(e.to_string()))
             }
         }
     }
 
     /// Refresh access token using a refresh token
     pub fn refresh(&self, refresh_token: &str) -> Result<AuthTokens, AuthError> {
-        let stored_token = self.get_refresh_token(refresh_token)?
+        let stored_token = self
+            .get_refresh_token(refresh_token)?
             .ok_or(AuthError::InvalidToken)?;
 
         if stored_token.is_expired() {
@@ -184,10 +197,13 @@ impl AuthService {
             return Err(AuthError::TokenExpired);
         }
 
-        let user = self.get_user(&stored_token.user_id)
+        let user = self
+            .get_user(&stored_token.user_id)
             .ok_or(AuthError::UserNotFound)?;
 
-        let access_token = self.jwt_manager.generate_access_token(&user.id, &user.tier)?;
+        let access_token = self
+            .jwt_manager
+            .generate_access_token(&user.id, &user.tier)?;
 
         Ok(AuthTokens {
             access_token,
@@ -204,7 +220,10 @@ impl AuthService {
                 Ok(refresh_tokens.get(token).map(|t| t.clone()))
             }
             AuthStorage::Sqlite(db) => {
-                match db.get_refresh_token(token).map_err(|e| AuthError::DatabaseError(e.to_string()))? {
+                match db
+                    .get_refresh_token(token)
+                    .map_err(|e| AuthError::DatabaseError(e.to_string()))?
+                {
                     Some(db_token) => Ok(Some(RefreshToken {
                         token: db_token.token,
                         user_id: db_token.user_id,
@@ -224,9 +243,9 @@ impl AuthService {
                 refresh_tokens.remove(token);
                 Ok(())
             }
-            AuthStorage::Sqlite(db) => {
-                db.delete_refresh_token(token).map_err(|e| AuthError::DatabaseError(e.to_string()))
-            }
+            AuthStorage::Sqlite(db) => db
+                .delete_refresh_token(token)
+                .map_err(|e| AuthError::DatabaseError(e.to_string())),
         }
     }
 
@@ -241,7 +260,11 @@ impl AuthService {
     }
 
     /// Register a new device for a user
-    pub fn register_device(&self, user_id: &str, registration: DeviceRegistrationRequest) -> Result<DeviceRegistration, AuthError> {
+    pub fn register_device(
+        &self,
+        user_id: &str,
+        registration: DeviceRegistrationRequest,
+    ) -> Result<DeviceRegistration, AuthError> {
         // Verify user exists
         if self.get_user(user_id).is_none() {
             return Err(AuthError::UserNotFound);
@@ -265,11 +288,15 @@ impl AuthService {
                     last_seen: device.last_seen,
                     created_at: device.registered_at,
                 };
-                db.create_device(&db_device).map_err(|e| AuthError::DatabaseError(e.to_string()))?;
+                db.create_device(&db_device)
+                    .map_err(|e| AuthError::DatabaseError(e.to_string()))?;
             }
         }
 
-        info!("Device registered for user {}: {}", user_id, device.device_id);
+        info!(
+            "Device registered for user {}: {}",
+            user_id, device.device_id
+        );
         Ok(device)
     }
 
@@ -284,41 +311,39 @@ impl AuthService {
                 device.last_seen = Utc::now();
                 Ok(())
             }
-            AuthStorage::Sqlite(db) => {
-                db.update_device_push_token(device_id, push_token)
-                    .map_err(|e| AuthError::DatabaseError(e.to_string()))
-            }
+            AuthStorage::Sqlite(db) => db
+                .update_device_push_token(device_id, push_token)
+                .map_err(|e| AuthError::DatabaseError(e.to_string())),
         }
     }
 
     /// Get all devices for a user
     pub fn get_user_devices(&self, user_id: &str) -> Vec<DeviceRegistration> {
         match &self.storage {
-            AuthStorage::Memory { devices, .. } => {
-                devices
-                    .iter()
-                    .filter(|d| d.user_id == user_id)
-                    .map(|d| d.clone())
-                    .collect()
-            }
-            AuthStorage::Sqlite(db) => {
-                match db.get_user_devices(user_id) {
-                    Ok(db_devices) => db_devices.into_iter().map(|d| self.db_device_to_device(d)).collect(),
-                    Err(_) => Vec::new(),
-                }
-            }
+            AuthStorage::Memory { devices, .. } => devices
+                .iter()
+                .filter(|d| d.user_id == user_id)
+                .map(|d| d.clone())
+                .collect(),
+            AuthStorage::Sqlite(db) => match db.get_user_devices(user_id) {
+                Ok(db_devices) => db_devices
+                    .into_iter()
+                    .map(|d| self.db_device_to_device(d))
+                    .collect(),
+                Err(_) => Vec::new(),
+            },
         }
     }
 
     /// Get user by ID
     pub fn get_user(&self, user_id: &str) -> Option<User> {
         match &self.storage {
-            AuthStorage::Memory { users, .. } => {
-                users.get(user_id).map(|u| u.clone())
-            }
-            AuthStorage::Sqlite(db) => {
-                db.get_user(user_id).ok().flatten().map(|u| self.db_user_to_user(u))
-            }
+            AuthStorage::Memory { users, .. } => users.get(user_id).map(|u| u.clone()),
+            AuthStorage::Sqlite(db) => db
+                .get_user(user_id)
+                .ok()
+                .flatten()
+                .map(|u| self.db_user_to_user(u)),
         }
     }
 
@@ -347,7 +372,8 @@ impl AuthService {
     /// Convert DbDevice to DeviceRegistration
     fn db_device_to_device(&self, db_device: DbDevice) -> DeviceRegistration {
         DeviceRegistration {
-            device_id: uuid::Uuid::parse_str(&db_device.id).unwrap_or_else(|_| uuid::Uuid::new_v4()),
+            device_id: uuid::Uuid::parse_str(&db_device.id)
+                .unwrap_or_else(|_| uuid::Uuid::new_v4()),
             user_id: db_device.user_id,
             device_name: db_device.device_name,
             platform: match db_device.platform.as_str() {

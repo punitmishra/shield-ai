@@ -88,8 +88,8 @@ impl Tier {
     pub fn price_cents(&self) -> u32 {
         match self {
             Tier::Free => 0,
-            Tier::Pro => 99,         // $0.99/month
-            Tier::Enterprise => 0,   // Custom pricing
+            Tier::Pro => 99,       // $0.99/month
+            Tier::Enterprise => 0, // Custom pricing
         }
     }
 
@@ -97,8 +97,8 @@ impl Tier {
     pub fn yearly_price_cents(&self) -> u32 {
         match self {
             Tier::Free => 0,
-            Tier::Pro => 799,        // $7.99/year (~33% discount)
-            Tier::Enterprise => 0,   // Custom pricing
+            Tier::Pro => 799,      // $7.99/year (~33% discount)
+            Tier::Enterprise => 0, // Custom pricing
         }
     }
 }
@@ -308,9 +308,7 @@ impl TierManager {
         let sub = self.get_subscription(user_id);
         let limits = sub.tier.limits();
 
-        let usage = self.usage
-            .entry(user_id.to_string())
-            .or_default();
+        let usage = self.usage.entry(user_id.to_string()).or_default();
 
         let queries_used = usage.queries_used();
         let allowed = queries_used < limits.queries_per_month;
@@ -332,9 +330,7 @@ impl TierManager {
 
     /// Record a query for usage tracking
     pub fn record_query(&self, user_id: &str) {
-        let usage = self.usage
-            .entry(user_id.to_string())
-            .or_default();
+        let usage = self.usage.entry(user_id.to_string()).or_default();
         usage.increment_queries();
     }
 
@@ -343,15 +339,15 @@ impl TierManager {
         let sub = self.get_subscription(user_id);
         let limits = sub.tier.limits();
 
-        let usage = self.usage
-            .entry(user_id.to_string())
-            .or_default();
+        let usage = self.usage.entry(user_id.to_string()).or_default();
 
         UsageStats {
             tier: sub.tier,
             queries_used: usage.queries_used(),
             queries_limit: limits.queries_per_month,
-            queries_remaining: limits.queries_per_month.saturating_sub(usage.queries_used()),
+            queries_remaining: limits
+                .queries_per_month
+                .saturating_sub(usage.queries_used()),
             profiles_used: usage.profiles_count.load(Ordering::Relaxed) as u32,
             profiles_limit: limits.max_profiles,
             devices_used: usage.devices_count.load(Ordering::Relaxed) as u32,
@@ -392,7 +388,8 @@ impl TierManager {
 
     /// Cancel a subscription
     pub fn cancel(&self, user_id: &str) -> Result<Subscription, TierError> {
-        let mut sub = self.subscriptions
+        let mut sub = self
+            .subscriptions
             .get_mut(user_id)
             .ok_or(TierError::NotFound)?;
 

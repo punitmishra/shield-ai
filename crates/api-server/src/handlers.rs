@@ -200,7 +200,9 @@ pub async fn get_query_history(State(state): State<Arc<AppState>>) -> Json<Query
 }
 
 /// Blocklist stats endpoint
-pub async fn get_blocklist_stats(State(state): State<Arc<AppState>>) -> Json<BlocklistStatsResponse> {
+pub async fn get_blocklist_stats(
+    State(state): State<Arc<AppState>>,
+) -> Json<BlocklistStatsResponse> {
     Json(BlocklistStatsResponse {
         total_blocked_domains: state.filter.blocklist_size(),
         allowlist_size: state.filter.allowlist_size(),
@@ -281,7 +283,9 @@ pub async fn doh_query(
 
     // Check if blocked
     if state.filter.is_blocked(&domain) {
-        state.metrics.record_query_with_details(domain.clone(), "0.0.0.0".to_string(), true, 0);
+        state
+            .metrics
+            .record_query_with_details(domain.clone(), "0.0.0.0".to_string(), true, 0);
         return Ok(Json(DohResponse {
             status: 3, // NXDOMAIN
             truncated: false,
@@ -313,7 +317,12 @@ pub async fn doh_query(
                 })
                 .collect();
 
-            state.metrics.record_query_with_details(domain.clone(), "0.0.0.0".to_string(), false, query_time_ms);
+            state.metrics.record_query_with_details(
+                domain.clone(),
+                "0.0.0.0".to_string(),
+                false,
+                query_time_ms,
+            );
 
             Ok(Json(DohResponse {
                 status: 0, // NOERROR
@@ -386,7 +395,11 @@ pub async fn get_analytics(State(state): State<Arc<AppState>>) -> Json<Analytics
     let queries_by_hour: Vec<HourlyStats> = (0..24)
         .map(|hour| {
             let (queries, blocked) = hourly_stats.get(&hour).copied().unwrap_or((0, 0));
-            HourlyStats { hour, queries, blocked }
+            HourlyStats {
+                hour,
+                queries,
+                blocked,
+            }
         })
         .collect();
 
@@ -538,7 +551,10 @@ pub async fn resolve_domain(
     }
 
     // Check if domain contains invalid characters
-    if !domain.chars().all(|c| c.is_alphanumeric() || c == '.' || c == '-') {
+    if !domain
+        .chars()
+        .all(|c| c.is_alphanumeric() || c == '.' || c == '-')
+    {
         warn!("Invalid domain characters: {}", domain);
         return Err(Json(ErrorResponse {
             error: "invalid_domain".to_string(),
@@ -645,7 +661,10 @@ pub async fn metrics(State(state): State<Arc<AppState>>) -> String {
 
     output.push_str("# HELP dns_queries_blocked_total Total blocked queries\n");
     output.push_str("# TYPE dns_queries_blocked_total counter\n");
-    output.push_str(&format!("dns_queries_blocked_total {}\n", snapshot.blocked_queries));
+    output.push_str(&format!(
+        "dns_queries_blocked_total {}\n",
+        snapshot.blocked_queries
+    ));
 
     output.push_str("# HELP dns_cache_hits_total Total cache hits\n");
     output.push_str("# TYPE dns_cache_hits_total counter\n");
@@ -653,19 +672,31 @@ pub async fn metrics(State(state): State<Arc<AppState>>) -> String {
 
     output.push_str("# HELP dns_cache_misses_total Total cache misses\n");
     output.push_str("# TYPE dns_cache_misses_total counter\n");
-    output.push_str(&format!("dns_cache_misses_total {}\n", snapshot.cache_misses));
+    output.push_str(&format!(
+        "dns_cache_misses_total {}\n",
+        snapshot.cache_misses
+    ));
 
     output.push_str("# HELP dns_cache_hit_rate Cache hit rate\n");
     output.push_str("# TYPE dns_cache_hit_rate gauge\n");
-    output.push_str(&format!("dns_cache_hit_rate {:.4}\n", snapshot.cache_hit_rate));
+    output.push_str(&format!(
+        "dns_cache_hit_rate {:.4}\n",
+        snapshot.cache_hit_rate
+    ));
 
     output.push_str("# HELP dns_blocklist_size Number of blocked domains\n");
     output.push_str("# TYPE dns_blocklist_size gauge\n");
-    output.push_str(&format!("dns_blocklist_size {}\n", state.filter.blocklist_size()));
+    output.push_str(&format!(
+        "dns_blocklist_size {}\n",
+        state.filter.blocklist_size()
+    ));
 
     output.push_str("# HELP dns_uptime_seconds Server uptime in seconds\n");
     output.push_str("# TYPE dns_uptime_seconds gauge\n");
-    output.push_str(&format!("dns_uptime_seconds {}\n", state.start_time.elapsed().as_secs()));
+    output.push_str(&format!(
+        "dns_uptime_seconds {}\n",
+        state.start_time.elapsed().as_secs()
+    ));
 
     output
 }
@@ -675,10 +706,7 @@ pub async fn metrics(State(state): State<Arc<AppState>>) -> String {
 // ============================================================================
 
 /// WebSocket handler for real-time stats updates
-pub async fn ws_handler(
-    ws: WebSocketUpgrade,
-    State(state): State<Arc<AppState>>,
-) -> Response {
+pub async fn ws_handler(ws: WebSocketUpgrade, State(state): State<Arc<AppState>>) -> Response {
     info!("WebSocket connection requested");
     ws.on_upgrade(|socket| handle_socket(socket, state))
 }
@@ -774,13 +802,12 @@ pub async fn rate_limit_stats(State(state): State<Arc<AppState>>) -> Json<RateLi
 
 /// Check rate limit for IP and return error response if limited
 #[allow(dead_code)] // Prepared for middleware integration
-pub fn check_rate_limit(
-    state: &Arc<AppState>,
-    ip: std::net::IpAddr,
-) -> Result<(), RateLimitError> {
+pub fn check_rate_limit(state: &Arc<AppState>, ip: std::net::IpAddr) -> Result<(), RateLimitError> {
     match state.rate_limiter.check(ip) {
         RateLimitResult::Allowed { .. } => Ok(()),
-        RateLimitResult::Limited { retry_after_secs, .. } => Err(RateLimitError {
+        RateLimitResult::Limited {
+            retry_after_secs, ..
+        } => Err(RateLimitError {
             error: "rate_limited".to_string(),
             message: "Too many requests. Please slow down.".to_string(),
             retry_after_secs,
@@ -805,7 +832,10 @@ pub async fn threat_analyze(
     }
 
     let analysis = state.threat_intel.analyze(&domain).await;
-    debug!("Threat analysis for {}: risk={:.2}", domain, analysis.risk_score);
+    debug!(
+        "Threat analysis for {}: risk={:.2}",
+        domain, analysis.risk_score
+    );
     Ok(Json(analysis))
 }
 
@@ -861,7 +891,9 @@ pub async fn create_profile(
     State(state): State<Arc<AppState>>,
     Json(request): Json<CreateProfileRequest>,
 ) -> Json<ProfileResponse> {
-    let id = state.profiles.create_profile(request.name.clone(), request.protection_level);
+    let id = state
+        .profiles
+        .create_profile(request.name.clone(), request.protection_level);
     let profile = state.profiles.get_profile(&id);
     Json(ProfileResponse {
         success: true,
@@ -878,9 +910,7 @@ pub struct ProfileResponse {
 }
 
 /// List all profiles
-pub async fn list_profiles(
-    State(state): State<Arc<AppState>>,
-) -> Json<Vec<Profile>> {
+pub async fn list_profiles(State(state): State<Arc<AppState>>) -> Json<Vec<Profile>> {
     Json(state.profiles.list_profiles())
 }
 
@@ -923,7 +953,11 @@ pub async fn delete_profile(
     let success = state.profiles.delete_profile(&uuid);
     Json(ProfileResponse {
         success,
-        message: if success { "Profile deleted".to_string() } else { "Profile not found".to_string() },
+        message: if success {
+            "Profile deleted".to_string()
+        } else {
+            "Profile not found".to_string()
+        },
         profile: None,
     })
 }
@@ -950,7 +984,9 @@ pub async fn assign_device(
         }
     };
 
-    let success = state.profiles.assign_device(request.device_id.clone(), &profile_uuid);
+    let success = state
+        .profiles
+        .assign_device(request.device_id.clone(), &profile_uuid);
     Json(ProfileResponse {
         success,
         message: if success {
@@ -963,9 +999,7 @@ pub async fn assign_device(
 }
 
 /// Get profile stats
-pub async fn profile_stats(
-    State(state): State<Arc<AppState>>,
-) -> Json<ProfileStats> {
+pub async fn profile_stats(State(state): State<Arc<AppState>>) -> Json<ProfileStats> {
     Json(state.profiles.stats())
 }
 
@@ -1000,7 +1034,11 @@ pub async fn check_feature(
     State(state): State<Arc<AppState>>,
     Json(request): Json<FeatureCheckRequest>,
 ) -> Json<FeatureCheck> {
-    Json(state.tiers.check_feature(&request.user_id, &request.feature))
+    Json(
+        state
+            .tiers
+            .check_feature(&request.user_id, &request.feature),
+    )
 }
 
 #[derive(Deserialize)]
@@ -1118,9 +1156,7 @@ pub struct DGACheckResponse {
 }
 
 /// ML analytics endpoint
-pub async fn ml_analytics(
-    State(state): State<Arc<AppState>>,
-) -> Json<AnalyticsSnapshot> {
+pub async fn ml_analytics(State(state): State<Arc<AppState>>) -> Json<AnalyticsSnapshot> {
     Json(state.ml_engine.get_analytics())
 }
 
@@ -1240,7 +1276,10 @@ pub async fn get_privacy_metrics(State(state): State<Arc<AppState>>) -> Json<Pri
     let top_trackers: Vec<TopTracker> = sorted_trackers
         .into_iter()
         .take(5)
-        .map(|(domain, blocked_count)| TopTracker { domain, blocked_count })
+        .map(|(domain, blocked_count)| TopTracker {
+            domain,
+            blocked_count,
+        })
         .collect();
 
     // Calculate privacy score based on block rate
@@ -1257,7 +1296,8 @@ pub async fn get_privacy_metrics(State(state): State<Arc<AppState>>) -> Json<Pri
         70..=79 => "C",
         60..=69 => "D",
         _ => "F",
-    }.to_string();
+    }
+    .to_string();
 
     // Generate trend data (last 24 hours)
     let now = std::time::SystemTime::now()
@@ -1284,10 +1324,22 @@ pub async fn get_privacy_metrics(State(state): State<Arc<AppState>>) -> Json<Pri
     let other_blocked = snapshot.blocked_queries - ad_blocked - analytics_blocked - social_blocked;
 
     let tracker_categories = vec![
-        TrackerCategory { name: "Advertising".to_string(), count: ad_blocked },
-        TrackerCategory { name: "Analytics".to_string(), count: analytics_blocked },
-        TrackerCategory { name: "Social Media".to_string(), count: social_blocked },
-        TrackerCategory { name: "Other".to_string(), count: other_blocked },
+        TrackerCategory {
+            name: "Advertising".to_string(),
+            count: ad_blocked,
+        },
+        TrackerCategory {
+            name: "Analytics".to_string(),
+            count: analytics_blocked,
+        },
+        TrackerCategory {
+            name: "Social Media".to_string(),
+            count: social_blocked,
+        },
+        TrackerCategory {
+            name: "Other".to_string(),
+            count: other_blocked,
+        },
     ];
 
     Json(PrivacyMetrics {
@@ -1343,7 +1395,9 @@ pub async fn get_devices(State(state): State<Arc<AppState>>) -> Json<DevicesResp
     // Aggregate device stats from query history by client IP
     let mut device_stats: HashMap<String, (u64, u64, u64)> = HashMap::new(); // (queries, blocked, last_seen)
     for query in &history {
-        let entry = device_stats.entry(query.client_ip.clone()).or_insert((0, 0, 0));
+        let entry = device_stats
+            .entry(query.client_ip.clone())
+            .or_insert((0, 0, 0));
         entry.0 += 1;
         if query.blocked {
             entry.1 += 1;
@@ -1471,17 +1525,23 @@ pub async fn auth_register(
     match state.auth.register(&request.email, &request.password) {
         Ok(user) => {
             let user_info: UserInfo = user.into();
-            (StatusCode::CREATED, Json(serde_json::json!({
-                "success": true,
-                "user": user_info
-            })))
+            (
+                StatusCode::CREATED,
+                Json(serde_json::json!({
+                    "success": true,
+                    "user": user_info
+                })),
+            )
         }
         Err(e) => {
             warn!("Registration failed: {}", e);
-            (StatusCode::BAD_REQUEST, Json(serde_json::json!({
-                "success": false,
-                "error": e.to_string()
-            })))
+            (
+                StatusCode::BAD_REQUEST,
+                Json(serde_json::json!({
+                    "success": false,
+                    "error": e.to_string()
+                })),
+            )
         }
     }
 }
@@ -1494,17 +1554,23 @@ pub async fn auth_login(
     match state.auth.login(&request.email, &request.password) {
         Ok(tokens) => {
             info!("User logged in: {}", request.email);
-            (StatusCode::OK, Json(serde_json::json!({
-                "success": true,
-                "tokens": tokens
-            })))
+            (
+                StatusCode::OK,
+                Json(serde_json::json!({
+                    "success": true,
+                    "tokens": tokens
+                })),
+            )
         }
         Err(e) => {
             warn!("Login failed for {}: {}", request.email, e);
-            (StatusCode::UNAUTHORIZED, Json(serde_json::json!({
-                "success": false,
-                "error": "Invalid credentials"
-            })))
+            (
+                StatusCode::UNAUTHORIZED,
+                Json(serde_json::json!({
+                    "success": false,
+                    "error": "Invalid credentials"
+                })),
+            )
         }
     }
 }
@@ -1515,18 +1581,22 @@ pub async fn auth_refresh(
     Json(request): Json<RefreshRequest>,
 ) -> (StatusCode, Json<serde_json::Value>) {
     match state.auth.refresh(&request.refresh_token) {
-        Ok(tokens) => {
-            (StatusCode::OK, Json(serde_json::json!({
+        Ok(tokens) => (
+            StatusCode::OK,
+            Json(serde_json::json!({
                 "success": true,
                 "tokens": tokens
-            })))
-        }
+            })),
+        ),
         Err(e) => {
             warn!("Token refresh failed: {}", e);
-            (StatusCode::UNAUTHORIZED, Json(serde_json::json!({
-                "success": false,
-                "error": "Invalid or expired refresh token"
-            })))
+            (
+                StatusCode::UNAUTHORIZED,
+                Json(serde_json::json!({
+                    "success": false,
+                    "error": "Invalid or expired refresh token"
+                })),
+            )
         }
     }
 }
@@ -1537,10 +1607,13 @@ pub async fn auth_logout(
     Json(request): Json<RefreshRequest>,
 ) -> (StatusCode, Json<serde_json::Value>) {
     let _ = state.auth.logout(&request.refresh_token);
-    (StatusCode::OK, Json(serde_json::json!({
-        "success": true,
-        "message": "Logged out successfully"
-    })))
+    (
+        StatusCode::OK,
+        Json(serde_json::json!({
+            "success": true,
+            "message": "Logged out successfully"
+        })),
+    )
 }
 
 /// GET /api/auth/me - Get current user info (requires auth)
@@ -1551,17 +1624,21 @@ pub async fn auth_me(
     match state.auth.get_user(&claims.sub) {
         Some(user) => {
             let user_info: UserInfo = user.into();
-            (StatusCode::OK, Json(serde_json::json!({
-                "success": true,
-                "user": user_info
-            })))
+            (
+                StatusCode::OK,
+                Json(serde_json::json!({
+                    "success": true,
+                    "user": user_info
+                })),
+            )
         }
-        None => {
-            (StatusCode::NOT_FOUND, Json(serde_json::json!({
+        None => (
+            StatusCode::NOT_FOUND,
+            Json(serde_json::json!({
                 "success": false,
                 "error": "User not found"
-            })))
-        }
+            })),
+        ),
     }
 }
 
@@ -1572,18 +1649,22 @@ pub async fn auth_register_device(
     Json(request): Json<DeviceRegistrationRequest>,
 ) -> (StatusCode, Json<serde_json::Value>) {
     match state.auth.register_device(&claims.sub, request) {
-        Ok(device) => {
-            (StatusCode::CREATED, Json(serde_json::json!({
+        Ok(device) => (
+            StatusCode::CREATED,
+            Json(serde_json::json!({
                 "success": true,
                 "device": device
-            })))
-        }
+            })),
+        ),
         Err(e) => {
             warn!("Device registration failed: {}", e);
-            (StatusCode::BAD_REQUEST, Json(serde_json::json!({
-                "success": false,
-                "error": e.to_string()
-            })))
+            (
+                StatusCode::BAD_REQUEST,
+                Json(serde_json::json!({
+                    "success": false,
+                    "error": e.to_string()
+                })),
+            )
         }
     }
 }
@@ -1594,10 +1675,13 @@ pub async fn auth_get_devices(
     axum::Extension(claims): axum::Extension<Claims>,
 ) -> (StatusCode, Json<serde_json::Value>) {
     let devices = state.auth.get_user_devices(&claims.sub);
-    (StatusCode::OK, Json(serde_json::json!({
-        "success": true,
-        "devices": devices
-    })))
+    (
+        StatusCode::OK,
+        Json(serde_json::json!({
+            "success": true,
+            "devices": devices
+        })),
+    )
 }
 
 /// PUT /api/auth/devices/:id/push-token - Update push notification token
@@ -1606,19 +1690,26 @@ pub async fn auth_update_push_token(
     Path(device_id): Path<String>,
     Json(request): Json<UpdatePushTokenRequest>,
 ) -> (StatusCode, Json<serde_json::Value>) {
-    match state.auth.update_push_token(&device_id, &request.push_token) {
-        Ok(_) => {
-            (StatusCode::OK, Json(serde_json::json!({
+    match state
+        .auth
+        .update_push_token(&device_id, &request.push_token)
+    {
+        Ok(_) => (
+            StatusCode::OK,
+            Json(serde_json::json!({
                 "success": true,
                 "message": "Push token updated"
-            })))
-        }
+            })),
+        ),
         Err(e) => {
             warn!("Push token update failed: {}", e);
-            (StatusCode::NOT_FOUND, Json(serde_json::json!({
-                "success": false,
-                "error": e.to_string()
-            })))
+            (
+                StatusCode::NOT_FOUND,
+                Json(serde_json::json!({
+                    "success": false,
+                    "error": e.to_string()
+                })),
+            )
         }
     }
 }

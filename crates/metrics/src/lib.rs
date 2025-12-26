@@ -88,13 +88,7 @@ impl QueryLog {
     }
 
     /// Record a new query to the log
-    pub fn record(
-        &self,
-        domain: String,
-        client_ip: String,
-        blocked: bool,
-        response_time_ms: u64,
-    ) {
+    pub fn record(&self, domain: String, client_ip: String, blocked: bool, response_time_ms: u64) {
         let timestamp = SystemTime::now()
             .duration_since(UNIX_EPOCH)
             .unwrap_or_default()
@@ -201,7 +195,9 @@ impl MetricsCollector {
         response_time_ms: u64,
     ) {
         self.record_query(blocked);
-        self.inner.query_log.record(domain, client_ip, blocked, response_time_ms);
+        self.inner
+            .query_log
+            .record(domain, client_ip, blocked, response_time_ms);
     }
 
     pub fn record_cache_hit(&self) {
@@ -261,7 +257,10 @@ impl MetricsCollector {
 
         output.push_str("# HELP dns_queries_blocked_total Total blocked queries\n");
         output.push_str("# TYPE dns_queries_blocked_total counter\n");
-        output.push_str(&format!("dns_queries_blocked_total {}\n", snapshot.blocked_queries));
+        output.push_str(&format!(
+            "dns_queries_blocked_total {}\n",
+            snapshot.blocked_queries
+        ));
 
         output.push_str("# HELP dns_cache_hits_total Total cache hits\n");
         output.push_str("# TYPE dns_cache_hits_total counter\n");
@@ -269,7 +268,10 @@ impl MetricsCollector {
 
         output.push_str("# HELP dns_cache_hit_rate Cache hit rate\n");
         output.push_str("# TYPE dns_cache_hit_rate gauge\n");
-        output.push_str(&format!("dns_cache_hit_rate {:.4}\n", snapshot.cache_hit_rate));
+        output.push_str(&format!(
+            "dns_cache_hit_rate {:.4}\n",
+            snapshot.cache_hit_rate
+        ));
 
         output
     }

@@ -88,7 +88,10 @@ impl RateLimiter {
         entry.count += 1;
 
         if entry.count > self.config.max_requests {
-            let retry_after = self.config.window.saturating_sub(now.duration_since(entry.window_start));
+            let retry_after = self
+                .config
+                .window
+                .saturating_sub(now.duration_since(entry.window_start));
             warn!("Rate limit exceeded for IP: {:?}", ip);
             RateLimitResult::Limited {
                 retry_after_secs: retry_after.as_secs(),
@@ -113,18 +116,24 @@ impl RateLimiter {
         let last = self.last_cleanup.load(std::sync::atomic::Ordering::Relaxed);
 
         if now_secs - last > self.config.cleanup_interval.as_secs()
-            && self.last_cleanup.compare_exchange(
-                last,
-                now_secs,
-                std::sync::atomic::Ordering::SeqCst,
-                std::sync::atomic::Ordering::Relaxed,
-            ).is_ok() {
-                let now = Instant::now();
-                self.entries.retain(|_, entry| {
-                    now.duration_since(entry.window_start) <= self.config.window
-                });
-                debug!("Rate limiter cleanup completed, {} entries remaining", self.entries.len());
-            }
+            && self
+                .last_cleanup
+                .compare_exchange(
+                    last,
+                    now_secs,
+                    std::sync::atomic::Ordering::SeqCst,
+                    std::sync::atomic::Ordering::Relaxed,
+                )
+                .is_ok()
+        {
+            let now = Instant::now();
+            self.entries
+                .retain(|_, entry| now.duration_since(entry.window_start) <= self.config.window);
+            debug!(
+                "Rate limiter cleanup completed, {} entries remaining",
+                self.entries.len()
+            );
+        }
     }
 
     /// Get stats about the rate limiter

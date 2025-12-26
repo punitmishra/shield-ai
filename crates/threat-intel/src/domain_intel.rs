@@ -11,16 +11,14 @@ use crate::DomainIntelReport;
 
 /// High-risk TLDs commonly used for malicious purposes
 const HIGH_RISK_TLDS: &[&str] = &[
-    "tk", "ml", "ga", "cf", "gq",  // Free domains often abused
-    "xyz", "top", "club", "work", "click",
-    "link", "info", "biz", "pw", "cc",
-    "su", "ws", "buzz", "monster",
+    "tk", "ml", "ga", "cf", "gq", // Free domains often abused
+    "xyz", "top", "club", "work", "click", "link", "info", "biz", "pw", "cc", "su", "ws", "buzz",
+    "monster",
 ];
 
 /// Medium-risk TLDs
 const MEDIUM_RISK_TLDS: &[&str] = &[
-    "online", "site", "store", "tech", "space",
-    "website", "host", "fun", "press", "life",
+    "online", "site", "store", "tech", "space", "website", "host", "fun", "press", "life",
 ];
 
 /// Free subdomain providers (commonly abused)
@@ -80,7 +78,10 @@ impl DomainIntelligence {
             cache: DashMap::new(),
             high_risk_tlds: HIGH_RISK_TLDS.iter().map(|s| s.to_string()).collect(),
             medium_risk_tlds: MEDIUM_RISK_TLDS.iter().map(|s| s.to_string()).collect(),
-            free_providers: FREE_DOMAIN_PROVIDERS.iter().map(|s| s.to_string()).collect(),
+            free_providers: FREE_DOMAIN_PROVIDERS
+                .iter()
+                .map(|s| s.to_string())
+                .collect(),
         }
     }
 
@@ -100,10 +101,13 @@ impl DomainIntelligence {
         let report = self.analyze_domain(&domain_lower);
 
         // Cache the result
-        self.cache.insert(domain_lower.clone(), CachedIntel {
-            report: report.clone(),
-            cached_at: Utc::now(),
-        });
+        self.cache.insert(
+            domain_lower.clone(),
+            CachedIntel {
+                report: report.clone(),
+                cached_at: Utc::now(),
+            },
+        );
 
         Some(report)
     }
@@ -159,10 +163,21 @@ impl DomainIntelligence {
     fn estimate_domain_age(&self, domain: &str) -> (Option<u32>, bool, Option<DateTime<Utc>>) {
         // Well-known domains that are definitely old
         let well_known = [
-            "google.com", "facebook.com", "amazon.com", "microsoft.com",
-            "apple.com", "github.com", "twitter.com", "linkedin.com",
-            "youtube.com", "netflix.com", "cloudflare.com", "mozilla.org",
-            "wikipedia.org", "reddit.com", "stackoverflow.com",
+            "google.com",
+            "facebook.com",
+            "amazon.com",
+            "microsoft.com",
+            "apple.com",
+            "github.com",
+            "twitter.com",
+            "linkedin.com",
+            "youtube.com",
+            "netflix.com",
+            "cloudflare.com",
+            "mozilla.org",
+            "wikipedia.org",
+            "reddit.com",
+            "stackoverflow.com",
         ];
 
         let domain_lower = domain.to_lowercase();
@@ -184,7 +199,11 @@ impl DomainIntelligence {
         ];
 
         for (pattern, is_suspicious) in &suspicious_patterns {
-            if regex::Regex::new(pattern).map(|re| re.is_match(&domain_lower)).unwrap_or(false) && *is_suspicious {
+            if regex::Regex::new(pattern)
+                .map(|re| re.is_match(&domain_lower))
+                .unwrap_or(false)
+                && *is_suspicious
+            {
                 // Treat as potentially new
                 return (Some(7), true, None);
             }
@@ -197,7 +216,9 @@ impl DomainIntelligence {
     /// Get cache statistics
     pub fn cache_stats(&self) -> (usize, usize) {
         let total = self.cache.len();
-        let stale = self.cache.iter()
+        let stale = self
+            .cache
+            .iter()
             .filter(|entry| {
                 let age = Utc::now() - entry.cached_at;
                 age.num_hours() >= 24

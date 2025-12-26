@@ -44,7 +44,8 @@ pub async fn auth_middleware(
                 "error": "missing_token",
                 "message": "Authorization header required"
             })),
-        ).into_response();
+        )
+            .into_response();
     };
 
     // Extract Bearer token
@@ -55,7 +56,8 @@ pub async fn auth_middleware(
                 "error": "invalid_token_format",
                 "message": "Bearer token required"
             })),
-        ).into_response();
+        )
+            .into_response();
     };
 
     // Validate token
@@ -73,7 +75,8 @@ pub async fn auth_middleware(
                     "error": "invalid_token",
                     "message": "Invalid or expired token"
                 })),
-            ).into_response()
+            )
+                .into_response()
         }
     }
 }

@@ -20,10 +20,7 @@ pub struct Resolver {
 
 impl Resolver {
     /// Create a new DNS resolver
-    pub async fn new(
-        cache: Arc<DNSCache>,
-        filter: Arc<FilterEngine>,
-    ) -> Result<Self> {
+    pub async fn new(cache: Arc<DNSCache>, filter: Arc<FilterEngine>) -> Result<Self> {
         info!("Initializing DNS resolver");
 
         let mut opts = ResolverOpts::default();
@@ -31,10 +28,7 @@ impl Resolver {
         opts.attempts = 2;
         opts.use_hosts_file = true;
 
-        let resolver = TokioAsyncResolver::tokio(
-            ResolverConfig::cloudflare(),
-            opts,
-        );
+        let resolver = TokioAsyncResolver::tokio(ResolverConfig::cloudflare(), opts);
 
         Ok(Self {
             inner: Arc::new(resolver),
@@ -58,10 +52,7 @@ impl Resolver {
         let cache_key = CacheKey::new(domain.to_string(), "A".to_string());
         if let Some(cached) = self.cache.get(&cache_key) {
             debug!("Cache hit for {}", domain);
-            let ips: Vec<IpAddr> = cached
-                .iter()
-                .filter_map(|s| s.parse().ok())
-                .collect();
+            let ips: Vec<IpAddr> = cached.iter().filter_map(|s| s.parse().ok()).collect();
             return Ok(ips);
         }
 

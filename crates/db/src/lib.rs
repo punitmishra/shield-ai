@@ -4,15 +4,15 @@
 //! - SQLite for relational data (users, devices, blocklists)
 //! - Qdrant for vector storage (domain embeddings, threat vectors)
 
-pub mod sqlite;
-pub mod qdrant;
-pub mod models;
 pub mod error;
+pub mod models;
+pub mod qdrant;
+pub mod sqlite;
 
 pub use error::DbError;
-pub use sqlite::SqliteDb;
-pub use qdrant::QdrantDb;
 pub use models::*;
+pub use qdrant::QdrantDb;
+pub use sqlite::SqliteDb;
 
 use std::sync::Arc;
 use tracing::info;

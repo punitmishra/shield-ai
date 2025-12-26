@@ -116,11 +116,7 @@ impl ThreatFeedManager {
         }
 
         // Known C&C servers
-        let c2_domains = [
-            "command-control.tk",
-            "c2-server.ml",
-            "beacon-host.ga",
-        ];
+        let c2_domains = ["command-control.tk", "c2-server.ml", "beacon-host.ga"];
 
         for domain in c2_domains {
             self.add_threat(domain, ThreatCategory::CommandAndControl, "builtin", 0.9);

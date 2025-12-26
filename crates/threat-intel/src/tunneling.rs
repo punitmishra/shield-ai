@@ -44,23 +44,17 @@ impl TunnelingDetector {
         vec![
             TunnelingSignature {
                 name: "iodine".to_string(),
-                patterns: vec![
-                    r"^[a-z0-9]{50,}\.".to_string(),
-                ],
+                patterns: vec![r"^[a-z0-9]{50,}\.".to_string()],
                 confidence: 0.9,
             },
             TunnelingSignature {
                 name: "dns2tcp".to_string(),
-                patterns: vec![
-                    r"^[a-f0-9]{32,}\.".to_string(),
-                ],
+                patterns: vec![r"^[a-f0-9]{32,}\.".to_string()],
                 confidence: 0.85,
             },
             TunnelingSignature {
                 name: "dnscat2".to_string(),
-                patterns: vec![
-                    r"^[a-z0-9]{30,}\.".to_string(),
-                ],
+                patterns: vec![r"^[a-z0-9]{30,}\.".to_string()],
                 confidence: 0.85,
             },
         ]
@@ -77,7 +71,10 @@ impl TunnelingDetector {
 
         // Check 1: Subdomain length
         if subdomain_length > self.max_subdomain_length {
-            indicators.push(format!("Extremely long subdomain: {} chars", subdomain_length));
+            indicators.push(format!(
+                "Extremely long subdomain: {} chars",
+                subdomain_length
+            ));
             confidence += 0.3;
         } else if subdomain_length > 30 {
             indicators.push(format!("Long subdomain: {} chars", subdomain_length));
@@ -204,8 +201,7 @@ impl TunnelingDetector {
             return false;
         }
 
-        let hex_chars: std::collections::HashSet<char> =
-            "0123456789abcdefABCDEF".chars().collect();
+        let hex_chars: std::collections::HashSet<char> = "0123456789abcdefABCDEF".chars().collect();
 
         let matching = s.chars().filter(|c| hex_chars.contains(c)).count();
         let ratio = matching as f32 / s.len() as f32;

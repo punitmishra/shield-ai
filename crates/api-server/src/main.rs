@@ -10,7 +10,11 @@ use std::net::SocketAddr;
 use std::sync::Arc;
 
 use anyhow::Result;
-use axum::{middleware, routing::{delete, get, post, put}, Router};
+use axum::{
+    middleware,
+    routing::{delete, get, post, put},
+    Router,
+};
 use tower_http::{
     cors::{Any, CorsLayer},
     trace::{DefaultMakeSpan, DefaultOnResponse, TraceLayer},
@@ -30,7 +34,10 @@ async fn main() -> Result<()> {
         .with_line_number(true)
         .init();
 
-    info!("Starting Shield AI API Server v{}", env!("CARGO_PKG_VERSION"));
+    info!(
+        "Starting Shield AI API Server v{}",
+        env!("CARGO_PKG_VERSION")
+    );
 
     // Initialize application state (async - connects to DNS servers)
     let app_state = Arc::new(AppState::new().await?);
@@ -53,11 +60,20 @@ async fn main() -> Result<()> {
         // Analytics endpoint
         .route("/api/analytics", get(handlers::get_analytics))
         // Allowlist management endpoints
-        .route("/api/allowlist", get(handlers::get_allowlist).post(handlers::add_to_allowlist))
-        .route("/api/allowlist/:domain", delete(handlers::remove_from_allowlist))
+        .route(
+            "/api/allowlist",
+            get(handlers::get_allowlist).post(handlers::add_to_allowlist),
+        )
+        .route(
+            "/api/allowlist/:domain",
+            delete(handlers::remove_from_allowlist),
+        )
         // Blocklist management endpoints
         .route("/api/blocklist", post(handlers::add_to_blocklist))
-        .route("/api/blocklist/:domain", delete(handlers::remove_from_blocklist))
+        .route(
+            "/api/blocklist/:domain",
+            delete(handlers::remove_from_blocklist),
+        )
         // Privacy metrics endpoint
         .route("/api/privacy-metrics", get(handlers::get_privacy_metrics))
         // Device management endpoints
@@ -70,9 +86,15 @@ async fn main() -> Result<()> {
         .route("/api/threat/check/:domain", get(handlers::threat_check))
         .route("/api/threat/feeds/stats", get(handlers::threat_feed_stats))
         // Profile management endpoints
-        .route("/api/profiles", get(handlers::list_profiles).post(handlers::create_profile))
+        .route(
+            "/api/profiles",
+            get(handlers::list_profiles).post(handlers::create_profile),
+        )
         .route("/api/profiles/stats", get(handlers::profile_stats))
-        .route("/api/profiles/:id", get(handlers::get_profile).delete(handlers::delete_profile))
+        .route(
+            "/api/profiles/:id",
+            get(handlers::get_profile).delete(handlers::delete_profile),
+        )
         .route("/api/profiles/device", post(handlers::assign_device))
         // Tier management endpoints
         .route("/api/tiers/pricing", get(handlers::get_pricing))
@@ -102,10 +124,19 @@ async fn main() -> Result<()> {
             Router::new()
                 .route("/api/auth/me", get(handlers::auth_me))
                 .route("/api/auth/devices", get(handlers::auth_get_devices))
-                .route("/api/auth/devices/register", post(handlers::auth_register_device))
-                .route("/api/auth/devices/:id/push-token", put(handlers::auth_update_push_token))
-                .layer(middleware::from_fn_with_state(app_state.clone(), handlers::auth_middleware))
-                .with_state(app_state)
+                .route(
+                    "/api/auth/devices/register",
+                    post(handlers::auth_register_device),
+                )
+                .route(
+                    "/api/auth/devices/:id/push-token",
+                    put(handlers::auth_update_push_token),
+                )
+                .layer(middleware::from_fn_with_state(
+                    app_state.clone(),
+                    handlers::auth_middleware,
+                ))
+                .with_state(app_state),
         )
         // Request tracing
         .layer(
