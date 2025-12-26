@@ -40,8 +40,7 @@
           "sounds": [],
           "defaultChannel": "default"
         }
-      ],
-      "./plugins/withShieldVPN.js"
+      ]
     ],
     "notification": {
       "icon": "./assets/notification-icon.png",

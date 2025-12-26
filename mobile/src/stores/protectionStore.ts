@@ -5,7 +5,29 @@
 
 import { create } from 'zustand';
 import { api } from '../api/client';
-import { VPN, VPNStatus, VPNStats } from '../../modules/vpn-module/src';
+
+// VPN types (native module not available in Expo Go)
+export type VPNStatus = 'connected' | 'connecting' | 'disconnected' | 'disconnecting' | 'error';
+export interface VPNStats {
+  bytesIn: number;
+  bytesOut: number;
+  packetsIn: number;
+  packetsOut: number;
+  connectedSince: number | null;
+}
+
+// Mock VPN module for Expo Go compatibility
+const VPN = {
+  isSupported: async () => false,
+  hasPermission: async () => false,
+  requestPermission: async () => false,
+  getStatus: async (): Promise<VPNStatus> => 'disconnected',
+  connect: async () => {},
+  disconnect: async () => {},
+  configure: async (_config: any) => {},
+  addStatusListener: (_callback: (status: VPNStatus) => void) => {},
+  addStatsListener: (_callback: (stats: VPNStats) => void) => {},
+};
 
 export interface Stats {
   total_queries: number;
