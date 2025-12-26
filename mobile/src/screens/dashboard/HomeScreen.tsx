@@ -1,6 +1,6 @@
 /**
- * Home Screen - Premium Dashboard
- * Refined elegant design with smooth animations
+ * Home Screen - Elite Dashboard
+ * Professional design with refined alignment and polished UI
  */
 
 import React, { useEffect, useCallback, useRef } from 'react';
@@ -13,54 +13,43 @@ import {
   TouchableOpacity,
   Dimensions,
   Animated,
-  Platform,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useAuthStore } from '../../stores/authStore';
 import { useProtectionStore } from '../../stores/protectionStore';
 
 const { width } = Dimensions.get('window');
-const CARD_WIDTH = (width - 56) / 2;
+const CARD_PADDING = 20;
+const SECTION_GAP = 12;
 
-// Animated pulse for the shield button
+// Animated pulse ring for shield button
 const PulseRing = ({ isActive }: { isActive: boolean }) => {
-  const scaleAnim = useRef(new Animated.Value(1)).current;
-  const opacityAnim = useRef(new Animated.Value(0.6)).current;
+  const scale = useRef(new Animated.Value(1)).current;
+  const opacity = useRef(new Animated.Value(0.4)).current;
 
   useEffect(() => {
     if (isActive) {
-      const pulse = Animated.loop(
-        Animated.sequence([
-          Animated.parallel([
-            Animated.timing(scaleAnim, {
-              toValue: 1.3,
-              duration: 1500,
-              useNativeDriver: true,
-            }),
-            Animated.timing(opacityAnim, {
-              toValue: 0,
-              duration: 1500,
-              useNativeDriver: true,
-            }),
-          ]),
-          Animated.parallel([
-            Animated.timing(scaleAnim, {
-              toValue: 1,
-              duration: 0,
-              useNativeDriver: true,
-            }),
-            Animated.timing(opacityAnim, {
-              toValue: 0.6,
-              duration: 0,
-              useNativeDriver: true,
-            }),
-          ]),
+      const animation = Animated.loop(
+        Animated.parallel([
+          Animated.timing(scale, {
+            toValue: 1.5,
+            duration: 2000,
+            useNativeDriver: true,
+          }),
+          Animated.timing(opacity, {
+            toValue: 0,
+            duration: 2000,
+            useNativeDriver: true,
+          }),
         ])
       );
-      pulse.start();
-      return () => pulse.stop();
+      animation.start();
+      return () => animation.stop();
+    } else {
+      scale.setValue(1);
+      opacity.setValue(0);
     }
-  }, [isActive]);
+  }, [isActive, scale, opacity]);
 
   if (!isActive) return null;
 
@@ -68,10 +57,7 @@ const PulseRing = ({ isActive }: { isActive: boolean }) => {
     <Animated.View
       style={[
         styles.pulseRing,
-        {
-          transform: [{ scale: scaleAnim }],
-          opacity: opacityAnim,
-        },
+        { transform: [{ scale }], opacity },
       ]}
     />
   );
@@ -109,7 +95,7 @@ export default function HomeScreen() {
   const handleShieldPress = () => {
     Animated.sequence([
       Animated.timing(buttonScale, {
-        toValue: 0.95,
+        toValue: 0.94,
         duration: 100,
         useNativeDriver: true,
       }),
@@ -123,16 +109,16 @@ export default function HomeScreen() {
   };
 
   const score = privacyMetrics?.privacy_score || 95;
-  const grade = privacyMetrics?.privacy_grade || 'A+';
+  const isConnecting = vpnStatus === 'connecting' || vpnStatus === 'disconnecting';
 
   return (
     <View style={styles.container}>
-      {/* Layered Background */}
-      <View style={styles.backgroundBase} />
-      <View style={styles.backgroundGlow} />
+      {/* Background */}
+      <View style={styles.bgBase} />
+      <View style={styles.bgGlow} />
 
       <ScrollView
-        style={styles.scrollView}
+        style={styles.scroll}
         contentContainerStyle={[styles.content, { paddingTop: insets.top + 16 }]}
         showsVerticalScrollIndicator={false}
         refreshControl={
@@ -140,163 +126,193 @@ export default function HomeScreen() {
             refreshing={isLoading}
             onRefresh={onRefresh}
             tintColor="#60a5fa"
-            colors={['#60a5fa']}
           />
         }
       >
-        {/* Minimal Header */}
+        {/* Header */}
         <View style={styles.header}>
-          <View>
-            <Text style={styles.greeting}>Good evening,</Text>
-            <Text style={styles.userName}>
-              {user?.email?.split('@')[0] || 'User'}
-            </Text>
+          <View style={styles.headerLeft}>
+            <Text style={styles.headerSub}>Dashboard</Text>
+            <Text style={styles.headerTitle}>Shield AI</Text>
           </View>
-          <View style={styles.tierPill}>
-            <View style={styles.tierDot} />
+          <View style={styles.tierBadge}>
+            <View style={[styles.tierDot, isVPNConnected && styles.tierDotActive]} />
             <Text style={styles.tierText}>{user?.tier?.toUpperCase() || 'PRO'}</Text>
           </View>
         </View>
 
-        {/* Shield Button - Hero Element */}
+        {/* Shield Button */}
         <View style={styles.shieldSection}>
           <TouchableOpacity
             activeOpacity={0.9}
             onPress={handleShieldPress}
-            style={styles.shieldButtonContainer}
+            style={styles.shieldWrapper}
           >
             <PulseRing isActive={isVPNConnected} />
             <Animated.View
               style={[
-                styles.shieldButton,
-                isVPNConnected && styles.shieldButtonActive,
+                styles.shieldOuter,
+                isVPNConnected && styles.shieldOuterActive,
                 { transform: [{ scale: buttonScale }] },
               ]}
             >
-              <View style={styles.shieldInner}>
-                <Text style={styles.shieldIcon}>
-                  {vpnStatus === 'connecting' || vpnStatus === 'disconnecting'
-                    ? '◐'
-                    : isVPNConnected ? '◉' : '○'}
-                </Text>
+              <View style={[styles.shieldInner, isVPNConnected && styles.shieldInnerActive]}>
+                <View style={[styles.shieldCore, isVPNConnected && styles.shieldCoreActive]}>
+                  {isConnecting ? (
+                    <Text style={styles.shieldIconConnecting}>●</Text>
+                  ) : (
+                    <View style={[styles.shieldShape, isVPNConnected && styles.shieldShapeActive]}>
+                      {isVPNConnected && <Text style={styles.checkmark}>✓</Text>}
+                    </View>
+                  )}
+                </View>
               </View>
             </Animated.View>
           </TouchableOpacity>
 
-          <Text style={[styles.statusText, isVPNConnected && styles.statusTextActive]}>
-            {isVPNConnected ? 'Protected' : 'Tap to Protect'}
+          <Text style={[styles.statusTitle, isVPNConnected && styles.statusTitleActive]}>
+            {isConnecting ? 'Connecting...' : isVPNConnected ? 'Protected' : 'Not Protected'}
           </Text>
-          <Text style={styles.statusSubtext}>
-            {isVPNConnected
-              ? 'Your connection is secure'
-              : 'Enable DNS protection'}
+          <Text style={styles.statusSubtitle}>
+            {isVPNConnected ? 'Your DNS queries are secure' : 'Tap the shield to enable protection'}
           </Text>
         </View>
 
-        {/* Stats Row */}
-        <View style={styles.statsRow}>
-          <View style={styles.statItem}>
-            <Text style={styles.statNumber}>{formatNumber(stats?.total_queries || 0)}</Text>
-            <Text style={styles.statLabel}>Queries</Text>
-          </View>
-          <View style={styles.statDivider} />
-          <View style={styles.statItem}>
-            <Text style={[styles.statNumber, styles.statBlocked]}>
-              {formatNumber(stats?.blocked_queries || 0)}
-            </Text>
-            <Text style={styles.statLabel}>Blocked</Text>
-          </View>
-          <View style={styles.statDivider} />
-          <View style={styles.statItem}>
-            <Text style={[styles.statNumber, styles.statCache]}>
-              {((stats?.cache_hit_rate || 0) * 100).toFixed(0)}%
-            </Text>
-            <Text style={styles.statLabel}>Cached</Text>
+        {/* Quick Stats */}
+        <View style={styles.statsCard}>
+          <View style={styles.statsRow}>
+            <View style={styles.statBlock}>
+              <Text style={styles.statNumber}>{formatNumber(stats?.total_queries || 0)}</Text>
+              <Text style={styles.statName}>Queries</Text>
+            </View>
+            <View style={styles.statSep} />
+            <View style={styles.statBlock}>
+              <Text style={[styles.statNumber, styles.textRed]}>{formatNumber(stats?.blocked_queries || 0)}</Text>
+              <Text style={styles.statName}>Blocked</Text>
+            </View>
+            <View style={styles.statSep} />
+            <View style={styles.statBlock}>
+              <Text style={[styles.statNumber, styles.textGreen]}>{((stats?.cache_hit_rate || 0) * 100).toFixed(0)}%</Text>
+              <Text style={styles.statName}>Cached</Text>
+            </View>
           </View>
         </View>
 
-        {/* Privacy Score Card */}
-        <View style={styles.scoreCard}>
-          <View style={styles.scoreHeader}>
-            <View>
-              <Text style={styles.scoreLabel}>Privacy Score</Text>
-              <View style={styles.scoreValueRow}>
-                <Text style={styles.scoreValue}>{score}</Text>
-                <Text style={styles.scoreMax}>/100</Text>
+        {/* Privacy Score Panel */}
+        <View style={styles.panel}>
+          <View style={styles.panelHeader}>
+            <Text style={styles.panelLabel}>Privacy Score</Text>
+          </View>
+          <View style={styles.scoreSection}>
+            <View style={styles.scoreLeft}>
+              <Text style={styles.scoreNumber}>{score}</Text>
+              <Text style={styles.scoreOf}>/100</Text>
+            </View>
+            <View style={styles.gradeBox}>
+              <Text style={styles.gradeText}>{privacyMetrics?.privacy_grade || 'A+'}</Text>
+            </View>
+          </View>
+          <View style={styles.progressBar}>
+            <View style={[styles.progressFill, { width: `${score}%` }]} />
+          </View>
+          <View style={styles.breakdownRow}>
+            <View style={styles.breakdownItem}>
+              <Text style={styles.breakdownValue}>{privacyMetrics?.trackers_blocked || 247}</Text>
+              <Text style={styles.breakdownLabel}>Trackers</Text>
+            </View>
+            <View style={styles.breakdownItem}>
+              <Text style={styles.breakdownValue}>{privacyMetrics?.ad_requests_blocked || '1.2K'}</Text>
+              <Text style={styles.breakdownLabel}>Ads</Text>
+            </View>
+            <View style={styles.breakdownItem}>
+              <Text style={styles.breakdownValue}>{privacyMetrics?.analytics_blocked || 89}</Text>
+              <Text style={styles.breakdownLabel}>Analytics</Text>
+            </View>
+          </View>
+        </View>
+
+        {/* Performance Metrics */}
+        <View style={styles.metricsGrid}>
+          <View style={styles.metricCard}>
+            <View style={styles.metricTop}>
+              <Text style={styles.metricLabel}>Cache Rate</Text>
+              <Text style={styles.metricValueGreen}>{((stats?.cache_hit_rate || 0) * 100).toFixed(0)}%</Text>
+            </View>
+            <View style={styles.metricBar}>
+              <View style={[styles.metricFillGreen, { width: `${(stats?.cache_hit_rate || 0) * 100}%` }]} />
+            </View>
+          </View>
+          <View style={styles.metricCard}>
+            <View style={styles.metricTop}>
+              <Text style={styles.metricLabel}>Block Rate</Text>
+              <Text style={styles.metricValueRed}>{((stats?.block_rate || 0) * 100).toFixed(1)}%</Text>
+            </View>
+            <View style={styles.metricBar}>
+              <View style={[styles.metricFillRed, { width: `${(stats?.block_rate || 0) * 100}%` }]} />
+            </View>
+          </View>
+        </View>
+
+        {/* Connection Info Panel */}
+        <View style={styles.panel}>
+          <View style={styles.panelHeader}>
+            <Text style={styles.panelLabel}>Connection</Text>
+          </View>
+          <View style={styles.infoList}>
+            <View style={styles.infoRow}>
+              <Text style={styles.infoKey}>DNS Server</Text>
+              <Text style={styles.infoValue}>Cloudflare</Text>
+            </View>
+            <View style={styles.infoDivider} />
+            <View style={styles.infoRow}>
+              <Text style={styles.infoKey}>Encryption</Text>
+              <Text style={styles.infoValue}>DoH (256-bit)</Text>
+            </View>
+            <View style={styles.infoDivider} />
+            <View style={styles.infoRow}>
+              <Text style={styles.infoKey}>Latency</Text>
+              <View style={styles.latencyChip}>
+                <Text style={styles.latencyValue}>&lt;1ms</Text>
               </View>
             </View>
-            <View style={styles.gradeBadge}>
-              <Text style={styles.gradeText}>{grade}</Text>
-            </View>
-          </View>
-
-          <View style={styles.scoreBar}>
-            <View style={[styles.scoreBarFill, { width: `${score}%` }]} />
-          </View>
-
-          <View style={styles.scoreMetrics}>
-            <View style={styles.metric}>
-              <Text style={styles.metricValue}>{privacyMetrics?.trackers_blocked || 247}</Text>
-              <Text style={styles.metricLabel}>Trackers</Text>
-            </View>
-            <View style={styles.metric}>
-              <Text style={styles.metricValue}>{privacyMetrics?.ad_requests_blocked || '1.2K'}</Text>
-              <Text style={styles.metricLabel}>Ads</Text>
-            </View>
-            <View style={styles.metric}>
-              <Text style={styles.metricValue}>{privacyMetrics?.analytics_blocked || 89}</Text>
-              <Text style={styles.metricLabel}>Analytics</Text>
+            <View style={styles.infoDivider} />
+            <View style={styles.infoRow}>
+              <Text style={styles.infoKey}>Status</Text>
+              <View style={[styles.statusChip, isVPNConnected && styles.statusChipActive]}>
+                <View style={[styles.statusIndicator, isVPNConnected && styles.statusIndicatorActive]} />
+                <Text style={[styles.statusValue, isVPNConnected && styles.statusValueActive]}>
+                  {isVPNConnected ? 'Active' : 'Inactive'}
+                </Text>
+              </View>
             </View>
           </View>
         </View>
 
         {/* Quick Actions */}
-        <Text style={styles.sectionLabel}>Quick Actions</Text>
-        <View style={styles.actionsGrid}>
-          {[
-            { icon: '◎', label: 'Analyze', color: '#3b82f6' },
-            { icon: '☰', label: 'History', color: '#10b981' },
-            { icon: '◇', label: 'Family', color: '#f59e0b' },
-            { icon: '⚙', label: 'Settings', color: '#6b7280' },
-          ].map((action, index) => (
-            <TouchableOpacity
-              key={index}
-              style={styles.actionCard}
-              activeOpacity={0.7}
-            >
-              <View style={[styles.actionIconBg, { backgroundColor: `${action.color}15` }]}>
-                <Text style={[styles.actionIcon, { color: action.color }]}>{action.icon}</Text>
-              </View>
-              <Text style={styles.actionLabel}>{action.label}</Text>
-            </TouchableOpacity>
-          ))}
-        </View>
-
-        {/* Connection Info */}
-        <View style={styles.connectionCard}>
-          <View style={styles.connectionRow}>
-            <Text style={styles.connectionLabel}>DNS Server</Text>
-            <Text style={styles.connectionValue}>Cloudflare</Text>
-          </View>
-          <View style={styles.connectionDivider} />
-          <View style={styles.connectionRow}>
-            <Text style={styles.connectionLabel}>Encryption</Text>
-            <Text style={styles.connectionValue}>DoH (256-bit)</Text>
-          </View>
-          <View style={styles.connectionDivider} />
-          <View style={styles.connectionRow}>
-            <Text style={styles.connectionLabel}>Latency</Text>
-            <View style={styles.latencyBadge}>
-              <Text style={styles.latencyText}>&lt;1ms</Text>
-            </View>
+        <View style={styles.actionsSection}>
+          <Text style={styles.sectionLabel}>Quick Actions</Text>
+          <View style={styles.actionsGrid}>
+            {[
+              { icon: '◎', label: 'Analyze', color: '#3b82f6' },
+              { icon: '☰', label: 'History', color: '#10b981' },
+              { icon: '◇', label: 'Family', color: '#f59e0b' },
+              { icon: '⚙', label: 'Settings', color: '#8b5cf6' },
+            ].map((action, i) => (
+              <TouchableOpacity key={i} style={styles.actionCard} activeOpacity={0.7}>
+                <View style={[styles.actionIconWrap, { backgroundColor: `${action.color}12` }]}>
+                  <Text style={[styles.actionIconText, { color: action.color }]}>{action.icon}</Text>
+                </View>
+                <Text style={styles.actionName}>{action.label}</Text>
+              </TouchableOpacity>
+            ))}
           </View>
         </View>
 
         {/* Footer */}
         <View style={styles.footer}>
-          <Text style={styles.footerText}>Shield AI</Text>
-          <View style={styles.footerDot} />
-          <Text style={styles.footerVersion}>v0.4.4</Text>
+          <Text style={styles.footerBrand}>Shield AI</Text>
+          <View style={styles.footerSep} />
+          <Text style={styles.footerVer}>v0.4.4</Text>
         </View>
       </ScrollView>
     </View>
@@ -307,26 +323,25 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
   },
-  backgroundBase: {
+  bgBase: {
     ...StyleSheet.absoluteFillObject,
     backgroundColor: '#0a0f1a',
   },
-  backgroundGlow: {
+  bgGlow: {
     position: 'absolute',
     top: -100,
-    left: '50%',
-    marginLeft: -200,
-    width: 400,
-    height: 400,
-    borderRadius: 200,
-    backgroundColor: 'rgba(59, 130, 246, 0.08)',
+    alignSelf: 'center',
+    width: 350,
+    height: 350,
+    borderRadius: 175,
+    backgroundColor: 'rgba(59, 130, 246, 0.05)',
   },
-  scrollView: {
+  scroll: {
     flex: 1,
   },
   content: {
-    paddingHorizontal: 24,
-    paddingBottom: 40,
+    paddingHorizontal: CARD_PADDING,
+    paddingBottom: 32,
   },
 
   // Header
@@ -334,38 +349,42 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'flex-start',
-    marginBottom: 40,
+    marginBottom: 24,
   },
-  greeting: {
+  headerLeft: {},
+  headerSub: {
+    fontSize: 12,
     color: '#64748b',
-    fontSize: 15,
     fontWeight: '500',
-    marginBottom: 4,
+    marginBottom: 2,
   },
-  userName: {
+  headerTitle: {
+    fontSize: 22,
     color: '#f8fafc',
-    fontSize: 26,
     fontWeight: '700',
-    letterSpacing: -0.5,
+    letterSpacing: -0.3,
   },
-  tierPill: {
+  tierBadge: {
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: 'rgba(59, 130, 246, 0.1)',
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 20,
-    gap: 6,
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    borderRadius: 16,
   },
   tierDot: {
-    width: 6,
-    height: 6,
-    borderRadius: 3,
-    backgroundColor: '#3b82f6',
+    width: 5,
+    height: 5,
+    borderRadius: 2.5,
+    backgroundColor: '#64748b',
+    marginRight: 5,
+  },
+  tierDotActive: {
+    backgroundColor: '#22c55e',
   },
   tierText: {
+    fontSize: 10,
     color: '#60a5fa',
-    fontSize: 11,
     fontWeight: '700',
     letterSpacing: 0.5,
   },
@@ -373,247 +392,362 @@ const styles = StyleSheet.create({
   // Shield Button
   shieldSection: {
     alignItems: 'center',
-    marginBottom: 40,
+    marginBottom: 24,
   },
-  shieldButtonContainer: {
+  shieldWrapper: {
     alignItems: 'center',
     justifyContent: 'center',
-    marginBottom: 20,
+    marginBottom: 14,
   },
   pulseRing: {
     position: 'absolute',
-    width: 140,
-    height: 140,
-    borderRadius: 70,
+    width: 130,
+    height: 130,
+    borderRadius: 65,
     borderWidth: 2,
     borderColor: '#22c55e',
   },
-  shieldButton: {
-    width: 120,
-    height: 120,
-    borderRadius: 60,
-    backgroundColor: 'rgba(255,255,255,0.03)',
-    borderWidth: 2,
-    borderColor: 'rgba(255,255,255,0.1)',
+  shieldOuter: {
+    width: 110,
+    height: 110,
+    borderRadius: 55,
+    backgroundColor: 'rgba(255, 255, 255, 0.02)',
+    borderWidth: 1.5,
+    borderColor: 'rgba(255, 255, 255, 0.06)',
     alignItems: 'center',
     justifyContent: 'center',
   },
-  shieldButtonActive: {
-    backgroundColor: 'rgba(34, 197, 94, 0.1)',
-    borderColor: 'rgba(34, 197, 94, 0.3)',
+  shieldOuterActive: {
+    backgroundColor: 'rgba(34, 197, 94, 0.06)',
+    borderColor: 'rgba(34, 197, 94, 0.2)',
   },
   shieldInner: {
     width: 80,
     height: 80,
     borderRadius: 40,
-    backgroundColor: 'rgba(255,255,255,0.05)',
+    backgroundColor: 'rgba(255, 255, 255, 0.02)',
     alignItems: 'center',
     justifyContent: 'center',
   },
-  shieldIcon: {
-    fontSize: 32,
-    color: '#64748b',
+  shieldInnerActive: {
+    backgroundColor: 'rgba(34, 197, 94, 0.08)',
   },
-  statusText: {
-    color: '#64748b',
-    fontSize: 20,
+  shieldCore: {
+    width: 52,
+    height: 52,
+    borderRadius: 26,
+    backgroundColor: 'rgba(255, 255, 255, 0.03)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  shieldCoreActive: {
+    backgroundColor: 'rgba(34, 197, 94, 0.12)',
+  },
+  shieldIconConnecting: {
+    fontSize: 18,
+    color: '#f59e0b',
+  },
+  shieldShape: {
+    width: 28,
+    height: 32,
+    borderRadius: 4,
+    borderWidth: 2,
+    borderColor: '#475569',
+    borderTopLeftRadius: 14,
+    borderTopRightRadius: 14,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  shieldShapeActive: {
+    borderColor: '#22c55e',
+    backgroundColor: 'rgba(34, 197, 94, 0.2)',
+  },
+  checkmark: {
+    fontSize: 14,
+    color: '#22c55e',
+    fontWeight: '700',
+  },
+  statusTitle: {
+    fontSize: 18,
     fontWeight: '600',
+    color: '#64748b',
     marginBottom: 4,
   },
-  statusTextActive: {
+  statusTitleActive: {
     color: '#22c55e',
   },
-  statusSubtext: {
+  statusSubtitle: {
+    fontSize: 13,
     color: '#475569',
-    fontSize: 14,
   },
 
-  // Stats Row
+  // Stats Card
+  statsCard: {
+    backgroundColor: 'rgba(255, 255, 255, 0.03)',
+    borderRadius: 14,
+    padding: 18,
+    marginBottom: SECTION_GAP,
+  },
   statsRow: {
     flexDirection: 'row',
-    backgroundColor: 'rgba(255,255,255,0.03)',
-    borderRadius: 16,
-    padding: 20,
-    marginBottom: 24,
+    alignItems: 'center',
   },
-  statItem: {
+  statBlock: {
     flex: 1,
     alignItems: 'center',
   },
-  statDivider: {
+  statSep: {
     width: 1,
-    backgroundColor: 'rgba(255,255,255,0.06)',
+    height: 32,
+    backgroundColor: 'rgba(255, 255, 255, 0.06)',
   },
   statNumber: {
-    color: '#f8fafc',
-    fontSize: 24,
+    fontSize: 20,
     fontWeight: '700',
-    marginBottom: 4,
+    color: '#f8fafc',
+    marginBottom: 3,
   },
-  statBlocked: {
+  textRed: {
     color: '#f87171',
   },
-  statCache: {
+  textGreen: {
     color: '#34d399',
   },
-  statLabel: {
+  statName: {
+    fontSize: 11,
     color: '#64748b',
-    fontSize: 12,
     fontWeight: '500',
   },
 
-  // Score Card
-  scoreCard: {
-    backgroundColor: 'rgba(255,255,255,0.03)',
-    borderRadius: 20,
-    padding: 24,
-    marginBottom: 32,
+  // Panel
+  panel: {
+    backgroundColor: 'rgba(255, 255, 255, 0.03)',
+    borderRadius: 14,
+    padding: 18,
+    marginBottom: SECTION_GAP,
   },
-  scoreHeader: {
+  panelHeader: {
+    marginBottom: 14,
+  },
+  panelLabel: {
+    fontSize: 11,
+    color: '#64748b',
+    fontWeight: '600',
+    letterSpacing: 0.5,
+    textTransform: 'uppercase',
+  },
+
+  // Privacy Score
+  scoreSection: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    alignItems: 'flex-start',
-    marginBottom: 20,
+    alignItems: 'center',
+    marginBottom: 14,
   },
-  scoreLabel: {
-    color: '#64748b',
-    fontSize: 13,
-    fontWeight: '500',
-    marginBottom: 8,
-    textTransform: 'uppercase',
-    letterSpacing: 0.5,
-  },
-  scoreValueRow: {
+  scoreLeft: {
     flexDirection: 'row',
     alignItems: 'baseline',
   },
-  scoreValue: {
-    color: '#f8fafc',
-    fontSize: 48,
+  scoreNumber: {
+    fontSize: 40,
     fontWeight: '700',
-    letterSpacing: -2,
+    color: '#f8fafc',
+    letterSpacing: -1.5,
   },
-  scoreMax: {
+  scoreOf: {
+    fontSize: 16,
     color: '#475569',
-    fontSize: 20,
-    marginLeft: 4,
+    marginLeft: 3,
   },
-  gradeBadge: {
-    backgroundColor: 'rgba(34, 197, 94, 0.15)',
-    paddingHorizontal: 14,
-    paddingVertical: 8,
-    borderRadius: 12,
+  gradeBox: {
+    backgroundColor: 'rgba(34, 197, 94, 0.1)',
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 10,
   },
   gradeText: {
-    color: '#22c55e',
-    fontSize: 22,
+    fontSize: 18,
     fontWeight: '800',
+    color: '#22c55e',
   },
-  scoreBar: {
+  progressBar: {
     height: 4,
-    backgroundColor: 'rgba(255,255,255,0.06)',
+    backgroundColor: 'rgba(255, 255, 255, 0.05)',
     borderRadius: 2,
-    marginBottom: 24,
+    marginBottom: 16,
     overflow: 'hidden',
   },
-  scoreBarFill: {
+  progressFill: {
     height: '100%',
     backgroundColor: '#3b82f6',
     borderRadius: 2,
   },
-  scoreMetrics: {
+  breakdownRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-around',
+  },
+  breakdownItem: {
+    alignItems: 'center',
+  },
+  breakdownValue: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#f8fafc',
+    marginBottom: 2,
+  },
+  breakdownLabel: {
+    fontSize: 11,
+    color: '#64748b',
+  },
+
+  // Metrics Grid
+  metricsGrid: {
+    flexDirection: 'row',
+    gap: 10,
+    marginBottom: SECTION_GAP,
+  },
+  metricCard: {
+    flex: 1,
+    backgroundColor: 'rgba(255, 255, 255, 0.03)',
+    borderRadius: 14,
+    padding: 14,
+  },
+  metricTop: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-  },
-  metric: {
     alignItems: 'center',
-  },
-  metricValue: {
-    color: '#f8fafc',
-    fontSize: 18,
-    fontWeight: '600',
-    marginBottom: 4,
+    marginBottom: 10,
   },
   metricLabel: {
-    color: '#64748b',
     fontSize: 12,
-  },
-
-  // Actions
-  sectionLabel: {
-    color: '#64748b',
-    fontSize: 13,
-    fontWeight: '600',
-    textTransform: 'uppercase',
-    letterSpacing: 0.5,
-    marginBottom: 16,
-  },
-  actionsGrid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 12,
-    marginBottom: 24,
-  },
-  actionCard: {
-    width: CARD_WIDTH,
-    backgroundColor: 'rgba(255,255,255,0.03)',
-    borderRadius: 16,
-    padding: 20,
-    alignItems: 'center',
-  },
-  actionIconBg: {
-    width: 48,
-    height: 48,
-    borderRadius: 14,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: 12,
-  },
-  actionIcon: {
-    fontSize: 22,
-  },
-  actionLabel: {
     color: '#94a3b8',
-    fontSize: 13,
-    fontWeight: '600',
+    fontWeight: '500',
+  },
+  metricValueGreen: {
+    fontSize: 15,
+    fontWeight: '700',
+    color: '#34d399',
+  },
+  metricValueRed: {
+    fontSize: 15,
+    fontWeight: '700',
+    color: '#f87171',
+  },
+  metricBar: {
+    height: 4,
+    backgroundColor: 'rgba(255, 255, 255, 0.05)',
+    borderRadius: 2,
+    overflow: 'hidden',
+  },
+  metricFillGreen: {
+    height: '100%',
+    backgroundColor: '#22c55e',
+    borderRadius: 2,
+  },
+  metricFillRed: {
+    height: '100%',
+    backgroundColor: '#ef4444',
+    borderRadius: 2,
   },
 
-  // Connection Card
-  connectionCard: {
-    backgroundColor: 'rgba(255,255,255,0.03)',
-    borderRadius: 16,
-    padding: 20,
-    marginBottom: 32,
-  },
-  connectionRow: {
+  // Connection Info
+  infoList: {},
+  infoRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
     paddingVertical: 12,
   },
-  connectionDivider: {
+  infoDivider: {
     height: 1,
-    backgroundColor: 'rgba(255,255,255,0.04)',
+    backgroundColor: 'rgba(255, 255, 255, 0.04)',
   },
-  connectionLabel: {
-    color: '#64748b',
-    fontSize: 14,
-  },
-  connectionValue: {
-    color: '#f8fafc',
-    fontSize: 14,
-    fontWeight: '500',
-  },
-  latencyBadge: {
-    backgroundColor: 'rgba(34, 197, 94, 0.15)',
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-    borderRadius: 8,
-  },
-  latencyText: {
-    color: '#22c55e',
+  infoKey: {
     fontSize: 13,
+    color: '#64748b',
+  },
+  infoValue: {
+    fontSize: 13,
+    fontWeight: '500',
+    color: '#f8fafc',
+  },
+  latencyChip: {
+    backgroundColor: 'rgba(34, 197, 94, 0.1)',
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 6,
+  },
+  latencyValue: {
+    fontSize: 11,
     fontWeight: '600',
+    color: '#22c55e',
+  },
+  statusChip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: 'rgba(100, 116, 139, 0.1)',
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 6,
+  },
+  statusChipActive: {
+    backgroundColor: 'rgba(34, 197, 94, 0.1)',
+  },
+  statusIndicator: {
+    width: 5,
+    height: 5,
+    borderRadius: 2.5,
+    backgroundColor: '#64748b',
+    marginRight: 5,
+  },
+  statusIndicatorActive: {
+    backgroundColor: '#22c55e',
+  },
+  statusValue: {
+    fontSize: 11,
+    fontWeight: '600',
+    color: '#64748b',
+  },
+  statusValueActive: {
+    color: '#22c55e',
+  },
+
+  // Actions
+  actionsSection: {
+    marginTop: 4,
+    marginBottom: 8,
+  },
+  sectionLabel: {
+    fontSize: 11,
+    color: '#64748b',
+    fontWeight: '600',
+    letterSpacing: 0.5,
+    textTransform: 'uppercase',
+    marginBottom: 12,
+  },
+  actionsGrid: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+  },
+  actionCard: {
+    alignItems: 'center',
+    width: (width - CARD_PADDING * 2 - 30) / 4,
+  },
+  actionIconWrap: {
+    width: 48,
+    height: 48,
+    borderRadius: 14,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 6,
+  },
+  actionIconText: {
+    fontSize: 20,
+  },
+  actionName: {
+    fontSize: 11,
+    color: '#94a3b8',
+    fontWeight: '500',
   },
 
   // Footer
@@ -621,22 +755,23 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    paddingVertical: 16,
+    paddingTop: 24,
+    paddingBottom: 8,
   },
-  footerText: {
-    color: '#475569',
+  footerBrand: {
     fontSize: 13,
     fontWeight: '600',
+    color: '#475569',
   },
-  footerDot: {
+  footerSep: {
     width: 3,
     height: 3,
     borderRadius: 1.5,
     backgroundColor: '#475569',
     marginHorizontal: 8,
   },
-  footerVersion: {
-    color: '#475569',
+  footerVer: {
     fontSize: 13,
+    color: '#475569',
   },
 });
