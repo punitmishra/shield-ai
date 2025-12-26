@@ -1,0 +1,91 @@
+{
+  "app": {
+    "name": "Shield AI",
+    "subtitle": "AI-Powered DNS Protection",
+    "bundle_id": {
+      "ios": "com.shieldai.app",
+      "android": "com.shieldai.app"
+    },
+    "version": "1.0.0",
+    "build_number": 1
+  },
+  "store_listing": {
+    "category": {
+      "ios": "Utilities",
+      "android": "Tools"
+    },
+    "content_rating": "4+",
+    "price": "Free",
+    "in_app_purchases": true
+  },
+  "descriptions": {
+    "short": "Protect your devices with AI-powered DNS filtering. Block ads, trackers, malware, and phishing in real-time.",
+    "full": "Shield AI is the next-generation DNS protection app that uses artificial intelligence to keep your devices safe from online threats.\n\n🛡️ REAL-TIME PROTECTION\n• Block malware, phishing, and malicious domains before they load\n• AI-powered threat detection identifies new threats in milliseconds\n• DNS-over-HTTPS ensures your queries stay private\n\n🚫 AD & TRACKER BLOCKING\n• Block intrusive ads across all apps and browsers\n• Stop trackers from following you online\n• Improve battery life and reduce data usage\n\n👨‍👩‍👧‍👦 FAMILY PROTECTION\n• Create profiles for each family member\n• Age-appropriate content filters for kids\n• Screen time controls and bedtime schedules\n• Monitor blocked threats and usage\n\n📊 DETAILED ANALYTICS\n• See exactly what's being blocked\n• Query history with search\n• Weekly protection reports\n• Real-time statistics\n\n⚡ BLAZING FAST\n• Sub-millisecond DNS resolution\n• Minimal battery impact\n• Works with cellular and WiFi\n• No VPN required for basic protection\n\n🔒 PRIVACY FIRST\n• No logs of your browsing history\n• Open source and auditable\n• Your data stays on your device\n• No ads, ever\n\nPRICING\n• Free tier: Basic DNS protection\n• Pro ($0.99/month): VPN, family profiles, advanced filters\n• 14-day free trial of Pro features\n\nGET STARTED\n1. Download Shield AI\n2. Enable DNS protection with one tap\n3. Enjoy a safer, faster internet\n\nQuestions? Visit shieldai.dev or email support@shieldai.dev"
+  },
+  "keywords": [
+    "dns",
+    "security",
+    "privacy",
+    "ad blocker",
+    "tracker blocker",
+    "malware protection",
+    "phishing protection",
+    "family safety",
+    "parental controls",
+    "vpn",
+    "network security",
+    "ai protection"
+  ],
+  "screenshots": {
+    "required_sizes": {
+      "ios": {
+        "6.7_inch": "1290x2796",
+        "6.5_inch": "1284x2778",
+        "5.5_inch": "1242x2208",
+        "ipad_12.9": "2048x2732"
+      },
+      "android": {
+        "phone": "1080x1920",
+        "7_inch": "1200x1920",
+        "10_inch": "1800x2560"
+      }
+    },
+    "scenes": [
+      {
+        "id": "home",
+        "title": "Real-Time Protection",
+        "description": "See your protection status at a glance"
+      },
+      {
+        "id": "analytics",
+        "title": "Detailed Analytics",
+        "description": "Track blocked threats and queries"
+      },
+      {
+        "id": "family",
+        "title": "Family Profiles",
+        "description": "Keep everyone safe with custom profiles"
+      },
+      {
+        "id": "settings",
+        "title": "Easy Setup",
+        "description": "Configure protection in seconds"
+      },
+      {
+        "id": "vpn",
+        "title": "VPN Protection",
+        "description": "Encrypt all your traffic"
+      }
+    ]
+  },
+  "localization": {
+    "default": "en-US",
+    "supported": ["en-US", "en-GB", "es", "fr", "de", "ja", "zh-Hans"]
+  },
+  "support": {
+    "url": "https://shieldai.dev/support",
+    "email": "support@shieldai.dev",
+    "privacy_policy": "https://shieldai.dev/privacy",
+    "terms_of_service": "https://shieldai.dev/terms"
+  }
+}

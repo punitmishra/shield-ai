@@ -17,6 +17,18 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useAnalyticsStore, QueryLogEntry } from '../../stores/analyticsStore';
 import { AnalyticsScreenSkeleton } from '../../components/Skeleton';
+import {
+  ChartIcon,
+  BlockIcon,
+  AllowIcon,
+  HistoryIcon,
+  AdIcon,
+  TrackerIcon,
+  MalwareIcon,
+  PhishingIcon,
+  AnalyticsIcon,
+  SearchIcon,
+} from '../../components/icons';
 
 const { width } = Dimensions.get('window');
 
@@ -28,7 +40,7 @@ interface ChartData {
   color: string;
 }
 
-// Category colors for chart
+// Category colors and icons for chart
 const categoryColors: Record<string, string> = {
   'Advertising': '#ef4444',
   'Analytics': '#f97316',
@@ -40,10 +52,29 @@ const categoryColors: Record<string, string> = {
   'Phishing': '#7c3aed',
 };
 
+// Get icon for category
+const getCategoryIcon = (category: string, size: number = 16) => {
+  switch (category) {
+    case 'Ads':
+    case 'Advertising':
+      return <AdIcon size={size} color={categoryColors[category] || '#ef4444'} />;
+    case 'Trackers':
+    case 'Analytics':
+      return <TrackerIcon size={size} color={categoryColors[category] || '#f97316'} />;
+    case 'Malware':
+      return <MalwareIcon size={size} color="#dc2626" />;
+    case 'Phishing':
+      return <PhishingIcon size={size} color="#7c3aed" />;
+    default:
+      return <BlockIcon size={size} color="#64748b" />;
+  }
+};
+
 function SimpleBarChart({ data }: { data: ChartData[] }) {
   if (data.length === 0) {
     return (
       <View style={styles.emptyChart}>
+        <AnalyticsIcon size={32} color="#64748b" />
         <Text style={styles.emptyText}>No data available</Text>
       </View>
     );
@@ -55,7 +86,10 @@ function SimpleBarChart({ data }: { data: ChartData[] }) {
     <View style={styles.chartContainer}>
       {data.map((item, index) => (
         <View key={index} style={styles.barRow}>
-          <Text style={styles.barLabel}>{item.label}</Text>
+          <View style={styles.barLabelContainer}>
+            {getCategoryIcon(item.label, 14)}
+            <Text style={styles.barLabel}>{item.label}</Text>
+          </View>
           <View style={styles.barBackground}>
             <View
               style={[
@@ -105,7 +139,13 @@ function QueryLogItem({ entry }: { entry: QueryLogEntry }) {
 
   return (
     <View style={styles.logItem}>
-      <View style={[styles.statusIndicator, entry.status === 'blocked' && styles.blockedIndicator]} />
+      <View style={styles.logIconWrap}>
+        {entry.status === 'blocked' ? (
+          <BlockIcon size={18} color="#ef4444" />
+        ) : (
+          <AllowIcon size={18} color="#22c55e" />
+        )}
+      </View>
       <View style={styles.logContent}>
         <View style={styles.logHeader}>
           <Text style={styles.logDomain} numberOfLines={1}>{entry.domain}</Text>
@@ -115,6 +155,7 @@ function QueryLogItem({ entry }: { entry: QueryLogEntry }) {
           <Text style={styles.logType}>{entry.type}</Text>
           {entry.category && (
             <View style={styles.categoryBadge}>
+              {getCategoryIcon(entry.category, 12)}
               <Text style={styles.categoryText}>{entry.category}</Text>
             </View>
           )}
@@ -426,10 +467,16 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: 12,
   },
+  barLabelContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    width: 100,
+    gap: 6,
+  },
   barLabel: {
     color: '#94a3b8',
     fontSize: 13,
-    width: 80,
+    flex: 1,
   },
   barBackground: {
     flex: 1,
@@ -453,10 +500,16 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     paddingVertical: 20,
+    gap: 8,
   },
   emptyText: {
     color: '#64748b',
     fontSize: 14,
+  },
+  logIconWrap: {
+    width: 28,
+    alignItems: 'center',
+    marginRight: 8,
   },
   topDomainsCard: {
     backgroundColor: 'rgba(255,255,255,0.05)',
@@ -569,6 +622,9 @@ const styles = StyleSheet.create({
     paddingHorizontal: 8,
     paddingVertical: 2,
     borderRadius: 10,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
   },
   categoryText: {
     color: '#ef4444',

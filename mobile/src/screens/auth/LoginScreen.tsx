@@ -19,23 +19,16 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useAuthStore } from '../../stores/authStore';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
+import { ShieldLockIcon, LockIcon, NetworkIcon } from '../../components/icons';
 
 type Props = {
   navigation: NativeStackNavigationProp<any>;
 };
 
-// Shield AI Logo - View-based to avoid SVG issues in Expo Go
+// Shield AI Logo using library icon
 const ShieldLogo = () => (
   <View style={logoStyles.container}>
-    <View style={logoStyles.shield}>
-      <View style={logoStyles.shieldTop} />
-      <View style={logoStyles.shieldBottom} />
-      <View style={logoStyles.centerDot} />
-      <View style={logoStyles.networkDots}>
-        <View style={[logoStyles.smallDot, { backgroundColor: '#8b5cf6' }]} />
-        <View style={[logoStyles.smallDot, { backgroundColor: '#22c55e' }]} />
-      </View>
-    </View>
+    <ShieldLockIcon size={64} color="#3b82f6" />
   </View>
 );
 
@@ -64,51 +57,6 @@ const logoStyles = StyleSheet.create({
     height: 80,
     alignItems: 'center',
     justifyContent: 'center',
-  },
-  shield: {
-    width: 55,
-    height: 65,
-    borderWidth: 2.5,
-    borderColor: '#3b82f6',
-    borderRadius: 8,
-    borderTopLeftRadius: 28,
-    borderTopRightRadius: 28,
-    backgroundColor: 'rgba(59, 130, 246, 0.1)',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  shieldTop: {
-    position: 'absolute',
-    top: 8,
-    width: 35,
-    height: 2,
-    backgroundColor: 'rgba(139, 92, 246, 0.3)',
-    borderRadius: 1,
-  },
-  shieldBottom: {
-    position: 'absolute',
-    bottom: 12,
-    width: 25,
-    height: 2,
-    backgroundColor: 'rgba(34, 197, 94, 0.3)',
-    borderRadius: 1,
-  },
-  centerDot: {
-    width: 12,
-    height: 12,
-    borderRadius: 6,
-    backgroundColor: '#3b82f6',
-    marginBottom: 8,
-  },
-  networkDots: {
-    flexDirection: 'row',
-    gap: 16,
-  },
-  smallDot: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
-    opacity: 0.7,
   },
 });
 

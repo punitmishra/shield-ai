@@ -19,21 +19,16 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useAuthStore } from '../../stores/authStore';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
+import { ShieldLockIcon, AllowIcon } from '../../components/icons';
 
 type Props = {
   navigation: NativeStackNavigationProp<any>;
 };
 
-// Shield AI Logo - View-based to avoid SVG issues in Expo Go
+// Shield AI Logo using library icon
 const ShieldLogo = () => (
   <View style={logoStyles.container}>
-    <View style={logoStyles.shield}>
-      <View style={logoStyles.centerDot} />
-      <View style={logoStyles.networkDots}>
-        <View style={[logoStyles.smallDot, { backgroundColor: '#8b5cf6' }]} />
-        <View style={[logoStyles.smallDot, { backgroundColor: '#22c55e' }]} />
-      </View>
-    </View>
+    <ShieldLockIcon size={52} color="#3b82f6" />
   </View>
 );
 
@@ -45,10 +40,10 @@ const BackArrow = () => (
   </View>
 );
 
-// Checkmark Icon - View-based
+// Checkmark Icon using library icon
 const CheckIcon = ({ checked }: { checked: boolean }) => (
   <View style={[styles.checkBox, checked && styles.checkBoxChecked]}>
-    {checked && <Text style={iconStyles.checkmark}>✓</Text>}
+    {checked && <AllowIcon size={14} color="#fff" />}
   </View>
 );
 
@@ -58,35 +53,6 @@ const logoStyles = StyleSheet.create({
     height: 64,
     alignItems: 'center',
     justifyContent: 'center',
-  },
-  shield: {
-    width: 44,
-    height: 52,
-    borderWidth: 2,
-    borderColor: '#3b82f6',
-    borderRadius: 6,
-    borderTopLeftRadius: 22,
-    borderTopRightRadius: 22,
-    backgroundColor: 'rgba(59, 130, 246, 0.1)',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  centerDot: {
-    width: 10,
-    height: 10,
-    borderRadius: 5,
-    backgroundColor: '#3b82f6',
-    marginBottom: 6,
-  },
-  networkDots: {
-    flexDirection: 'row',
-    gap: 12,
-  },
-  smallDot: {
-    width: 6,
-    height: 6,
-    borderRadius: 3,
-    opacity: 0.7,
   },
 });
 
@@ -113,11 +79,6 @@ const iconStyles = StyleSheet.create({
     borderBottomWidth: 2,
     borderColor: '#f8fafc',
     transform: [{ rotate: '45deg' }],
-  },
-  checkmark: {
-    fontSize: 10,
-    fontWeight: '700',
-    color: '#fff',
   },
 });
 
