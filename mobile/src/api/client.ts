@@ -6,8 +6,9 @@
 import axios, { AxiosInstance, AxiosError, InternalAxiosRequestConfig } from 'axios';
 import { useAuthStore } from '../stores/authStore';
 
-// API base URL - can be configured via environment
-const API_BASE_URL = process.env.EXPO_PUBLIC_API_URL || 'http://localhost:8080';
+// API base URL - use Mac's IP for simulator access
+// For production, use environment variable EXPO_PUBLIC_API_URL
+const API_BASE_URL = process.env.EXPO_PUBLIC_API_URL || 'http://192.168.0.177:8080';
 
 // Create axios instance
 const apiClient: AxiosInstance = axios.create({
