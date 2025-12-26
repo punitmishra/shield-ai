@@ -1,5 +1,6 @@
 /**
  * Register Screen
+ * Elegant signup with SVG branding
  */
 
 import React, { useState } from 'react';
@@ -15,6 +16,8 @@ import {
   Alert,
   ScrollView,
 } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import Svg, { Path, Defs, LinearGradient, Stop, Circle } from 'react-native-svg';
 import { useAuthStore } from '../../stores/authStore';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 
@@ -22,14 +25,65 @@ type Props = {
   navigation: NativeStackNavigationProp<any>;
 };
 
+// Shield AI Logo
+const ShieldLogo = () => (
+  <Svg width={64} height={64} viewBox="0 0 24 24" fill="none">
+    <Defs>
+      <LinearGradient id="logoGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+        <Stop offset="0%" stopColor="#3b82f6" />
+        <Stop offset="50%" stopColor="#8b5cf6" />
+        <Stop offset="100%" stopColor="#22c55e" />
+      </LinearGradient>
+    </Defs>
+    <Path
+      d="M12 2L4 6v6c0 5.55 3.84 10.74 8 12 4.16-1.26 8-6.45 8-12V6l-8-4z"
+      fill="url(#logoGrad)"
+      fillOpacity={0.15}
+      stroke="url(#logoGrad)"
+      strokeWidth={1.5}
+    />
+    <Circle cx="12" cy="11" r="2" fill="url(#logoGrad)" />
+    <Circle cx="9" cy="15" r="1.5" fill="#8b5cf6" fillOpacity={0.7} />
+    <Circle cx="15" cy="15" r="1.5" fill="#22c55e" fillOpacity={0.7} />
+    <Path d="M12 11l-3 4M12 11l3 4M9 15l3 2 3-2" stroke="url(#logoGrad)" strokeWidth={0.75} strokeOpacity={0.5} />
+  </Svg>
+);
+
+// Back Arrow
+const BackArrow = () => (
+  <Svg width={24} height={24} viewBox="0 0 24 24" fill="none">
+    <Path d="M19 12H5M12 19l-7-7 7-7" stroke="#f8fafc" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" />
+  </Svg>
+);
+
+// Checkmark Icon
+const CheckIcon = ({ checked }: { checked: boolean }) => (
+  <View style={[styles.checkBox, checked && styles.checkBoxChecked]}>
+    {checked && (
+      <Svg width={12} height={12} viewBox="0 0 24 24" fill="none">
+        <Path d="M5 12l5 5L20 7" stroke="#fff" strokeWidth={3} strokeLinecap="round" strokeLinejoin="round" />
+      </Svg>
+    )}
+  </View>
+);
+
 export default function RegisterScreen({ navigation }: Props) {
+  const insets = useSafeAreaInsets();
+  const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
+  const [acceptTerms, setAcceptTerms] = useState(false);
   const { register, isLoading, error } = useAuthStore();
 
+  const passwordRequirements = [
+    { label: 'At least 8 characters', met: password.length >= 8 },
+    { label: 'Contains a number', met: /\d/.test(password) },
+    { label: 'Contains uppercase', met: /[A-Z]/.test(password) },
+  ];
+
   const handleRegister = async () => {
-    if (!email.trim() || !password.trim()) {
+    if (!name.trim() || !email.trim() || !password.trim()) {
       Alert.alert('Error', 'Please fill in all fields');
       return;
     }
@@ -39,213 +93,342 @@ export default function RegisterScreen({ navigation }: Props) {
       return;
     }
 
-    if (password.length < 8) {
-      Alert.alert('Error', 'Password must be at least 8 characters');
+    if (!acceptTerms) {
+      Alert.alert('Error', 'Please accept the Terms of Service');
       return;
     }
 
     try {
-      await register(email.trim(), password);
+      await register(email.trim(), password, name.trim());
     } catch (e: any) {
       Alert.alert('Registration Failed', e.message || 'Please try again');
     }
   };
 
   return (
-    <KeyboardAvoidingView
-      style={styles.container}
-      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-    >
-      <ScrollView contentContainerStyle={styles.scrollContent}>
-        <View style={styles.content}>
+    <View style={styles.container}>
+      <View style={styles.bgBase} />
+      <View style={styles.bgGlow} />
+
+      <KeyboardAvoidingView
+        style={styles.keyboardView}
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+      >
+        <ScrollView
+          contentContainerStyle={[
+            styles.scrollContent,
+            { paddingTop: insets.top + 16, paddingBottom: insets.bottom + 24 },
+          ]}
+          showsVerticalScrollIndicator={false}
+          keyboardShouldPersistTaps="handled"
+        >
           {/* Header */}
           <View style={styles.header}>
-            <Text style={styles.logoIcon}>🛡️</Text>
-            <Text style={styles.title}>Create Account</Text>
-            <Text style={styles.subtitle}>
-              Start protecting your family's digital life
-            </Text>
+            <TouchableOpacity style={styles.backButton} onPress={() => navigation.goBack()}>
+              <BackArrow />
+            </TouchableOpacity>
+            <ShieldLogo />
+          </View>
+
+          {/* Welcome Text */}
+          <View style={styles.welcomeSection}>
+            <Text style={styles.welcomeTitle}>Create account</Text>
+            <Text style={styles.welcomeSubtitle}>Join Shield AI and protect your network</Text>
           </View>
 
           {/* Form */}
           <View style={styles.form}>
-            <TextInput
-              style={styles.input}
-              placeholder="Email"
-              placeholderTextColor="#64748b"
-              value={email}
-              onChangeText={setEmail}
-              autoCapitalize="none"
-              keyboardType="email-address"
-              autoComplete="email"
-            />
-            <TextInput
-              style={styles.input}
-              placeholder="Password"
-              placeholderTextColor="#64748b"
-              value={password}
-              onChangeText={setPassword}
-              secureTextEntry
-              autoComplete="new-password"
-            />
-            <TextInput
-              style={styles.input}
-              placeholder="Confirm Password"
-              placeholderTextColor="#64748b"
-              value={confirmPassword}
-              onChangeText={setConfirmPassword}
-              secureTextEntry
-              autoComplete="new-password"
-            />
+            <View style={styles.inputContainer}>
+              <Text style={styles.inputLabel}>Full Name</Text>
+              <TextInput
+                style={styles.input}
+                placeholder="Enter your name"
+                placeholderTextColor="#475569"
+                value={name}
+                onChangeText={setName}
+                autoComplete="name"
+              />
+            </View>
+
+            <View style={styles.inputContainer}>
+              <Text style={styles.inputLabel}>Email</Text>
+              <TextInput
+                style={styles.input}
+                placeholder="Enter your email"
+                placeholderTextColor="#475569"
+                value={email}
+                onChangeText={setEmail}
+                autoCapitalize="none"
+                keyboardType="email-address"
+                autoComplete="email"
+              />
+            </View>
+
+            <View style={styles.inputContainer}>
+              <Text style={styles.inputLabel}>Password</Text>
+              <TextInput
+                style={styles.input}
+                placeholder="Create a password"
+                placeholderTextColor="#475569"
+                value={password}
+                onChangeText={setPassword}
+                secureTextEntry
+                autoComplete="new-password"
+              />
+              {password.length > 0 && (
+                <View style={styles.requirements}>
+                  {passwordRequirements.map((req, i) => (
+                    <View key={i} style={styles.requirementRow}>
+                      <View style={[styles.requirementDot, req.met && styles.requirementDotMet]} />
+                      <Text style={[styles.requirementText, req.met && styles.requirementTextMet]}>
+                        {req.label}
+                      </Text>
+                    </View>
+                  ))}
+                </View>
+              )}
+            </View>
+
+            <View style={styles.inputContainer}>
+              <Text style={styles.inputLabel}>Confirm Password</Text>
+              <TextInput
+                style={styles.input}
+                placeholder="Confirm your password"
+                placeholderTextColor="#475569"
+                value={confirmPassword}
+                onChangeText={setConfirmPassword}
+                secureTextEntry
+                autoComplete="new-password"
+              />
+            </View>
+
+            {/* Terms */}
+            <TouchableOpacity
+              style={styles.termsRow}
+              onPress={() => setAcceptTerms(!acceptTerms)}
+              activeOpacity={0.7}
+            >
+              <CheckIcon checked={acceptTerms} />
+              <Text style={styles.termsText}>
+                I agree to the <Text style={styles.termsLink}>Terms of Service</Text> and{' '}
+                <Text style={styles.termsLink}>Privacy Policy</Text>
+              </Text>
+            </TouchableOpacity>
 
             {error && <Text style={styles.errorText}>{error}</Text>}
 
             <TouchableOpacity
-              style={[styles.button, isLoading && styles.buttonDisabled]}
+              style={[styles.signUpButton, isLoading && styles.buttonDisabled]}
               onPress={handleRegister}
               disabled={isLoading}
             >
               {isLoading ? (
                 <ActivityIndicator color="#fff" />
               ) : (
-                <Text style={styles.buttonText}>Create Account</Text>
+                <Text style={styles.signUpButtonText}>Create Account</Text>
               )}
             </TouchableOpacity>
-
-            <TouchableOpacity
-              style={styles.linkButton}
-              onPress={() => navigation.goBack()}
-            >
-              <Text style={styles.linkText}>
-                Already have an account? <Text style={styles.linkBold}>Sign In</Text>
-              </Text>
-            </TouchableOpacity>
           </View>
-
-          {/* Terms */}
-          <Text style={styles.terms}>
-            By creating an account, you agree to our{' '}
-            <Text style={styles.termsLink}>Terms of Service</Text> and{' '}
-            <Text style={styles.termsLink}>Privacy Policy</Text>
-          </Text>
 
           {/* Pricing Info */}
-          <View style={styles.pricingInfo}>
+          <View style={styles.pricingCard}>
             <Text style={styles.pricingTitle}>Start with a 14-day free trial</Text>
-            <Text style={styles.pricingText}>
-              Then just $0.99/month for full VPN + AI protection
-            </Text>
+            <Text style={styles.pricingText}>Then just $0.99/month for full protection</Text>
           </View>
-        </View>
-      </ScrollView>
-    </KeyboardAvoidingView>
+
+          {/* Sign In Link */}
+          <View style={styles.signInSection}>
+            <Text style={styles.signInText}>Already have an account? </Text>
+            <TouchableOpacity onPress={() => navigation.navigate('Login')}>
+              <Text style={styles.signInLink}>Sign In</Text>
+            </TouchableOpacity>
+          </View>
+        </ScrollView>
+      </KeyboardAvoidingView>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#0f172a',
+  },
+  bgBase: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: '#0a0f1a',
+  },
+  bgGlow: {
+    position: 'absolute',
+    top: -50,
+    alignSelf: 'center',
+    width: 350,
+    height: 350,
+    borderRadius: 175,
+    backgroundColor: 'rgba(139, 92, 246, 0.05)',
+  },
+  keyboardView: {
+    flex: 1,
   },
   scrollContent: {
     flexGrow: 1,
-  },
-  content: {
-    flex: 1,
-    padding: 24,
-    justifyContent: 'center',
+    paddingHorizontal: 24,
   },
   header: {
+    flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'space-between',
     marginBottom: 32,
   },
-  logoIcon: {
-    fontSize: 48,
-    marginBottom: 16,
+  backButton: {
+    width: 44,
+    height: 44,
+    borderRadius: 12,
+    backgroundColor: 'rgba(255, 255, 255, 0.05)',
+    alignItems: 'center',
+    justifyContent: 'center',
   },
-  title: {
+  welcomeSection: {
+    marginBottom: 32,
+  },
+  welcomeTitle: {
     fontSize: 28,
-    fontWeight: '800',
-    color: '#fff',
+    fontWeight: '700',
+    color: '#f8fafc',
     marginBottom: 8,
   },
-  subtitle: {
-    fontSize: 16,
+  welcomeSubtitle: {
+    fontSize: 15,
     color: '#64748b',
-    textAlign: 'center',
   },
   form: {
     marginBottom: 24,
   },
+  inputContainer: {
+    marginBottom: 20,
+  },
+  inputLabel: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: '#94a3b8',
+    marginBottom: 8,
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+  },
   input: {
-    backgroundColor: 'rgba(255,255,255,0.05)',
+    backgroundColor: 'rgba(255, 255, 255, 0.04)',
     borderRadius: 12,
-    padding: 16,
+    paddingHorizontal: 16,
+    paddingVertical: 14,
     fontSize: 16,
-    color: '#fff',
-    marginBottom: 16,
+    color: '#f8fafc',
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.1)',
+    borderColor: 'rgba(255, 255, 255, 0.08)',
   },
-  button: {
-    backgroundColor: '#3b82f6',
-    borderRadius: 12,
-    padding: 16,
+  requirements: {
+    marginTop: 12,
+    paddingLeft: 4,
+  },
+  requirementRow: {
+    flexDirection: 'row',
     alignItems: 'center',
-    marginTop: 8,
+    marginBottom: 6,
   },
-  buttonDisabled: {
-    opacity: 0.6,
+  requirementDot: {
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+    backgroundColor: '#475569',
+    marginRight: 8,
   },
-  buttonText: {
-    color: '#fff',
-    fontSize: 18,
-    fontWeight: '600',
+  requirementDotMet: {
+    backgroundColor: '#22c55e',
   },
-  linkButton: {
-    alignItems: 'center',
-    marginTop: 24,
-  },
-  linkText: {
+  requirementText: {
+    fontSize: 13,
     color: '#64748b',
-    fontSize: 14,
   },
-  linkBold: {
+  requirementTextMet: {
+    color: '#22c55e',
+  },
+  termsRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    marginBottom: 24,
+  },
+  checkBox: {
+    width: 22,
+    height: 22,
+    borderRadius: 6,
+    borderWidth: 2,
+    borderColor: 'rgba(255, 255, 255, 0.2)',
+    marginRight: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  checkBoxChecked: {
+    backgroundColor: '#3b82f6',
+    borderColor: '#3b82f6',
+  },
+  termsText: {
+    flex: 1,
+    fontSize: 14,
+    color: '#94a3b8',
+    lineHeight: 20,
+  },
+  termsLink: {
     color: '#3b82f6',
-    fontWeight: '600',
+    fontWeight: '500',
   },
   errorText: {
     color: '#ef4444',
     fontSize: 14,
-    marginBottom: 8,
+    marginBottom: 16,
     textAlign: 'center',
   },
-  terms: {
-    textAlign: 'center',
-    color: '#64748b',
-    fontSize: 12,
-    lineHeight: 18,
-    marginBottom: 24,
-  },
-  termsLink: {
-    color: '#3b82f6',
-  },
-  pricingInfo: {
-    backgroundColor: 'rgba(59, 130, 246, 0.1)',
+  signUpButton: {
+    backgroundColor: '#3b82f6',
     borderRadius: 12,
+    paddingVertical: 16,
+    alignItems: 'center',
+  },
+  buttonDisabled: {
+    opacity: 0.6,
+  },
+  signUpButtonText: {
+    fontSize: 17,
+    fontWeight: '600',
+    color: '#fff',
+  },
+  pricingCard: {
+    backgroundColor: 'rgba(59, 130, 246, 0.08)',
+    borderRadius: 14,
     padding: 16,
     alignItems: 'center',
+    marginBottom: 24,
     borderWidth: 1,
-    borderColor: 'rgba(59, 130, 246, 0.3)',
+    borderColor: 'rgba(59, 130, 246, 0.2)',
   },
   pricingTitle: {
-    color: '#3b82f6',
-    fontSize: 16,
+    fontSize: 15,
     fontWeight: '600',
+    color: '#3b82f6',
     marginBottom: 4,
   },
   pricingText: {
+    fontSize: 13,
     color: '#64748b',
-    fontSize: 14,
+  },
+  signInSection: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+  },
+  signInText: {
+    fontSize: 15,
+    color: '#64748b',
+  },
+  signInLink: {
+    fontSize: 15,
+    fontWeight: '600',
+    color: '#3b82f6',
   },
 });
