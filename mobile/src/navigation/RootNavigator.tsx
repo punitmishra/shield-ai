@@ -18,6 +18,9 @@ import MainNavigator from './MainNavigator';
 
 const Stack = createNativeStackNavigator();
 
+// DEV MODE: Set to true to bypass login for testing
+const DEV_SKIP_AUTH = __DEV__ && true;
+
 export default function RootNavigator() {
   const { isAuthenticated, checkAuth } = useAuthStore();
   const [isLoading, setIsLoading] = useState(true);
@@ -25,7 +28,9 @@ export default function RootNavigator() {
   useEffect(() => {
     const initAuth = async () => {
       try {
-        await checkAuth();
+        if (!DEV_SKIP_AUTH) {
+          await checkAuth();
+        }
       } finally {
         setIsLoading(false);
       }
@@ -41,6 +46,9 @@ export default function RootNavigator() {
     );
   }
 
+  // Skip auth in dev mode for testing
+  const showMainApp = DEV_SKIP_AUTH || isAuthenticated;
+
   return (
     <NavigationContainer>
       <Stack.Navigator
@@ -49,7 +57,7 @@ export default function RootNavigator() {
           contentStyle: { backgroundColor: '#0f172a' },
         }}
       >
-        {isAuthenticated ? (
+        {showMainApp ? (
           <Stack.Screen name="Main" component={MainNavigator} />
         ) : (
           <>

@@ -17,6 +17,7 @@
     "expo": "~54.0.30",
     "expo-constants": "~18.0.12",
     "expo-device": "~8.0.10",
+    "expo-linear-gradient": "^15.0.8",
     "expo-notifications": "~0.32.15",
     "expo-status-bar": "~3.0.9",
     "react": "19.1.0",
