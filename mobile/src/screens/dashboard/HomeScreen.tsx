@@ -15,12 +15,71 @@ import {
   Animated,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import Svg, { Path, Circle, Defs, LinearGradient, Stop } from 'react-native-svg';
 import { useAuthStore } from '../../stores/authStore';
 import { useProtectionStore } from '../../stores/protectionStore';
 
 const { width } = Dimensions.get('window');
 const CARD_PADDING = 20;
 const SECTION_GAP = 12;
+
+// Icon Components
+const ShieldIcon = ({ size = 36, active = false }: { size?: number; active?: boolean }) => (
+  <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
+    <Path
+      d="M12 2L4 6v6c0 5.55 3.84 10.74 8 12 4.16-1.26 8-6.45 8-12V6l-8-4z"
+      fill={active ? '#22c55e' : '#475569'}
+      fillOpacity={active ? 0.2 : 0.1}
+      stroke={active ? '#22c55e' : '#475569'}
+      strokeWidth={1.5}
+    />
+    {active && (
+      <Path
+        d="M9 12l2 2 4-4"
+        stroke="#22c55e"
+        strokeWidth={2}
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    )}
+  </Svg>
+);
+
+const AnalyzeIcon = ({ size = 22, color = '#3b82f6' }: { size?: number; color?: string }) => (
+  <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
+    <Circle cx="11" cy="11" r="7" stroke={color} strokeWidth={2} />
+    <Path d="M21 21l-4-4" stroke={color} strokeWidth={2} strokeLinecap="round" />
+    <Circle cx="11" cy="11" r="3" stroke={color} strokeWidth={1.5} strokeOpacity={0.5} />
+  </Svg>
+);
+
+const HistoryIcon = ({ size = 22, color = '#10b981' }: { size?: number; color?: string }) => (
+  <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
+    <Circle cx="12" cy="12" r="9" stroke={color} strokeWidth={2} />
+    <Path d="M12 7v5l3 3" stroke={color} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" />
+  </Svg>
+);
+
+const FamilyIcon = ({ size = 22, color = '#f59e0b' }: { size?: number; color?: string }) => (
+  <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
+    <Circle cx="12" cy="8" r="4" stroke={color} strokeWidth={2} />
+    <Path d="M6 21v-2a4 4 0 014-4h4a4 4 0 014 4v2" stroke={color} strokeWidth={2} strokeLinecap="round" />
+    <Circle cx="19" cy="8" r="2.5" stroke={color} strokeWidth={1.5} strokeOpacity={0.5} />
+    <Circle cx="5" cy="8" r="2.5" stroke={color} strokeWidth={1.5} strokeOpacity={0.5} />
+  </Svg>
+);
+
+const SettingsIcon = ({ size = 22, color = '#8b5cf6' }: { size?: number; color?: string }) => (
+  <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
+    <Circle cx="12" cy="12" r="3" stroke={color} strokeWidth={2} />
+    <Path
+      d="M12 1v2m0 18v2M4.22 4.22l1.42 1.42m12.72 12.72l1.42 1.42M1 12h2m18 0h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"
+      stroke={color}
+      strokeWidth={2}
+      strokeLinecap="round"
+    />
+  </Svg>
+);
 
 // Animated pulse ring for shield button
 const PulseRing = ({ isActive }: { isActive: boolean }) => {
@@ -111,6 +170,13 @@ export default function HomeScreen() {
   const score = privacyMetrics?.privacy_score || 95;
   const isConnecting = vpnStatus === 'connecting' || vpnStatus === 'disconnecting';
 
+  const quickActions = [
+    { icon: <AnalyzeIcon />, label: 'Analyze', color: '#3b82f6' },
+    { icon: <HistoryIcon />, label: 'History', color: '#10b981' },
+    { icon: <FamilyIcon />, label: 'Family', color: '#f59e0b' },
+    { icon: <SettingsIcon />, label: 'Settings', color: '#8b5cf6' },
+  ];
+
   return (
     <View style={styles.container}>
       {/* Background */}
@@ -159,11 +225,9 @@ export default function HomeScreen() {
               <View style={[styles.shieldInner, isVPNConnected && styles.shieldInnerActive]}>
                 <View style={[styles.shieldCore, isVPNConnected && styles.shieldCoreActive]}>
                   {isConnecting ? (
-                    <Text style={styles.shieldIconConnecting}>●</Text>
+                    <View style={styles.loadingDot} />
                   ) : (
-                    <View style={[styles.shieldShape, isVPNConnected && styles.shieldShapeActive]}>
-                      {isVPNConnected && <Text style={styles.checkmark}>✓</Text>}
-                    </View>
+                    <ShieldIcon size={40} active={isVPNConnected} />
                   )}
                 </View>
               </View>
@@ -292,15 +356,10 @@ export default function HomeScreen() {
         <View style={styles.actionsSection}>
           <Text style={styles.sectionLabel}>Quick Actions</Text>
           <View style={styles.actionsGrid}>
-            {[
-              { icon: '◎', label: 'Analyze', color: '#3b82f6' },
-              { icon: '☰', label: 'History', color: '#10b981' },
-              { icon: '◇', label: 'Family', color: '#f59e0b' },
-              { icon: '⚙', label: 'Settings', color: '#8b5cf6' },
-            ].map((action, i) => (
+            {quickActions.map((action, i) => (
               <TouchableOpacity key={i} style={styles.actionCard} activeOpacity={0.7}>
-                <View style={[styles.actionIconWrap, { backgroundColor: `${action.color}12` }]}>
-                  <Text style={[styles.actionIconText, { color: action.color }]}>{action.icon}</Text>
+                <View style={[styles.actionIconWrap, { backgroundColor: `${action.color}15` }]}>
+                  {action.icon}
                 </View>
                 <Text style={styles.actionName}>{action.label}</Text>
               </TouchableOpacity>
@@ -433,9 +492,9 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(34, 197, 94, 0.08)',
   },
   shieldCore: {
-    width: 52,
-    height: 52,
-    borderRadius: 26,
+    width: 56,
+    height: 56,
+    borderRadius: 28,
     backgroundColor: 'rgba(255, 255, 255, 0.03)',
     alignItems: 'center',
     justifyContent: 'center',
@@ -443,29 +502,11 @@ const styles = StyleSheet.create({
   shieldCoreActive: {
     backgroundColor: 'rgba(34, 197, 94, 0.12)',
   },
-  shieldIconConnecting: {
-    fontSize: 18,
-    color: '#f59e0b',
-  },
-  shieldShape: {
-    width: 28,
-    height: 32,
-    borderRadius: 4,
-    borderWidth: 2,
-    borderColor: '#475569',
-    borderTopLeftRadius: 14,
-    borderTopRightRadius: 14,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  shieldShapeActive: {
-    borderColor: '#22c55e',
-    backgroundColor: 'rgba(34, 197, 94, 0.2)',
-  },
-  checkmark: {
-    fontSize: 14,
-    color: '#22c55e',
-    fontWeight: '700',
+  loadingDot: {
+    width: 12,
+    height: 12,
+    borderRadius: 6,
+    backgroundColor: '#f59e0b',
   },
   statusTitle: {
     fontSize: 18,
@@ -740,9 +781,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     marginBottom: 6,
-  },
-  actionIconText: {
-    fontSize: 20,
   },
   actionName: {
     fontSize: 11,
