@@ -17,6 +17,7 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useAuthStore } from '../../stores/authStore';
 import { useProtectionStore } from '../../stores/protectionStore';
+import { ShieldIcon, BlockIcon, AllowIcon, NetworkIcon, TipIcon, PrivacyIcon } from '../../components/icons';
 
 const { width } = Dimensions.get('window');
 
@@ -126,11 +127,7 @@ const ShieldHero = ({
                 <View style={styles.connectingDot} />
               </View>
             ) : (
-              <View style={styles.shieldIcon}>
-                <View style={[styles.shieldShape, active && styles.shieldShapeActive]}>
-                  {active && <Text style={styles.checkmark}>✓</Text>}
-                </View>
-              </View>
+              <ShieldIcon size={48} active={active} color={active ? '#22c55e' : '#64748b'} />
             )}
           </View>
         </View>
@@ -194,6 +191,13 @@ const RecentActivity = ({ activities }: { activities: any[] }) => {
     'Allowed': '#22c55e',
   };
 
+  const getActivityIcon = (type: string) => {
+    if (type === 'Allowed') {
+      return <AllowIcon size={16} color={typeColors[type]} />;
+    }
+    return <BlockIcon size={16} color={typeColors[type] || '#ef4444'} />;
+  };
+
   return (
     <View style={styles.activityCard}>
       <View style={styles.cardHeader}>
@@ -205,7 +209,9 @@ const RecentActivity = ({ activities }: { activities: any[] }) => {
 
       {mockActivities.slice(0, 4).map((activity, i) => (
         <View key={i} style={[styles.activityRow, i === mockActivities.length - 1 && styles.lastRow]}>
-          <View style={[styles.activityIndicator, { backgroundColor: typeColors[activity.type] || '#64748b' }]} />
+          <View style={styles.activityIconWrap}>
+            {getActivityIcon(activity.type)}
+          </View>
           <View style={styles.activityContent}>
             <Text style={styles.activityDomain} numberOfLines={1}>{activity.domain}</Text>
             <View style={styles.activityMeta}>
@@ -233,7 +239,10 @@ const PrivacyInsights = ({ privacyMetrics, stats }: { privacyMetrics: any; stats
   return (
     <View style={styles.insightsCard}>
       <View style={styles.cardHeader}>
-        <Text style={styles.cardTitle}>Privacy Score</Text>
+        <View style={styles.cardTitleRow}>
+          <PrivacyIcon size={18} color="#8b5cf6" />
+          <Text style={styles.cardTitle}>Privacy Score</Text>
+        </View>
         <View style={styles.gradeBadge}>
           <Text style={styles.gradeText}>{grade}</Text>
         </View>
@@ -264,7 +273,9 @@ const PrivacyInsights = ({ privacyMetrics, stats }: { privacyMetrics: any; stats
 
       {/* Insight tip */}
       <View style={styles.insightTip}>
-        <Text style={styles.tipIcon}>💡</Text>
+        <View style={styles.tipIconWrap}>
+          <TipIcon size={18} color="#f59e0b" />
+        </View>
         <Text style={styles.tipText}>
           You've blocked 42% more trackers than the average user this week!
         </Text>
@@ -278,7 +289,10 @@ const ConnectionCard = ({ isConnected }: { isConnected: boolean }) => {
   return (
     <View style={styles.connectionCard}>
       <View style={styles.cardHeader}>
-        <Text style={styles.cardTitle}>Connection</Text>
+        <View style={styles.cardTitleRow}>
+          <NetworkIcon size={18} color={isConnected ? '#22c55e' : '#64748b'} />
+          <Text style={styles.cardTitle}>Connection</Text>
+        </View>
         <View style={[styles.connectionBadge, isConnected && styles.connectionBadgeActive]}>
           <View style={[styles.connectionDot, isConnected && styles.connectionDotActive]} />
           <Text style={[styles.connectionStatus, isConnected && styles.connectionStatusActive]}>
@@ -639,6 +653,11 @@ const styles = StyleSheet.create({
     textTransform: 'uppercase',
     letterSpacing: 0.5,
   },
+  cardTitleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
   viewAllText: {
     fontSize: 13,
     color: '#3b82f6',
@@ -654,10 +673,13 @@ const styles = StyleSheet.create({
   lastRow: {
     borderBottomWidth: 0,
   },
-  activityIndicator: {
-    width: 3,
+  activityIconWrap: {
+    width: 32,
     height: 32,
-    borderRadius: 2,
+    borderRadius: 8,
+    backgroundColor: 'rgba(255, 255, 255, 0.05)',
+    alignItems: 'center',
+    justifyContent: 'center',
     marginRight: 12,
   },
   activityContent: {
@@ -766,13 +788,13 @@ const styles = StyleSheet.create({
   insightTip: {
     flexDirection: 'row',
     alignItems: 'flex-start',
-    backgroundColor: 'rgba(59, 130, 246, 0.1)',
+    backgroundColor: 'rgba(245, 158, 11, 0.1)',
     borderRadius: 12,
     padding: 12,
   },
-  tipIcon: {
-    fontSize: 16,
-    marginRight: 8,
+  tipIconWrap: {
+    marginRight: 10,
+    marginTop: -2,
   },
   tipText: {
     flex: 1,

@@ -3,7 +3,7 @@
  * VPN toggle, DNS settings, and security controls
  */
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, ReactNode } from 'react';
 import {
   View,
   Text,
@@ -16,9 +16,20 @@ import {
 } from 'react-native';
 import { useProtectionStore } from '../../stores/protectionStore';
 import { useAuthStore } from '../../stores/authStore';
+import {
+  LockIcon,
+  UnlockIcon,
+  MalwareIcon,
+  AdIcon,
+  TrackerIcon,
+  PhishingIcon,
+  BlockIcon,
+  AllowIcon,
+  ProtectionIcon,
+} from '../../components/icons';
 
 interface SettingCardProps {
-  icon: string;
+  icon: ReactNode;
   title: string;
   description: string;
   enabled?: boolean;
@@ -53,7 +64,7 @@ function SettingCard({ icon, title, description, enabled, onToggle, onPress, pre
       disabled={onToggle !== undefined}
     >
       <View style={styles.settingIcon}>
-        <Text style={styles.iconText}>{icon}</Text>
+        {icon}
       </View>
       <View style={styles.settingContent}>
         <View style={styles.settingHeader}>
@@ -151,7 +162,13 @@ export default function ProtectionScreen() {
               </Text>
             </View>
           </View>
-          <Text style={styles.vpnIcon}>{isVPNConnected ? '🔒' : '🔓'}</Text>
+          <View style={styles.vpnIconWrap}>
+            {isVPNConnected ? (
+              <LockIcon size={32} color="#22c55e" active />
+            ) : (
+              <UnlockIcon size={32} color="#ef4444" />
+            )}
+          </View>
         </TouchableOpacity>
 
         {isVPNConnected && (
@@ -179,7 +196,7 @@ export default function ProtectionScreen() {
         <Text style={styles.sectionTitle}>DNS Protection</Text>
 
         <SettingCard
-          icon="🦠"
+          icon={<MalwareIcon size={22} color="#ef4444" />}
           title="Malware Blocking"
           description="Block known malware and ransomware domains"
           enabled={malwareBlocking}
@@ -187,7 +204,7 @@ export default function ProtectionScreen() {
         />
 
         <SettingCard
-          icon="📢"
+          icon={<AdIcon size={22} color="#f59e0b" />}
           title="Ad Blocking"
           description="Block intrusive ads and popups"
           enabled={adBlocking}
@@ -195,7 +212,7 @@ export default function ProtectionScreen() {
         />
 
         <SettingCard
-          icon="👁️"
+          icon={<TrackerIcon size={22} color="#8b5cf6" />}
           title="Tracker Blocking"
           description="Prevent tracking across websites"
           enabled={trackerBlocking}
@@ -203,7 +220,7 @@ export default function ProtectionScreen() {
         />
 
         <SettingCard
-          icon="🎣"
+          icon={<PhishingIcon size={22} color="#dc2626" />}
           title="Phishing Protection"
           description="Block phishing and scam websites"
           enabled={phishingProtection}
@@ -216,7 +233,7 @@ export default function ProtectionScreen() {
         <Text style={styles.sectionTitle}>Advanced Protection</Text>
 
         <SettingCard
-          icon="⛏️"
+          icon={<ProtectionIcon size={22} color="#3b82f6" />}
           title="Cryptominer Blocking"
           description="Block cryptocurrency mining scripts"
           enabled={cryptominerBlocking}
@@ -225,7 +242,7 @@ export default function ProtectionScreen() {
         />
 
         <SettingCard
-          icon="🔞"
+          icon={<BlockIcon size={22} color="#ef4444" />}
           title="Adult Content Filter"
           description="Block adult and explicit content"
           enabled={adultContentFilter}
@@ -234,7 +251,7 @@ export default function ProtectionScreen() {
         />
 
         <SettingCard
-          icon="🎰"
+          icon={<BlockIcon size={22} color="#f59e0b" />}
           title="Gambling Sites"
           description="Block gambling and betting websites"
           enabled={false}
@@ -243,7 +260,7 @@ export default function ProtectionScreen() {
         />
 
         <SettingCard
-          icon="🎮"
+          icon={<BlockIcon size={22} color="#8b5cf6" />}
           title="Gaming Sites"
           description="Block gaming and entertainment sites"
           enabled={false}
@@ -258,7 +275,9 @@ export default function ProtectionScreen() {
 
         <TouchableOpacity style={styles.listCard}>
           <View style={styles.listInfo}>
-            <Text style={styles.listIcon}>🚫</Text>
+            <View style={styles.listIconWrap}>
+              <BlockIcon size={22} color="#ef4444" />
+            </View>
             <View>
               <Text style={styles.listTitle}>Blocklist</Text>
               <Text style={styles.listCount}>
@@ -271,7 +290,9 @@ export default function ProtectionScreen() {
 
         <TouchableOpacity style={styles.listCard}>
           <View style={styles.listInfo}>
-            <Text style={styles.listIcon}>✅</Text>
+            <View style={styles.listIconWrap}>
+              <AllowIcon size={22} color="#22c55e" />
+            </View>
             <View>
               <Text style={styles.listTitle}>Allowlist</Text>
               <Text style={styles.listCount}>
@@ -362,8 +383,11 @@ const styles = StyleSheet.create({
     fontSize: 13,
     marginTop: 2,
   },
-  vpnIcon: {
-    fontSize: 32,
+  vpnIconWrap: {
+    width: 48,
+    height: 48,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   vpnStats: {
     flexDirection: 'row',
@@ -410,9 +434,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginRight: 12,
   },
-  iconText: {
-    fontSize: 20,
-  },
   settingContent: {
     flex: 1,
   },
@@ -456,8 +477,11 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: 12,
   },
-  listIcon: {
-    fontSize: 24,
+  listIconWrap: {
+    width: 32,
+    height: 32,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   listTitle: {
     color: '#fff',

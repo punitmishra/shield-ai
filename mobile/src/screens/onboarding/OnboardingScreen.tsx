@@ -16,6 +16,12 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
+import {
+  ShieldLockIcon,
+  PrivacyIcon as PrivacyIconBase,
+  SpeedIcon as SpeedIconBase,
+  FamilyIcon as FamilyIconBase,
+} from '../../components/icons';
 
 const { width, height } = Dimensions.get('window');
 
@@ -24,44 +30,28 @@ type Props = {
   onComplete?: () => void;
 };
 
-// Icon components using styled Views
+// Onboarding icon wrappers with larger sizes
 const ShieldIcon = () => (
   <View style={[iconStyles.container, { backgroundColor: 'rgba(34, 197, 94, 0.1)' }]}>
-    <View style={[iconStyles.shield, { borderColor: '#22c55e' }]}>
-      <Text style={[iconStyles.checkmark, { color: '#22c55e' }]}>✓</Text>
-    </View>
+    <ShieldLockIcon size={56} color="#22c55e" />
   </View>
 );
 
 const PrivacyIcon = () => (
   <View style={[iconStyles.container, { backgroundColor: 'rgba(139, 92, 246, 0.1)' }]}>
-    <View style={iconStyles.rings}>
-      <View style={[iconStyles.ring, iconStyles.ringOuter, { borderColor: '#8b5cf6' }]} />
-      <View style={[iconStyles.ring, iconStyles.ringMiddle, { borderColor: '#8b5cf6' }]} />
-      <View style={[iconStyles.dot, { backgroundColor: '#8b5cf6' }]} />
-    </View>
+    <PrivacyIconBase size={56} color="#8b5cf6" />
   </View>
 );
 
 const SpeedIcon = () => (
   <View style={[iconStyles.container, { backgroundColor: 'rgba(245, 158, 11, 0.1)' }]}>
-    <View style={iconStyles.gauge}>
-      <View style={[iconStyles.gaugeArc, { borderColor: '#f59e0b' }]} />
-      <View style={[iconStyles.needle, { backgroundColor: '#f59e0b' }]} />
-      <View style={[iconStyles.gaugeDot, { backgroundColor: '#f59e0b' }]} />
-    </View>
+    <SpeedIconBase size={56} color="#f59e0b" />
   </View>
 );
 
 const FamilyIcon = () => (
   <View style={[iconStyles.container, { backgroundColor: 'rgba(16, 185, 129, 0.1)' }]}>
-    <View style={iconStyles.family}>
-      <View style={[iconStyles.person, { borderColor: '#10b981' }]} />
-      <View style={iconStyles.smallPeople}>
-        <View style={[iconStyles.smallPerson, { borderColor: '#10b981', opacity: 0.5 }]} />
-        <View style={[iconStyles.smallPerson, { borderColor: '#10b981', opacity: 0.5 }]} />
-      </View>
-    </View>
+    <FamilyIconBase size={56} color="#10b981" />
   </View>
 );
 
@@ -228,93 +218,6 @@ const iconStyles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     marginBottom: 40,
-  },
-  shield: {
-    width: 50,
-    height: 60,
-    borderWidth: 3,
-    borderRadius: 8,
-    borderTopLeftRadius: 25,
-    borderTopRightRadius: 25,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  checkmark: {
-    fontSize: 24,
-    fontWeight: '700',
-  },
-  rings: {
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  ring: {
-    position: 'absolute',
-    borderWidth: 2,
-    borderRadius: 100,
-  },
-  ringOuter: {
-    width: 70,
-    height: 70,
-    opacity: 0.3,
-  },
-  ringMiddle: {
-    width: 45,
-    height: 45,
-    opacity: 0.6,
-  },
-  dot: {
-    width: 16,
-    height: 16,
-    borderRadius: 8,
-  },
-  gauge: {
-    width: 70,
-    height: 40,
-    alignItems: 'center',
-    justifyContent: 'flex-end',
-  },
-  gaugeArc: {
-    position: 'absolute',
-    top: 0,
-    width: 70,
-    height: 35,
-    borderWidth: 3,
-    borderBottomWidth: 0,
-    borderTopLeftRadius: 35,
-    borderTopRightRadius: 35,
-    opacity: 0.4,
-  },
-  needle: {
-    width: 3,
-    height: 25,
-    borderRadius: 2,
-    transform: [{ rotate: '45deg' }, { translateY: -8 }],
-  },
-  gaugeDot: {
-    width: 12,
-    height: 12,
-    borderRadius: 6,
-    marginTop: 5,
-  },
-  family: {
-    alignItems: 'center',
-  },
-  person: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    borderWidth: 3,
-    marginBottom: 8,
-  },
-  smallPeople: {
-    flexDirection: 'row',
-    gap: 20,
-  },
-  smallPerson: {
-    width: 24,
-    height: 24,
-    borderRadius: 12,
-    borderWidth: 2,
   },
 });
 

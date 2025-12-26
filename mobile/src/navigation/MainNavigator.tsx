@@ -1,11 +1,11 @@
 /**
  * Main Navigator
- * Bottom tab navigation for authenticated users
+ * Bottom tab navigation with custom icons
  */
 
 import React from 'react';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
-import { Text, StyleSheet } from 'react-native';
+import { View, StyleSheet } from 'react-native';
 
 // Screens
 import HomeScreen from '../screens/dashboard/HomeScreen';
@@ -14,12 +14,16 @@ import ProtectionScreen from '../screens/protection/ProtectionScreen';
 import AnalyticsScreen from '../screens/analytics/AnalyticsScreen';
 import FamilyScreen from '../screens/family/FamilyScreen';
 
-const Tab = createBottomTabNavigator();
+// Custom Icons
+import {
+  HomeIcon,
+  ProtectionIcon,
+  AnalyticsIcon,
+  FamilyIcon,
+  SettingsIcon,
+} from '../components/icons';
 
-// Custom tab icon component
-const TabIcon = ({ icon, focused }: { icon: string; focused: boolean }) => (
-  <Text style={[styles.tabIcon, focused && styles.tabIconFocused]}>{icon}</Text>
-);
+const Tab = createBottomTabNavigator();
 
 export default function MainNavigator() {
   return (
@@ -36,35 +40,55 @@ export default function MainNavigator() {
         name="Home"
         component={HomeScreen}
         options={{
-          tabBarIcon: ({ focused }) => <TabIcon icon="🏠" focused={focused} />,
+          tabBarIcon: ({ focused }) => (
+            <View style={styles.iconContainer}>
+              <HomeIcon size={24} active={focused} />
+            </View>
+          ),
         }}
       />
       <Tab.Screen
         name="Protection"
         component={ProtectionScreen}
         options={{
-          tabBarIcon: ({ focused }) => <TabIcon icon="🛡️" focused={focused} />,
+          tabBarIcon: ({ focused }) => (
+            <View style={styles.iconContainer}>
+              <ProtectionIcon size={24} active={focused} />
+            </View>
+          ),
         }}
       />
       <Tab.Screen
         name="Analytics"
         component={AnalyticsScreen}
         options={{
-          tabBarIcon: ({ focused }) => <TabIcon icon="📊" focused={focused} />,
+          tabBarIcon: ({ focused }) => (
+            <View style={styles.iconContainer}>
+              <AnalyticsIcon size={24} active={focused} />
+            </View>
+          ),
         }}
       />
       <Tab.Screen
         name="Family"
         component={FamilyScreen}
         options={{
-          tabBarIcon: ({ focused }) => <TabIcon icon="👨‍👩‍👧" focused={focused} />,
+          tabBarIcon: ({ focused }) => (
+            <View style={styles.iconContainer}>
+              <FamilyIcon size={24} active={focused} />
+            </View>
+          ),
         }}
       />
       <Tab.Screen
         name="Settings"
         component={SettingsScreen}
         options={{
-          tabBarIcon: ({ focused }) => <TabIcon icon="⚙️" focused={focused} />,
+          tabBarIcon: ({ focused }) => (
+            <View style={styles.iconContainer}>
+              <SettingsIcon size={24} active={focused} />
+            </View>
+          ),
         }}
       />
     </Tab.Navigator>
@@ -73,22 +97,22 @@ export default function MainNavigator() {
 
 const styles = StyleSheet.create({
   tabBar: {
-    backgroundColor: '#1e293b',
-    borderTopColor: 'rgba(255,255,255,0.1)',
+    backgroundColor: '#0f172a',
+    borderTopColor: 'rgba(255, 255, 255, 0.08)',
     borderTopWidth: 1,
-    height: 60,
-    paddingBottom: 8,
+    height: 65,
+    paddingBottom: 10,
     paddingTop: 8,
   },
   tabLabel: {
     fontSize: 10,
-    fontWeight: '500',
+    fontWeight: '600',
+    letterSpacing: 0.2,
   },
-  tabIcon: {
-    fontSize: 20,
-    opacity: 0.6,
-  },
-  tabIconFocused: {
-    opacity: 1,
+  iconContainer: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    width: 28,
+    height: 28,
   },
 });
