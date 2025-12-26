@@ -62,8 +62,7 @@
           "sounds": [],
           "defaultChannel": "default"
         }
-      ],
-      "expo-router"
+      ]
     ],
     "notification": {
       "icon": "./assets/notification-icon.png",

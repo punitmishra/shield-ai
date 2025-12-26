@@ -1,9 +1,14 @@
 # Shield AI - Multi-stage Dockerfile for Rust Backend
 
-FROM rust:1.83-slim as builder
+FROM rust:1.84-slim AS builder
 WORKDIR /app
+
+# Install dependencies and Rust nightly for edition 2024 support
 RUN apt-get update && apt-get install -y pkg-config libssl-dev && rm -rf /var/lib/apt/lists/*
-COPY Cargo.toml Cargo.lock ./
+RUN rustup install nightly && rustup default nightly
+
+COPY Cargo.toml ./
+COPY Cargo.lock* ./
 COPY crates/ ./crates/
 RUN cargo build --release
 

@@ -94,3 +94,4 @@ debug = true
 # Faster compile times for development
 [profile.dev.package."*"]
 opt-level = 2
+

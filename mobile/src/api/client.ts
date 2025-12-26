@@ -6,9 +6,24 @@
 import axios, { AxiosInstance, AxiosError, InternalAxiosRequestConfig } from 'axios';
 import { useAuthStore } from '../stores/authStore';
 
-// API base URL - use Mac's IP for simulator access
-// For production, use environment variable EXPO_PUBLIC_API_URL
-const API_BASE_URL = process.env.EXPO_PUBLIC_API_URL || 'http://192.168.0.177:8080';
+// API base URL configuration
+// For local development: http://localhost:8080
+// For Expo Go on physical device: Use your machine's IP
+// For production: Set EXPO_PUBLIC_API_URL environment variable
+const getApiUrl = () => {
+  if (process.env.EXPO_PUBLIC_API_URL) {
+    return process.env.EXPO_PUBLIC_API_URL;
+  }
+  // Use localhost for emulators/simulators
+  // Android emulator uses 10.0.2.2 to access host's localhost
+  const Platform = require('react-native').Platform;
+  if (Platform.OS === 'android') {
+    return 'http://10.0.2.2:8080';
+  }
+  return 'http://localhost:8080';
+};
+
+const API_BASE_URL = getApiUrl();
 
 // Create axios instance
 const apiClient: AxiosInstance = axios.create({
