@@ -1,7 +1,7 @@
 # Shield AI - Project Checkpoint & Memory Context
 
-## Project State: v0.4.4-alpha (99% Feature Complete)
-**Last Updated**: 2025-12-25
+## Project State: v0.4.5-alpha (UX Iteration Phase)
+**Last Updated**: 2025-12-25 (Session 9)
 
 ---
 
@@ -245,7 +245,51 @@ All 8 auth endpoints tested and working:
 
 ## Session History
 
-### Session 2025-12-25 (Part 8 - Current)
+### Session 2025-12-25 (Part 9 - Current)
+**Onboarding, Auth Screens & UX Redesign**
+
+1. **Onboarding Flow Implemented**:
+   - Created `OnboardingScreen.tsx` with 4 swipeable slides
+   - DNS Protection, Privacy, Speed, Family themes
+   - Animated dot indicators, Skip/Next/Get Started buttons
+   - AsyncStorage persistence for onboarding completion
+   - Fixed navigation flow using state callback
+
+2. **Auth Screens Polished**:
+   - Redesigned `LoginScreen.tsx` with Shield AI branding
+   - Redesigned `RegisterScreen.tsx` with password requirements
+   - Social login buttons (Apple, Google) ready for implementation
+
+3. **SVG Compatibility Fix**:
+   - Replaced all `react-native-svg` icons with View-based components
+   - Fixed "topSvgLayout" errors in Expo Go (new architecture)
+   - Updated: OnboardingScreen, LoginScreen, RegisterScreen, HomeScreen
+
+4. **Home Dashboard UX Redesign (v1)**:
+   - New hero section with animated shield and pulsing glow rings
+   - Personalized greeting ("Good Morning/Afternoon/Evening")
+   - Live stats strip (Queries, Threats Blocked, Cache Hit, Privacy Score)
+   - Recent activity feed with color-coded threat types
+   - Privacy insights card with score ring visualization
+   - Connection status card with DNS details
+   - Removed redundant Quick Actions
+
+5. **Documentation Created**:
+   - `docs/MOBILE_UX_ITERATIONS.md` - UX analysis and plans
+   - `docs/screenshots/v0/` - Current app screenshots
+   - `docs/screenshots/v1/` - Updated version screenshots
+   - Design system documented (colors, typography, spacing)
+
+6. **Commits**: `26ba067`, `a1b2c3d` (SVG fix), `abb31dc` (UX redesign)
+
+**PENDING - Icon Improvements Needed**:
+- View-based icons look basic/generic
+- Need more unique, distinctive icon designs
+- Color palette could be more cohesive
+- Consider custom icon component library
+- Icons to improve: Shield, Search, Clock, Family, Settings, etc.
+
+### Session 2025-12-25 (Part 8)
 **VPN Native Module & App Icons**
 1. Cleaned up mobile notification config:
    - Removed googleServicesFile reference
@@ -568,8 +612,49 @@ sheilds-ai/
 | **Backend** | ✅ Production Ready | 10 crates, 44 endpoints, zero warnings |
 | **Auth** | ✅ Complete & Tested | JWT + refresh tokens, device registration |
 | **Web Frontend** | ✅ Complete | 10+ components, real-time updates |
-| **Mobile App** | ✅ 99% Complete | All screens, VPN module, ready for store submission |
+| **Mobile App** | 🔄 UX Polish Phase | Onboarding done, Home redesigned, icons need work |
 | **CI/CD** | ✅ Complete | 9-job pipeline, Railway deployment |
 | **Docker** | ✅ Ready | Multi-stage build, health checks |
 | **Tests** | ✅ 32 Passing | 21 Rust + 5 Vitest + 6 E2E |
-| **Documentation** | ✅ Updated | CHECKPOINT, CLAUDE.md, OpenAPI |
+| **Documentation** | ✅ Updated | CHECKPOINT, CLAUDE.md, OpenAPI, UX_ITERATIONS |
+
+---
+
+## Next Session: Icon Improvements
+
+**Problem**: View-based icons are functional but look basic/generic. They need to be more distinctive and visually cohesive.
+
+**Icons to Redesign**:
+| Icon | Current Issue | Improvement Ideas |
+|------|---------------|-------------------|
+| Shield | Basic bordered shape | Add gradient layers, inner details |
+| Search | Simple circle + line | Magnifying glass with shine |
+| Clock | Plain circle + hands | Segmented dial, dot markers |
+| Family | Generic circles | Stylized silhouettes, overlapping |
+| Settings | Basic gear teeth | More detailed cog, inner elements |
+| Lock | Not implemented | Padlock with keyhole detail |
+| Stats | Not implemented | Bar chart with trend line |
+| Network | Not implemented | Connected nodes/dots |
+
+**Color Palette to Refine**:
+```
+Primary Blue:   #3b82f6 → Consider gradient to #60a5fa
+Success Green:  #22c55e → Add glow effect when active
+Danger Red:     #ef4444 → Use for blocked/threats only
+Warning Amber:  #f59e0b → Use for connecting/pending
+Purple Accent:  #8b5cf6 → Use for premium/tracker-related
+```
+
+**Approach Options**:
+1. **Custom Icon Library**: Create `src/components/icons/` with detailed View-based icons
+2. **Lottie Animations**: Use animated icons for key interactions
+3. **Icon Font**: Consider creating custom icon font (heavier solution)
+
+**Files to Update**:
+- `mobile/src/screens/dashboard/HomeScreen.tsx`
+- `mobile/src/screens/onboarding/OnboardingScreen.tsx`
+- `mobile/src/screens/auth/LoginScreen.tsx`
+- `mobile/src/screens/auth/RegisterScreen.tsx`
+- `mobile/src/screens/protection/ProtectionScreen.tsx`
+- `mobile/src/screens/analytics/AnalyticsScreen.tsx`
+- `mobile/src/navigation/MainNavigator.tsx` (tab bar icons)
