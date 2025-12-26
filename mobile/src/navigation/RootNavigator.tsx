@@ -72,7 +72,14 @@ export default function RootNavigator() {
       >
         {!hasSeenOnboarding ? (
           // Onboarding Flow
-          <Stack.Screen name="Onboarding" component={OnboardingScreen} />
+          <Stack.Screen name="Onboarding">
+            {(props) => (
+              <OnboardingScreen
+                {...props}
+                onComplete={() => setHasSeenOnboarding(true)}
+              />
+            )}
+          </Stack.Screen>
         ) : showMainApp ? (
           // Main App
           <Stack.Screen name="Main" component={MainNavigator} />

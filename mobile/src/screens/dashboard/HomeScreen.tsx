@@ -15,7 +15,6 @@ import {
   Animated,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import Svg, { Path, Circle, Defs, LinearGradient, Stop } from 'react-native-svg';
 import { useAuthStore } from '../../stores/authStore';
 import { useProtectionStore } from '../../stores/protectionStore';
 
@@ -23,63 +22,186 @@ const { width } = Dimensions.get('window');
 const CARD_PADDING = 20;
 const SECTION_GAP = 12;
 
-// Icon Components
-const ShieldIcon = ({ size = 36, active = false }: { size?: number; active?: boolean }) => (
-  <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
-    <Path
-      d="M12 2L4 6v6c0 5.55 3.84 10.74 8 12 4.16-1.26 8-6.45 8-12V6l-8-4z"
-      fill={active ? '#22c55e' : '#475569'}
-      fillOpacity={active ? 0.2 : 0.1}
-      stroke={active ? '#22c55e' : '#475569'}
-      strokeWidth={1.5}
-    />
-    {active && (
-      <Path
-        d="M9 12l2 2 4-4"
-        stroke="#22c55e"
-        strokeWidth={2}
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      />
-    )}
-  </Svg>
-);
+// View-based Icon Components to avoid SVG issues in Expo Go
+const ShieldIcon = ({ size = 36, active = false }: { size?: number; active?: boolean }) => {
+  const scale = size / 36;
+  return (
+    <View style={[iconStyles.shieldContainer, { width: size, height: size }]}>
+      <View
+        style={[
+          iconStyles.shield,
+          {
+            width: 28 * scale,
+            height: 34 * scale,
+            borderColor: active ? '#22c55e' : '#475569',
+            backgroundColor: active ? 'rgba(34, 197, 94, 0.2)' : 'rgba(71, 85, 105, 0.1)',
+            borderTopLeftRadius: 14 * scale,
+            borderTopRightRadius: 14 * scale,
+            borderRadius: 4 * scale,
+          },
+        ]}
+      >
+        {active && <Text style={[iconStyles.checkmark, { fontSize: 14 * scale }]}>✓</Text>}
+      </View>
+    </View>
+  );
+};
 
 const AnalyzeIcon = ({ size = 22, color = '#3b82f6' }: { size?: number; color?: string }) => (
-  <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
-    <Circle cx="11" cy="11" r="7" stroke={color} strokeWidth={2} />
-    <Path d="M21 21l-4-4" stroke={color} strokeWidth={2} strokeLinecap="round" />
-    <Circle cx="11" cy="11" r="3" stroke={color} strokeWidth={1.5} strokeOpacity={0.5} />
-  </Svg>
+  <View style={[iconStyles.iconContainer, { width: size, height: size }]}>
+    <View style={[iconStyles.searchCircle, { borderColor: color }]} />
+    <View style={[iconStyles.searchHandle, { backgroundColor: color }]} />
+  </View>
 );
 
 const HistoryIcon = ({ size = 22, color = '#10b981' }: { size?: number; color?: string }) => (
-  <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
-    <Circle cx="12" cy="12" r="9" stroke={color} strokeWidth={2} />
-    <Path d="M12 7v5l3 3" stroke={color} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" />
-  </Svg>
+  <View style={[iconStyles.iconContainer, { width: size, height: size }]}>
+    <View style={[iconStyles.clockCircle, { borderColor: color }]} />
+    <View style={[iconStyles.clockHand, { backgroundColor: color }]} />
+    <View style={[iconStyles.clockHandMin, { backgroundColor: color }]} />
+  </View>
 );
 
 const FamilyIcon = ({ size = 22, color = '#f59e0b' }: { size?: number; color?: string }) => (
-  <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
-    <Circle cx="12" cy="8" r="4" stroke={color} strokeWidth={2} />
-    <Path d="M6 21v-2a4 4 0 014-4h4a4 4 0 014 4v2" stroke={color} strokeWidth={2} strokeLinecap="round" />
-    <Circle cx="19" cy="8" r="2.5" stroke={color} strokeWidth={1.5} strokeOpacity={0.5} />
-    <Circle cx="5" cy="8" r="2.5" stroke={color} strokeWidth={1.5} strokeOpacity={0.5} />
-  </Svg>
+  <View style={[iconStyles.iconContainer, { width: size, height: size }]}>
+    <View style={[iconStyles.personHead, { borderColor: color }]} />
+    <View style={[iconStyles.personBody, { borderColor: color }]} />
+    <View style={[iconStyles.smallPersonLeft, { borderColor: color }]} />
+    <View style={[iconStyles.smallPersonRight, { borderColor: color }]} />
+  </View>
 );
 
 const SettingsIcon = ({ size = 22, color = '#8b5cf6' }: { size?: number; color?: string }) => (
-  <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
-    <Circle cx="12" cy="12" r="3" stroke={color} strokeWidth={2} />
-    <Path
-      d="M12 1v2m0 18v2M4.22 4.22l1.42 1.42m12.72 12.72l1.42 1.42M1 12h2m18 0h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"
-      stroke={color}
-      strokeWidth={2}
-      strokeLinecap="round"
-    />
-  </Svg>
+  <View style={[iconStyles.iconContainer, { width: size, height: size }]}>
+    <View style={[iconStyles.gearCenter, { borderColor: color }]} />
+    <View style={[iconStyles.gearTooth, iconStyles.gearTop, { backgroundColor: color }]} />
+    <View style={[iconStyles.gearTooth, iconStyles.gearBottom, { backgroundColor: color }]} />
+    <View style={[iconStyles.gearTooth, iconStyles.gearLeft, { backgroundColor: color }]} />
+    <View style={[iconStyles.gearTooth, iconStyles.gearRight, { backgroundColor: color }]} />
+  </View>
 );
+
+const iconStyles = StyleSheet.create({
+  shieldContainer: {
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  shield: {
+    borderWidth: 2,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  checkmark: {
+    color: '#22c55e',
+    fontWeight: '700',
+  },
+  iconContainer: {
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  searchCircle: {
+    width: 14,
+    height: 14,
+    borderRadius: 7,
+    borderWidth: 2,
+    position: 'absolute',
+    top: 2,
+    left: 2,
+  },
+  searchHandle: {
+    width: 6,
+    height: 2,
+    borderRadius: 1,
+    position: 'absolute',
+    bottom: 4,
+    right: 2,
+    transform: [{ rotate: '45deg' }],
+  },
+  clockCircle: {
+    width: 16,
+    height: 16,
+    borderRadius: 8,
+    borderWidth: 2,
+  },
+  clockHand: {
+    position: 'absolute',
+    width: 2,
+    height: 5,
+    borderRadius: 1,
+    top: 5,
+  },
+  clockHandMin: {
+    position: 'absolute',
+    width: 4,
+    height: 2,
+    borderRadius: 1,
+    right: 5,
+  },
+  personHead: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    borderWidth: 2,
+    position: 'absolute',
+    top: 2,
+  },
+  personBody: {
+    width: 12,
+    height: 6,
+    borderTopLeftRadius: 6,
+    borderTopRightRadius: 6,
+    borderWidth: 2,
+    borderBottomWidth: 0,
+    position: 'absolute',
+    bottom: 2,
+  },
+  smallPersonLeft: {
+    width: 5,
+    height: 5,
+    borderRadius: 3,
+    borderWidth: 1.5,
+    position: 'absolute',
+    left: 0,
+    top: 4,
+    opacity: 0.5,
+  },
+  smallPersonRight: {
+    width: 5,
+    height: 5,
+    borderRadius: 3,
+    borderWidth: 1.5,
+    position: 'absolute',
+    right: 0,
+    top: 4,
+    opacity: 0.5,
+  },
+  gearCenter: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    borderWidth: 2,
+  },
+  gearTooth: {
+    position: 'absolute',
+    width: 4,
+    height: 2,
+    borderRadius: 1,
+  },
+  gearTop: {
+    top: 1,
+    transform: [{ rotate: '90deg' }],
+  },
+  gearBottom: {
+    bottom: 1,
+    transform: [{ rotate: '90deg' }],
+  },
+  gearLeft: {
+    left: 1,
+  },
+  gearRight: {
+    right: 1,
+  },
+});
 
 // Animated pulse ring for shield button
 const PulseRing = ({ isActive }: { isActive: boolean }) => {

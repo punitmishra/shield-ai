@@ -17,7 +17,6 @@ import {
   ScrollView,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import Svg, { Path, Defs, LinearGradient, Stop, Circle } from 'react-native-svg';
 import { useAuthStore } from '../../stores/authStore';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 
@@ -25,47 +24,102 @@ type Props = {
   navigation: NativeStackNavigationProp<any>;
 };
 
-// Shield AI Logo
+// Shield AI Logo - View-based to avoid SVG issues in Expo Go
 const ShieldLogo = () => (
-  <Svg width={64} height={64} viewBox="0 0 24 24" fill="none">
-    <Defs>
-      <LinearGradient id="logoGrad" x1="0%" y1="0%" x2="100%" y2="100%">
-        <Stop offset="0%" stopColor="#3b82f6" />
-        <Stop offset="50%" stopColor="#8b5cf6" />
-        <Stop offset="100%" stopColor="#22c55e" />
-      </LinearGradient>
-    </Defs>
-    <Path
-      d="M12 2L4 6v6c0 5.55 3.84 10.74 8 12 4.16-1.26 8-6.45 8-12V6l-8-4z"
-      fill="url(#logoGrad)"
-      fillOpacity={0.15}
-      stroke="url(#logoGrad)"
-      strokeWidth={1.5}
-    />
-    <Circle cx="12" cy="11" r="2" fill="url(#logoGrad)" />
-    <Circle cx="9" cy="15" r="1.5" fill="#8b5cf6" fillOpacity={0.7} />
-    <Circle cx="15" cy="15" r="1.5" fill="#22c55e" fillOpacity={0.7} />
-    <Path d="M12 11l-3 4M12 11l3 4M9 15l3 2 3-2" stroke="url(#logoGrad)" strokeWidth={0.75} strokeOpacity={0.5} />
-  </Svg>
-);
-
-// Back Arrow
-const BackArrow = () => (
-  <Svg width={24} height={24} viewBox="0 0 24 24" fill="none">
-    <Path d="M19 12H5M12 19l-7-7 7-7" stroke="#f8fafc" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" />
-  </Svg>
-);
-
-// Checkmark Icon
-const CheckIcon = ({ checked }: { checked: boolean }) => (
-  <View style={[styles.checkBox, checked && styles.checkBoxChecked]}>
-    {checked && (
-      <Svg width={12} height={12} viewBox="0 0 24 24" fill="none">
-        <Path d="M5 12l5 5L20 7" stroke="#fff" strokeWidth={3} strokeLinecap="round" strokeLinejoin="round" />
-      </Svg>
-    )}
+  <View style={logoStyles.container}>
+    <View style={logoStyles.shield}>
+      <View style={logoStyles.centerDot} />
+      <View style={logoStyles.networkDots}>
+        <View style={[logoStyles.smallDot, { backgroundColor: '#8b5cf6' }]} />
+        <View style={[logoStyles.smallDot, { backgroundColor: '#22c55e' }]} />
+      </View>
+    </View>
   </View>
 );
+
+// Back Arrow - View-based
+const BackArrow = () => (
+  <View style={iconStyles.arrowContainer}>
+    <View style={iconStyles.arrowLine} />
+    <View style={iconStyles.arrowHead} />
+  </View>
+);
+
+// Checkmark Icon - View-based
+const CheckIcon = ({ checked }: { checked: boolean }) => (
+  <View style={[styles.checkBox, checked && styles.checkBoxChecked]}>
+    {checked && <Text style={iconStyles.checkmark}>✓</Text>}
+  </View>
+);
+
+const logoStyles = StyleSheet.create({
+  container: {
+    width: 64,
+    height: 64,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  shield: {
+    width: 44,
+    height: 52,
+    borderWidth: 2,
+    borderColor: '#3b82f6',
+    borderRadius: 6,
+    borderTopLeftRadius: 22,
+    borderTopRightRadius: 22,
+    backgroundColor: 'rgba(59, 130, 246, 0.1)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  centerDot: {
+    width: 10,
+    height: 10,
+    borderRadius: 5,
+    backgroundColor: '#3b82f6',
+    marginBottom: 6,
+  },
+  networkDots: {
+    flexDirection: 'row',
+    gap: 12,
+  },
+  smallDot: {
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+    opacity: 0.7,
+  },
+});
+
+const iconStyles = StyleSheet.create({
+  arrowContainer: {
+    width: 24,
+    height: 24,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  arrowLine: {
+    position: 'absolute',
+    width: 14,
+    height: 2,
+    backgroundColor: '#f8fafc',
+    borderRadius: 1,
+  },
+  arrowHead: {
+    position: 'absolute',
+    left: 3,
+    width: 8,
+    height: 8,
+    borderLeftWidth: 2,
+    borderBottomWidth: 2,
+    borderColor: '#f8fafc',
+    transform: [{ rotate: '45deg' }],
+  },
+  checkmark: {
+    fontSize: 10,
+    fontWeight: '700',
+    color: '#fff',
+  },
+});
 
 export default function RegisterScreen({ navigation }: Props) {
   const insets = useSafeAreaInsets();

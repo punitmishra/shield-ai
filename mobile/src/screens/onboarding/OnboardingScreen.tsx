@@ -14,7 +14,6 @@ import {
   FlatList,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import Svg, { Path, Circle, Defs, LinearGradient, Stop } from 'react-native-svg';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 
@@ -22,78 +21,48 @@ const { width, height } = Dimensions.get('window');
 
 type Props = {
   navigation: NativeStackNavigationProp<any>;
+  onComplete?: () => void;
 };
 
-// Elegant SVG Icons for each slide
+// Icon components using styled Views
 const ShieldIcon = () => (
-  <Svg width={120} height={120} viewBox="0 0 24 24" fill="none">
-    <Defs>
-      <LinearGradient id="shieldGrad" x1="0%" y1="0%" x2="100%" y2="100%">
-        <Stop offset="0%" stopColor="#3b82f6" />
-        <Stop offset="100%" stopColor="#22c55e" />
-      </LinearGradient>
-    </Defs>
-    <Path
-      d="M12 2L4 6v6c0 5.55 3.84 10.74 8 12 4.16-1.26 8-6.45 8-12V6l-8-4z"
-      fill="url(#shieldGrad)"
-      fillOpacity={0.2}
-      stroke="url(#shieldGrad)"
-      strokeWidth={1.5}
-    />
-    <Path
-      d="M9 12l2 2 4-4"
-      stroke="#22c55e"
-      strokeWidth={2}
-      strokeLinecap="round"
-      strokeLinejoin="round"
-    />
-  </Svg>
+  <View style={[iconStyles.container, { backgroundColor: 'rgba(34, 197, 94, 0.1)' }]}>
+    <View style={[iconStyles.shield, { borderColor: '#22c55e' }]}>
+      <Text style={[iconStyles.checkmark, { color: '#22c55e' }]}>✓</Text>
+    </View>
+  </View>
 );
 
 const PrivacyIcon = () => (
-  <Svg width={120} height={120} viewBox="0 0 24 24" fill="none">
-    <Defs>
-      <LinearGradient id="privacyGrad" x1="0%" y1="0%" x2="100%" y2="100%">
-        <Stop offset="0%" stopColor="#8b5cf6" />
-        <Stop offset="100%" stopColor="#3b82f6" />
-      </LinearGradient>
-    </Defs>
-    <Circle cx="12" cy="12" r="10" stroke="url(#privacyGrad)" strokeWidth={1.5} strokeOpacity={0.3} />
-    <Circle cx="12" cy="12" r="6" stroke="url(#privacyGrad)" strokeWidth={1.5} strokeOpacity={0.6} />
-    <Circle cx="12" cy="12" r="2" fill="url(#privacyGrad)" />
-    <Path d="M12 2v4M12 18v4M2 12h4M18 12h4" stroke="url(#privacyGrad)" strokeWidth={1.5} strokeLinecap="round" strokeOpacity={0.4} />
-  </Svg>
+  <View style={[iconStyles.container, { backgroundColor: 'rgba(139, 92, 246, 0.1)' }]}>
+    <View style={iconStyles.rings}>
+      <View style={[iconStyles.ring, iconStyles.ringOuter, { borderColor: '#8b5cf6' }]} />
+      <View style={[iconStyles.ring, iconStyles.ringMiddle, { borderColor: '#8b5cf6' }]} />
+      <View style={[iconStyles.dot, { backgroundColor: '#8b5cf6' }]} />
+    </View>
+  </View>
 );
 
 const SpeedIcon = () => (
-  <Svg width={120} height={120} viewBox="0 0 24 24" fill="none">
-    <Defs>
-      <LinearGradient id="speedGrad" x1="0%" y1="0%" x2="100%" y2="100%">
-        <Stop offset="0%" stopColor="#f59e0b" />
-        <Stop offset="100%" stopColor="#ef4444" />
-      </LinearGradient>
-    </Defs>
-    <Circle cx="12" cy="14" r="8" stroke="url(#speedGrad)" strokeWidth={1.5} strokeOpacity={0.3} />
-    <Path d="M12 14l3-5" stroke="url(#speedGrad)" strokeWidth={2} strokeLinecap="round" />
-    <Circle cx="12" cy="14" r="2" fill="url(#speedGrad)" />
-    <Path d="M5 10l2 1M19 10l-2 1M12 6v2" stroke="url(#speedGrad)" strokeWidth={1.5} strokeLinecap="round" strokeOpacity={0.5} />
-  </Svg>
+  <View style={[iconStyles.container, { backgroundColor: 'rgba(245, 158, 11, 0.1)' }]}>
+    <View style={iconStyles.gauge}>
+      <View style={[iconStyles.gaugeArc, { borderColor: '#f59e0b' }]} />
+      <View style={[iconStyles.needle, { backgroundColor: '#f59e0b' }]} />
+      <View style={[iconStyles.gaugeDot, { backgroundColor: '#f59e0b' }]} />
+    </View>
+  </View>
 );
 
 const FamilyIcon = () => (
-  <Svg width={120} height={120} viewBox="0 0 24 24" fill="none">
-    <Defs>
-      <LinearGradient id="familyGrad" x1="0%" y1="0%" x2="100%" y2="100%">
-        <Stop offset="0%" stopColor="#10b981" />
-        <Stop offset="100%" stopColor="#06b6d4" />
-      </LinearGradient>
-    </Defs>
-    <Circle cx="12" cy="8" r="4" stroke="url(#familyGrad)" strokeWidth={1.5} />
-    <Path d="M6 21v-2a4 4 0 014-4h4a4 4 0 014 4v2" stroke="url(#familyGrad)" strokeWidth={1.5} strokeLinecap="round" />
-    <Circle cx="20" cy="8" r="2.5" stroke="url(#familyGrad)" strokeWidth={1} strokeOpacity={0.5} />
-    <Circle cx="4" cy="8" r="2.5" stroke="url(#familyGrad)" strokeWidth={1} strokeOpacity={0.5} />
-    <Path d="M20 14v2M4 14v2" stroke="url(#familyGrad)" strokeWidth={1} strokeLinecap="round" strokeOpacity={0.5} />
-  </Svg>
+  <View style={[iconStyles.container, { backgroundColor: 'rgba(16, 185, 129, 0.1)' }]}>
+    <View style={iconStyles.family}>
+      <View style={[iconStyles.person, { borderColor: '#10b981' }]} />
+      <View style={iconStyles.smallPeople}>
+        <View style={[iconStyles.smallPerson, { borderColor: '#10b981', opacity: 0.5 }]} />
+        <View style={[iconStyles.smallPerson, { borderColor: '#10b981', opacity: 0.5 }]} />
+      </View>
+    </View>
+  </View>
 );
 
 const slides = [
@@ -131,7 +100,7 @@ const slides = [
   },
 ];
 
-export default function OnboardingScreen({ navigation }: Props) {
+export default function OnboardingScreen({ navigation, onComplete }: Props) {
   const insets = useSafeAreaInsets();
   const [currentIndex, setCurrentIndex] = useState(0);
   const flatListRef = useRef<FlatList>(null);
@@ -151,17 +120,17 @@ export default function OnboardingScreen({ navigation }: Props) {
 
   const completeOnboarding = async () => {
     await AsyncStorage.setItem('onboarding_complete', 'true');
-    navigation.replace('Login');
+    // Use callback to trigger state update in RootNavigator
+    if (onComplete) {
+      onComplete();
+    }
   };
 
-  const renderSlide = ({ item, index }: { item: typeof slides[0]; index: number }) => {
+  const renderSlide = ({ item }: { item: typeof slides[0] }) => {
     const Icon = item.icon;
     return (
       <View style={styles.slide}>
-        <View style={styles.iconContainer}>
-          <View style={[styles.iconGlow, { backgroundColor: `${item.color}10` }]} />
-          <Icon />
-        </View>
+        <Icon />
         <Text style={styles.title}>{item.title}</Text>
         <Text style={[styles.subtitle, { color: item.color }]}>{item.subtitle}</Text>
         <Text style={styles.description}>{item.description}</Text>
@@ -251,6 +220,104 @@ export default function OnboardingScreen({ navigation }: Props) {
   );
 }
 
+const iconStyles = StyleSheet.create({
+  container: {
+    width: 120,
+    height: 120,
+    borderRadius: 60,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 40,
+  },
+  shield: {
+    width: 50,
+    height: 60,
+    borderWidth: 3,
+    borderRadius: 8,
+    borderTopLeftRadius: 25,
+    borderTopRightRadius: 25,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  checkmark: {
+    fontSize: 24,
+    fontWeight: '700',
+  },
+  rings: {
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  ring: {
+    position: 'absolute',
+    borderWidth: 2,
+    borderRadius: 100,
+  },
+  ringOuter: {
+    width: 70,
+    height: 70,
+    opacity: 0.3,
+  },
+  ringMiddle: {
+    width: 45,
+    height: 45,
+    opacity: 0.6,
+  },
+  dot: {
+    width: 16,
+    height: 16,
+    borderRadius: 8,
+  },
+  gauge: {
+    width: 70,
+    height: 40,
+    alignItems: 'center',
+    justifyContent: 'flex-end',
+  },
+  gaugeArc: {
+    position: 'absolute',
+    top: 0,
+    width: 70,
+    height: 35,
+    borderWidth: 3,
+    borderBottomWidth: 0,
+    borderTopLeftRadius: 35,
+    borderTopRightRadius: 35,
+    opacity: 0.4,
+  },
+  needle: {
+    width: 3,
+    height: 25,
+    borderRadius: 2,
+    transform: [{ rotate: '45deg' }, { translateY: -8 }],
+  },
+  gaugeDot: {
+    width: 12,
+    height: 12,
+    borderRadius: 6,
+    marginTop: 5,
+  },
+  family: {
+    alignItems: 'center',
+  },
+  person: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    borderWidth: 3,
+    marginBottom: 8,
+  },
+  smallPeople: {
+    flexDirection: 'row',
+    gap: 20,
+  },
+  smallPerson: {
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+    borderWidth: 2,
+  },
+});
+
 const styles = StyleSheet.create({
   container: {
     flex: 1,
@@ -283,18 +350,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     paddingHorizontal: 32,
-    paddingTop: height * 0.15,
-  },
-  iconContainer: {
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: 48,
-  },
-  iconGlow: {
-    position: 'absolute',
-    width: 200,
-    height: 200,
-    borderRadius: 100,
+    paddingTop: height * 0.18,
   },
   title: {
     fontSize: 32,
