@@ -31,6 +31,7 @@ import {
   MessageIcon,
   LogoutIcon,
 } from '../../components/icons';
+import { SettingsScreenSkeleton } from '../../components/Skeleton';
 
 interface SettingRowProps {
   icon: ReactNode;

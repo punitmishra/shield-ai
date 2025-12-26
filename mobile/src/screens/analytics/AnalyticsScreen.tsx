@@ -15,6 +15,7 @@ import {
   ActivityIndicator,
 } from 'react-native';
 import { useAnalyticsStore, QueryLogEntry } from '../../stores/analyticsStore';
+import { AnalyticsScreenSkeleton } from '../../components/Skeleton';
 
 const { width } = Dimensions.get('window');
 
@@ -140,6 +141,7 @@ function formatNumber(num: number): string {
 export default function AnalyticsScreen() {
   const [timeRange, setTimeRange] = useState<TimeRange>('24h');
   const [filter, setFilter] = useState<'all' | 'blocked' | 'allowed'>('all');
+  const [initialLoad, setInitialLoad] = useState(true);
 
   const {
     queryHistory,
@@ -152,8 +154,21 @@ export default function AnalyticsScreen() {
 
   // Fetch data on mount
   useEffect(() => {
-    refreshAll();
+    const load = async () => {
+      await refreshAll();
+      setInitialLoad(false);
+    };
+    load();
   }, []);
+
+  // Show skeleton during initial load
+  if (initialLoad) {
+    return (
+      <View style={styles.container}>
+        <AnalyticsScreenSkeleton />
+      </View>
+    );
+  }
 
   // Filter query log
   const filteredLog = queryHistory.filter(entry => {

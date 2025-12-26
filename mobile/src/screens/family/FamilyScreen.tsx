@@ -31,6 +31,7 @@ import {
   AlertIcon,
   UserIcon,
 } from '../../components/icons';
+import { FamilyScreenSkeleton } from '../../components/Skeleton';
 
 function ProfileCard({ profile, onPress }: { profile: FamilyProfile; onPress: () => void }) {
   const typeColors = {
@@ -295,13 +296,27 @@ export default function FamilyScreen() {
   const { stats } = useProtectionStore();
   const [selectedProfile, setSelectedProfile] = useState<FamilyProfile | null>(null);
   const [isEditing, setIsEditing] = useState(false);
+  const [initialLoad, setInitialLoad] = useState(true);
 
   const isPro = user?.tier === 'pro' || user?.tier === 'enterprise';
 
   // Fetch profiles on mount
   useEffect(() => {
-    refreshAll();
+    const load = async () => {
+      await refreshAll();
+      setInitialLoad(false);
+    };
+    load();
   }, []);
+
+  // Show skeleton during initial load
+  if (initialLoad) {
+    return (
+      <View style={styles.container}>
+        <FamilyScreenSkeleton />
+      </View>
+    );
+  }
 
   const handleAddProfile = async () => {
     if (!isPro && profiles.length >= 2) {

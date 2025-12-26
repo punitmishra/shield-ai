@@ -18,6 +18,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useAuthStore } from '../../stores/authStore';
 import { useProtectionStore } from '../../stores/protectionStore';
 import { ShieldIcon, BlockIcon, AllowIcon, NetworkIcon, TipIcon, PrivacyIcon } from '../../components/icons';
+import { HomeScreenSkeleton } from '../../components/Skeleton';
 
 const { width } = Dimensions.get('window');
 
@@ -336,15 +337,32 @@ export default function HomeScreen() {
     toggleVPN,
   } = useProtectionStore();
 
+  const [initialLoad, setInitialLoad] = useState(true);
   const isConnecting = vpnStatus === 'connecting' || vpnStatus === 'disconnecting';
 
   useEffect(() => {
-    refreshAll();
+    const load = async () => {
+      await refreshAll();
+      setInitialLoad(false);
+    };
+    load();
   }, []);
 
   const onRefresh = useCallback(() => {
     refreshAll();
   }, [refreshAll]);
+
+  // Show skeleton on initial load
+  if (initialLoad) {
+    return (
+      <View style={styles.container}>
+        <View style={styles.bgBase} />
+        <View style={[styles.content, { paddingTop: insets.top + 12 }]}>
+          <HomeScreenSkeleton />
+        </View>
+      </View>
+    );
+  }
 
   return (
     <View style={styles.container}>
