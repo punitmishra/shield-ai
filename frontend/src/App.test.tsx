@@ -70,7 +70,7 @@ describe('App', () => {
     render(<App />)
 
     await waitFor(() => {
-      expect(screen.getByText('Shield AI')).toBeInTheDocument()
+      expect(screen.getAllByText('Shield AI')[0]).toBeInTheDocument()
     })
   })
 
@@ -112,9 +112,9 @@ describe('App', () => {
 
     await waitFor(() => {
       expect(screen.getByText('Total Queries')).toBeInTheDocument()
-      expect(screen.getByText('Blocked Queries')).toBeInTheDocument()
-      expect(screen.getByText('Cache Hits')).toBeInTheDocument()
-      expect(screen.getByText('Cache Misses')).toBeInTheDocument()
+      expect(screen.getAllByText('Threats Blocked')[0]).toBeInTheDocument()
+      expect(screen.getAllByText('Cache Hits')[0]).toBeInTheDocument()
+      expect(screen.getByText('Response Time')).toBeInTheDocument()
     })
   })
 
@@ -155,7 +155,7 @@ describe('App', () => {
     render(<App />)
 
     await waitFor(() => {
-      expect(screen.getByText('healthy')).toBeInTheDocument()
+      expect(screen.getByText('Healthy')).toBeInTheDocument()
     })
   })
 
@@ -196,7 +196,7 @@ describe('App', () => {
     render(<App />)
 
     await waitFor(() => {
-      expect(screen.getByText('Shield AI - AI-Powered DNS Protection')).toBeInTheDocument()
+      expect(screen.getByText('AI-Powered DNS Protection • Open Source • Privacy-First')).toBeInTheDocument()
     })
   })
 })

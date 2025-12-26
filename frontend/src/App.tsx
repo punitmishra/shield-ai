@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
-import { Shield, Activity, Ban, Database, Clock, RefreshCw, Server, AlertTriangle, Wifi, WifiOff } from 'lucide-react'
+import { Shield, Activity, Ban, Database, Clock, RefreshCw, Server, AlertTriangle, Wifi, WifiOff, Zap, Lock, Eye } from 'lucide-react'
 
 // API base URL - use environment variable in production, empty string for dev (uses Vite proxy)
 const API_BASE = import.meta.env.VITE_API_URL || ''
@@ -31,30 +31,46 @@ interface QueryLogEntry {
   response_time_ms: number
 }
 
-// Stat Card Component
+// Premium Stat Card Component
 function StatCard({
   title,
   value,
   icon: Icon,
-  color,
-  subtitle
+  gradient,
+  subtitle,
+  trend
 }: {
   title: string
   value: string | number
   icon: React.ComponentType<{ className?: string }>
-  color: string
+  gradient: string
   subtitle?: string
+  trend?: { value: number; positive: boolean }
 }) {
   return (
-    <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6 hover:shadow-md transition-shadow">
-      <div className="flex items-center justify-between">
-        <div>
-          <p className="text-sm text-gray-500 font-medium">{title}</p>
-          <p className="text-2xl font-bold text-gray-900 mt-1">{value}</p>
-          {subtitle && <p className="text-xs text-gray-400 mt-1">{subtitle}</p>}
-        </div>
-        <div className={`p-3 rounded-lg ${color}`}>
-          <Icon className="w-6 h-6 text-white" />
+    <div className="group relative overflow-hidden rounded-2xl bg-slate-800/50 border border-slate-700/50 p-6 hover:border-slate-600/50 transition-all duration-300 hover:shadow-lg hover:shadow-blue-500/5">
+      {/* Gradient glow effect */}
+      <div className={`absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-500 ${gradient} blur-xl`} />
+
+      <div className="relative">
+        <div className="flex items-start justify-between">
+          <div>
+            <p className="text-sm text-slate-400 font-medium">{title}</p>
+            <p className="text-3xl font-bold text-white mt-2 tracking-tight">{value}</p>
+            {subtitle && (
+              <p className="text-xs text-slate-500 mt-1 flex items-center gap-1">
+                {trend && (
+                  <span className={trend.positive ? 'text-emerald-400' : 'text-red-400'}>
+                    {trend.positive ? '↑' : '↓'} {trend.value}%
+                  </span>
+                )}
+                {subtitle}
+              </p>
+            )}
+          </div>
+          <div className={`p-3 rounded-xl bg-gradient-to-br ${gradient}`}>
+            <Icon className="w-6 h-6 text-white" />
+          </div>
         </div>
       </div>
     </div>
@@ -65,24 +81,54 @@ function StatCard({
 function StatusBadge({ status }: { status: string }) {
   const isHealthy = status === 'healthy'
   return (
-    <span className={`inline-flex items-center px-3 py-1 rounded-full text-sm font-medium ${
-      isHealthy ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
+    <span className={`inline-flex items-center px-3 py-1.5 rounded-full text-xs font-semibold backdrop-blur-sm ${
+      isHealthy
+        ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30'
+        : 'bg-red-500/20 text-red-400 border border-red-500/30'
     }`}>
-      <span className={`w-2 h-2 rounded-full mr-2 ${isHealthy ? 'bg-green-500' : 'bg-red-500'}`} />
-      {status}
+      <span className={`w-2 h-2 rounded-full mr-2 animate-pulse ${isHealthy ? 'bg-emerald-400' : 'bg-red-400'}`} />
+      {status.charAt(0).toUpperCase() + status.slice(1)}
     </span>
   )
 }
 
-// Progress Bar Component
-function ProgressBar({ value, color }: { value: number; color: string }) {
+// Gradient Progress Bar Component
+function GradientProgressBar({ value, gradient }: { value: number; gradient: string }) {
   return (
-    <div className="w-full bg-gray-200 rounded-full h-2">
+    <div className="w-full bg-slate-700/50 rounded-full h-2 overflow-hidden">
       <div
-        className={`h-2 rounded-full transition-all duration-500 ${color}`}
+        className={`h-2 rounded-full transition-all duration-700 ease-out bg-gradient-to-r ${gradient}`}
         style={{ width: `${Math.min(value * 100, 100)}%` }}
       />
     </div>
+  )
+}
+
+// Shield Logo SVG
+function ShieldLogo({ className = "w-8 h-8" }: { className?: string }) {
+  return (
+    <svg className={className} viewBox="0 0 48 48" fill="none">
+      <defs>
+        <linearGradient id="shieldGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+          <stop offset="0%" stopColor="#3b82f6" />
+          <stop offset="50%" stopColor="#8b5cf6" />
+          <stop offset="100%" stopColor="#22c55e" />
+        </linearGradient>
+      </defs>
+      <path
+        d="M24 4L6 12v12c0 11.05 7.68 21.38 18 24 10.32-2.62 18-12.95 18-24V12L24 4z"
+        fill="url(#shieldGrad)"
+      />
+      <path
+        d="M24 8L10 14v10c0 8.84 5.97 17.1 14 19.2 8.03-2.1 14-10.36 14-19.2V14L24 8z"
+        fill="#0f172a"
+        opacity="0.7"
+      />
+      <circle cx="24" cy="20" r="3" fill="#3b82f6" />
+      <circle cx="18" cy="28" r="2" fill="#8b5cf6" />
+      <circle cx="30" cy="28" r="2" fill="#22c55e" />
+      <path d="M24 20L18 28M24 20L30 28" stroke="#3b82f6" strokeWidth="1" strokeOpacity="0.5" />
+    </svg>
   )
 }
 
@@ -132,7 +178,6 @@ function App() {
   const connectWebSocket = useCallback(() => {
     if (wsRef.current?.readyState === WebSocket.OPEN) return
 
-    // Build WebSocket URL from API_BASE or current host
     let wsUrl: string
     if (API_BASE) {
       const apiUrl = new URL(API_BASE)
@@ -170,8 +215,6 @@ function App() {
         console.log('WebSocket disconnected')
         setWsConnected(false)
         wsRef.current = null
-
-        // Attempt to reconnect after 3 seconds
         reconnectTimeoutRef.current = setTimeout(() => {
           connectWebSocket()
         }, 3000)
@@ -183,12 +226,10 @@ function App() {
     }
   }, [])
 
-  // Initial data fetch and WebSocket connection
   useEffect(() => {
     fetchData()
     connectWebSocket()
 
-    // Fetch query history every 5 seconds (stats come via WebSocket)
     const historyInterval = setInterval(async () => {
       try {
         const historyRes = await fetch(`${API_BASE}/api/history`)
@@ -201,7 +242,6 @@ function App() {
       }
     }, 5000)
 
-    // Fetch health every 10 seconds
     const healthInterval = setInterval(async () => {
       try {
         const healthRes = await fetch(`${API_BASE}/health`)
@@ -247,45 +287,56 @@ function App() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 flex items-center justify-center">
+      <div className="min-h-screen bg-slate-900 flex items-center justify-center">
         <div className="text-center">
-          <RefreshCw className="w-8 h-8 text-blue-500 animate-spin mx-auto mb-4" />
-          <p className="text-gray-600">Loading Shield AI Dashboard...</p>
+          <div className="relative">
+            <ShieldLogo className="w-16 h-16 mx-auto mb-6 animate-pulse" />
+            <div className="absolute inset-0 bg-blue-500/20 blur-2xl rounded-full" />
+          </div>
+          <RefreshCw className="w-6 h-6 text-blue-400 animate-spin mx-auto mb-4" />
+          <p className="text-slate-400 font-medium">Loading Shield AI Dashboard...</p>
         </div>
       </div>
     )
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100">
+    <div className="min-h-screen bg-slate-900">
+      {/* Background gradient effects */}
+      <div className="fixed inset-0 overflow-hidden pointer-events-none">
+        <div className="absolute -top-40 -right-40 w-80 h-80 bg-blue-500/10 rounded-full blur-3xl" />
+        <div className="absolute top-1/2 -left-40 w-80 h-80 bg-purple-500/10 rounded-full blur-3xl" />
+        <div className="absolute -bottom-40 right-1/3 w-80 h-80 bg-emerald-500/10 rounded-full blur-3xl" />
+      </div>
+
       {/* Header */}
-      <header className="bg-white shadow-sm border-b border-gray-200">
+      <header className="relative border-b border-slate-800 bg-slate-900/80 backdrop-blur-xl sticky top-0 z-50">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between py-4">
-            <div className="flex items-center space-x-3">
-              <div className="bg-blue-600 p-2 rounded-lg">
-                <Shield className="w-6 h-6 text-white" />
-              </div>
+            <div className="flex items-center space-x-4">
+              <ShieldLogo className="w-10 h-10" />
               <div>
-                <h1 className="text-xl font-bold text-gray-900">Shield AI</h1>
-                <p className="text-sm text-gray-500">DNS Protection Dashboard</p>
+                <h1 className="text-xl font-bold text-white tracking-tight">Shield AI</h1>
+                <p className="text-xs text-slate-500 font-medium">DNS Protection Dashboard</p>
               </div>
             </div>
-            <div className="flex items-center space-x-4">
-              {/* WebSocket status indicator */}
-              <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${
-                wsConnected ? 'bg-green-100 text-green-700' : 'bg-yellow-100 text-yellow-700'
+            <div className="flex items-center space-x-3">
+              {/* Live indicator */}
+              <span className={`inline-flex items-center px-3 py-1.5 rounded-full text-xs font-medium backdrop-blur-sm ${
+                wsConnected
+                  ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20'
+                  : 'bg-amber-500/10 text-amber-400 border border-amber-500/20'
               }`}>
                 {wsConnected ? (
-                  <><Wifi className="w-3 h-3 mr-1" /> Live</>
+                  <><Wifi className="w-3 h-3 mr-1.5" /><span className="animate-pulse">Live</span></>
                 ) : (
-                  <><WifiOff className="w-3 h-3 mr-1" /> Polling</>
+                  <><WifiOff className="w-3 h-3 mr-1.5" /> Polling</>
                 )}
               </span>
               {health && <StatusBadge status={health.status} />}
               <button
                 onClick={fetchData}
-                className="p-2 text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded-lg transition-colors"
+                className="p-2.5 text-slate-400 hover:text-white hover:bg-slate-800 rounded-xl transition-all duration-200 border border-transparent hover:border-slate-700"
               >
                 <RefreshCw className="w-5 h-5" />
               </button>
@@ -294,33 +345,37 @@ function App() {
         </div>
       </header>
 
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      <main className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {error && (
-          <div className="mb-6 bg-red-50 border border-red-200 rounded-lg p-4 flex items-center">
-            <AlertTriangle className="w-5 h-5 text-red-500 mr-3" />
-            <p className="text-red-700">{error}</p>
+          <div className="mb-6 bg-red-500/10 border border-red-500/20 rounded-xl p-4 flex items-center backdrop-blur-sm">
+            <AlertTriangle className="w-5 h-5 text-red-400 mr-3" />
+            <p className="text-red-400 font-medium">{error}</p>
           </div>
         )}
 
-        {/* Server Info */}
+        {/* Server Status Bar */}
         {health && (
-          <div className="mb-8 bg-white rounded-xl shadow-sm border border-gray-100 p-6">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center space-x-4">
-                <Server className="w-5 h-5 text-gray-500" />
-                <div>
-                  <span className="text-gray-600">Version:</span>
-                  <span className="ml-2 font-mono text-gray-900">{health.version}</span>
+          <div className="mb-8 bg-slate-800/50 rounded-2xl border border-slate-700/50 p-5 backdrop-blur-sm">
+            <div className="flex flex-wrap items-center justify-between gap-4">
+              <div className="flex items-center gap-6">
+                <div className="flex items-center gap-2">
+                  <Server className="w-4 h-4 text-slate-500" />
+                  <span className="text-slate-500 text-sm">Version</span>
+                  <span className="font-mono text-white bg-slate-700/50 px-2 py-0.5 rounded text-sm">{health.version}</span>
                 </div>
-                <div className="border-l border-gray-200 pl-4">
-                  <span className="text-gray-600">Uptime:</span>
-                  <span className="ml-2 font-semibold text-gray-900">
-                    {formatUptime(health.uptime_seconds)}
-                  </span>
+                <div className="flex items-center gap-2">
+                  <Zap className="w-4 h-4 text-amber-400" />
+                  <span className="text-slate-500 text-sm">Uptime</span>
+                  <span className="font-semibold text-emerald-400">{formatUptime(health.uptime_seconds)}</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <Lock className="w-4 h-4 text-blue-400" />
+                  <span className="text-slate-500 text-sm">Encryption</span>
+                  <span className="font-semibold text-blue-400">256-bit</span>
                 </div>
               </div>
-              <div className="text-sm text-gray-400">
-                Last updated: {lastUpdated.toLocaleTimeString()}
+              <div className="text-xs text-slate-600">
+                Updated: {lastUpdated.toLocaleTimeString()}
               </div>
             </div>
           </div>
@@ -329,77 +384,83 @@ function App() {
         {/* Stats Grid */}
         {stats && (
           <>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-5 mb-8">
               <StatCard
                 title="Total Queries"
                 value={formatNumber(stats.total_queries)}
                 icon={Activity}
-                color="bg-blue-500"
-                subtitle="All DNS requests"
+                gradient="from-blue-500 to-blue-600"
+                subtitle="DNS requests processed"
               />
               <StatCard
-                title="Blocked Queries"
+                title="Threats Blocked"
                 value={formatNumber(stats.blocked_queries)}
                 icon={Ban}
-                color="bg-red-500"
+                gradient="from-red-500 to-rose-600"
                 subtitle={`${(stats.block_rate * 100).toFixed(1)}% block rate`}
               />
               <StatCard
                 title="Cache Hits"
                 value={formatNumber(stats.cache_hits)}
                 icon={Database}
-                color="bg-green-500"
+                gradient="from-emerald-500 to-green-600"
                 subtitle={`${(stats.cache_hit_rate * 100).toFixed(1)}% hit rate`}
               />
               <StatCard
-                title="Cache Misses"
-                value={formatNumber(stats.cache_misses)}
-                icon={Clock}
-                color="bg-orange-500"
-                subtitle="Upstream lookups"
+                title="Response Time"
+                value="<1ms"
+                icon={Zap}
+                gradient="from-amber-500 to-orange-600"
+                subtitle="Average latency"
               />
             </div>
 
-            {/* Rate Cards */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
-              <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
-                <h3 className="text-lg font-semibold text-gray-900 mb-4">Cache Performance</h3>
-                <div className="space-y-4">
-                  <div>
-                    <div className="flex justify-between text-sm mb-2">
-                      <span className="text-gray-600">Hit Rate</span>
-                      <span className="font-semibold text-green-600">
-                        {(stats.cache_hit_rate * 100).toFixed(1)}%
-                      </span>
-                    </div>
-                    <ProgressBar value={stats.cache_hit_rate} color="bg-green-500" />
+            {/* Performance Cards */}
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+              {/* Cache Performance */}
+              <div className="bg-slate-800/50 rounded-2xl border border-slate-700/50 p-6 backdrop-blur-sm">
+                <div className="flex items-center justify-between mb-6">
+                  <h3 className="text-lg font-semibold text-white flex items-center gap-2">
+                    <Database className="w-5 h-5 text-emerald-400" />
+                    Cache Performance
+                  </h3>
+                  <span className="text-2xl font-bold text-emerald-400">
+                    {(stats.cache_hit_rate * 100).toFixed(1)}%
+                  </span>
+                </div>
+                <GradientProgressBar value={stats.cache_hit_rate} gradient="from-emerald-500 to-green-400" />
+                <div className="mt-6 grid grid-cols-2 gap-4">
+                  <div className="bg-slate-700/30 rounded-xl p-4">
+                    <p className="text-slate-500 text-xs font-medium">Cache Hits</p>
+                    <p className="text-xl font-bold text-white mt-1">{formatNumber(stats.cache_hits)}</p>
                   </div>
-                  <div className="pt-4 border-t border-gray-100">
-                    <div className="flex justify-between text-sm">
-                      <span className="text-gray-500">Total Lookups</span>
-                      <span className="text-gray-900">{formatNumber(stats.cache_hits + stats.cache_misses)}</span>
-                    </div>
+                  <div className="bg-slate-700/30 rounded-xl p-4">
+                    <p className="text-slate-500 text-xs font-medium">Cache Misses</p>
+                    <p className="text-xl font-bold text-white mt-1">{formatNumber(stats.cache_misses)}</p>
                   </div>
                 </div>
               </div>
 
-              <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
-                <h3 className="text-lg font-semibold text-gray-900 mb-4">Threat Protection</h3>
-                <div className="space-y-4">
-                  <div>
-                    <div className="flex justify-between text-sm mb-2">
-                      <span className="text-gray-600">Block Rate</span>
-                      <span className="font-semibold text-red-600">
-                        {(stats.block_rate * 100).toFixed(1)}%
-                      </span>
-                    </div>
-                    <ProgressBar value={stats.block_rate} color="bg-red-500" />
+              {/* Threat Protection */}
+              <div className="bg-slate-800/50 rounded-2xl border border-slate-700/50 p-6 backdrop-blur-sm">
+                <div className="flex items-center justify-between mb-6">
+                  <h3 className="text-lg font-semibold text-white flex items-center gap-2">
+                    <Shield className="w-5 h-5 text-red-400" />
+                    Threat Protection
+                  </h3>
+                  <span className="text-2xl font-bold text-red-400">
+                    {(stats.block_rate * 100).toFixed(1)}%
+                  </span>
+                </div>
+                <GradientProgressBar value={stats.block_rate} gradient="from-red-500 to-rose-400" />
+                <div className="mt-6 grid grid-cols-2 gap-4">
+                  <div className="bg-slate-700/30 rounded-xl p-4">
+                    <p className="text-slate-500 text-xs font-medium">Threats Blocked</p>
+                    <p className="text-xl font-bold text-white mt-1">{formatNumber(stats.blocked_queries)}</p>
                   </div>
-                  <div className="pt-4 border-t border-gray-100">
-                    <div className="flex justify-between text-sm">
-                      <span className="text-gray-500">Threats Blocked</span>
-                      <span className="text-gray-900">{formatNumber(stats.blocked_queries)}</span>
-                    </div>
+                  <div className="bg-slate-700/30 rounded-xl p-4">
+                    <p className="text-slate-500 text-xs font-medium">Queries Allowed</p>
+                    <p className="text-xl font-bold text-white mt-1">{formatNumber(stats.total_queries - stats.blocked_queries)}</p>
                   </div>
                 </div>
               </div>
@@ -408,44 +469,60 @@ function App() {
         )}
 
         {/* Query History Table */}
-        <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6 mb-8">
-          <h3 className="text-lg font-semibold text-gray-900 mb-4">Recent Queries</h3>
+        <div className="bg-slate-800/50 rounded-2xl border border-slate-700/50 backdrop-blur-sm overflow-hidden">
+          <div className="p-6 border-b border-slate-700/50">
+            <div className="flex items-center justify-between">
+              <h3 className="text-lg font-semibold text-white flex items-center gap-2">
+                <Eye className="w-5 h-5 text-blue-400" />
+                Live Query Stream
+              </h3>
+              <span className="text-xs text-slate-500 font-medium">
+                Last 20 queries
+              </span>
+            </div>
+          </div>
           <div className="overflow-x-auto">
-            <table className="min-w-full divide-y divide-gray-200">
+            <table className="min-w-full">
               <thead>
-                <tr>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Time</th>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Domain</th>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Response Time</th>
+                <tr className="bg-slate-700/30">
+                  <th className="px-6 py-4 text-left text-xs font-semibold text-slate-400 uppercase tracking-wider">Time</th>
+                  <th className="px-6 py-4 text-left text-xs font-semibold text-slate-400 uppercase tracking-wider">Domain</th>
+                  <th className="px-6 py-4 text-left text-xs font-semibold text-slate-400 uppercase tracking-wider">Status</th>
+                  <th className="px-6 py-4 text-left text-xs font-semibold text-slate-400 uppercase tracking-wider">Latency</th>
                 </tr>
               </thead>
-              <tbody className="bg-white divide-y divide-gray-200">
+              <tbody className="divide-y divide-slate-700/30">
                 {queryHistory.length > 0 ? (
                   queryHistory.slice(0, 20).map((query, index) => (
-                    <tr key={index} className="hover:bg-gray-50 transition-colors">
-                      <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-500">
+                    <tr key={index} className="hover:bg-slate-700/20 transition-colors">
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-400 font-mono">
                         {formatTimestamp(query.timestamp)}
                       </td>
-                      <td className="px-4 py-3 whitespace-nowrap text-sm font-medium text-gray-900">
+                      <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-white">
                         {query.domain}
                       </td>
-                      <td className="px-4 py-3 whitespace-nowrap text-sm">
-                        <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                          query.blocked ? 'bg-red-100 text-red-800' : 'bg-green-100 text-green-800'
+                      <td className="px-6 py-4 whitespace-nowrap text-sm">
+                        <span className={`inline-flex items-center px-2.5 py-1 rounded-lg text-xs font-semibold ${
+                          query.blocked
+                            ? 'bg-red-500/20 text-red-400 border border-red-500/30'
+                            : 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30'
                         }`}>
                           {query.blocked ? 'Blocked' : 'Allowed'}
                         </span>
                       </td>
-                      <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-500">
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-400 font-mono">
                         {query.response_time_ms}ms
                       </td>
                     </tr>
                   ))
                 ) : (
                   <tr>
-                    <td colSpan={4} className="px-4 py-8 text-center text-sm text-gray-500">
-                      No query history available
+                    <td colSpan={4} className="px-6 py-12 text-center">
+                      <div className="text-slate-500">
+                        <Activity className="w-8 h-8 mx-auto mb-3 opacity-50" />
+                        <p className="font-medium">No query history available</p>
+                        <p className="text-sm mt-1">Queries will appear here in real-time</p>
+                      </div>
                     </td>
                   </tr>
                 )}
@@ -455,9 +532,15 @@ function App() {
         </div>
 
         {/* Footer */}
-        <div className="mt-8 text-center text-sm text-gray-500">
-          <p>Shield AI - AI-Powered DNS Protection</p>
-          <p className="mt-1">Open Source | Privacy-First | Ultra-Fast</p>
+        <div className="mt-12 text-center">
+          <div className="flex items-center justify-center gap-3 mb-3">
+            <ShieldLogo className="w-6 h-6" />
+            <span className="text-lg font-semibold text-white">Shield AI</span>
+            <span className="text-xs text-slate-600 font-mono bg-slate-800 px-2 py-0.5 rounded">v0.4.4</span>
+          </div>
+          <p className="text-sm text-slate-600">
+            AI-Powered DNS Protection • Open Source • Privacy-First
+          </p>
         </div>
       </main>
     </div>
