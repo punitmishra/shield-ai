@@ -32,6 +32,18 @@ yarn-error.*
 
 # local env files
 .env*.local
+.env
+
+# Secrets - NEVER COMMIT THESE
+google-play-key.json
+google-services.json
+GoogleService-Info.plist
+
+# EAS
+.eas/
+
+# Screenshots (generated during automation)
+assets/store/screenshots/*.png
 
 # typescript
 *.tsbuildinfo

@@ -1,6 +1,13 @@
 /**
  * Shield AI Icon Generator
- * Generates app icons as SVG files
+ * Generates app icons as SVG files and optionally converts to PNG
+ *
+ * Usage:
+ *   node scripts/generate-icons.js         # Generate SVGs only
+ *   node scripts/generate-icons.js --png   # Generate SVGs + PNGs (requires sharp)
+ *
+ * To install sharp for PNG generation:
+ *   npm install sharp --save-dev
  */
 
 const fs = require('fs');
@@ -10,6 +17,15 @@ const colors = {
   primary: '#22c55e',
   background: '#0f172a',
   backgroundLight: '#1e293b',
+};
+
+// Icon sizes for different platforms
+const iconSizes = {
+  'icon.png': 1024,           // App icon
+  'adaptive-icon.png': 1024,  // Android adaptive icon
+  'splash-icon.png': 512,     // Splash screen
+  'favicon.png': 48,          // Web favicon
+  'notification-icon.png': 96, // Notification icon
 };
 
 // App Icon SVG
@@ -86,4 +102,41 @@ icons.forEach(({ name, content }) => {
 });
 
 console.log('\nSVGs created in assets/svg/');
-console.log('Convert to PNG at: https://svgtopng.com/');
+
+// Convert to PNG if --png flag is provided
+const generatePng = process.argv.includes('--png');
+
+if (generatePng) {
+  try {
+    const sharp = require('sharp');
+    console.log('\nGenerating PNGs...');
+
+    const pngPromises = Object.entries(iconSizes).map(async ([pngName, size]) => {
+      const svgName = pngName.replace('.png', '.svg');
+      const svgPath = path.join(svgDir, svgName);
+      const pngPath = path.join(assetsDir, pngName);
+
+      if (fs.existsSync(svgPath)) {
+        await sharp(svgPath)
+          .resize(size, size)
+          .png()
+          .toFile(pngPath);
+        console.log(`Created: ${pngName} (${size}x${size})`);
+      }
+    });
+
+    Promise.all(pngPromises).then(() => {
+      console.log('\nPNGs created in assets/');
+      console.log('✅ Icons ready for app store submission!');
+    });
+  } catch (e) {
+    console.log('\nTo generate PNGs, install sharp:');
+    console.log('  npm install sharp --save-dev');
+    console.log('Then run: node scripts/generate-icons.js --png');
+    console.log('\nOr convert manually at: https://svgtopng.com/');
+  }
+} else {
+  console.log('\nTo generate PNGs, run:');
+  console.log('  node scripts/generate-icons.js --png');
+  console.log('\nOr convert manually at: https://svgtopng.com/');
+}

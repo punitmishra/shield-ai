@@ -1,0 +1,96 @@
+# Shield AI Screenshot Automation Flow
+# Run with: maestro test maestro/screenshot-flow.yaml
+#
+# Prerequisites:
+# 1. Install Maestro: curl -Ls "https://get.maestro.mobile.dev" | bash
+# 2. Start the app on simulator/emulator
+# 3. Create output directory: mkdir -p assets/store/screenshots
+
+appId: com.shieldai.app
+---
+
+# Wait for app to fully load
+- waitForAnimationToEnd:
+    timeout: 5000
+
+# ========================================
+# SCENE 1: Home - Protection Active
+# ========================================
+- assertVisible: "Protection Active"
+- takeScreenshot: assets/store/screenshots/01-home-protected
+
+# ========================================
+# SCENE 2: Analytics Dashboard
+# ========================================
+- tapOn:
+    text: "Analytics"
+- waitForAnimationToEnd
+- takeScreenshot: assets/store/screenshots/02-analytics-overview
+
+# Tap 7-day filter
+- tapOn:
+    text: "7d"
+- waitForAnimationToEnd
+- takeScreenshot: assets/store/screenshots/03-analytics-weekly
+
+# ========================================
+# SCENE 3: Query Log - Blocked
+# ========================================
+- tapOn:
+    text: "Blocked"
+- scroll:
+    direction: DOWN
+    distance: 200
+- takeScreenshot: assets/store/screenshots/04-query-log-blocked
+
+# ========================================
+# SCENE 4: Family Profiles
+# ========================================
+- tapOn:
+    text: "Family"
+- waitForAnimationToEnd
+- takeScreenshot: assets/store/screenshots/05-family-profiles
+
+# ========================================
+# SCENE 5: Profile Editor (if profile exists)
+# ========================================
+- runFlow:
+    when:
+      visible: "Kid's Profile"
+    commands:
+      - tapOn:
+          text: "Kid's Profile"
+      - waitForAnimationToEnd
+      - takeScreenshot: assets/store/screenshots/06-profile-editor
+      - tapOn:
+          text: "Cancel"
+
+# ========================================
+# SCENE 6: Protection Settings
+# ========================================
+- tapOn:
+    text: "Protection"
+- waitForAnimationToEnd
+- takeScreenshot: assets/store/screenshots/07-protection-overview
+
+# Scroll to DNS settings
+- scroll:
+    direction: DOWN
+    distance: 300
+- takeScreenshot: assets/store/screenshots/08-dns-settings
+
+# ========================================
+# SCENE 7: Settings
+# ========================================
+- tapOn:
+    text: "Settings"
+- waitForAnimationToEnd
+- takeScreenshot: assets/store/screenshots/09-settings
+
+# ========================================
+# COMPLETE
+# ========================================
+- runScript:
+    script: |
+      console.log("✅ Screenshots captured successfully!");
+      console.log("📁 Output: assets/store/screenshots/");
