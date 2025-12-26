@@ -1486,16 +1486,17 @@ pub async fn auth_middleware(
     };
 
     // Extract Bearer token
-    let token = if auth_header.starts_with("Bearer ") {
-        &auth_header[7..]
-    } else {
-        return Err((
-            StatusCode::UNAUTHORIZED,
-            Json(serde_json::json!({
-                "error": "invalid_token_format",
-                "message": "Bearer token required"
-            })),
-        ));
+    let token = match auth_header.strip_prefix("Bearer ") {
+        Some(t) => t,
+        None => {
+            return Err((
+                StatusCode::UNAUTHORIZED,
+                Json(serde_json::json!({
+                    "error": "invalid_token_format",
+                    "message": "Bearer token required"
+                })),
+            ));
+        }
     };
 
     // Validate token

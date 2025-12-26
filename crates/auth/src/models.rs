@@ -43,16 +43,12 @@ pub enum AuthError {
 /// User tier matching shield-tiers crate
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 #[serde(rename_all = "lowercase")]
+#[derive(Default)]
 pub enum Tier {
+    #[default]
     Free,
     Pro,
     Enterprise,
-}
-
-impl Default for Tier {
-    fn default() -> Self {
-        Tier::Free
-    }
 }
 
 /// User account
@@ -150,18 +146,14 @@ pub struct AuthTokens {
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 #[serde(rename_all = "lowercase")]
 #[allow(non_camel_case_types)]
+#[derive(Default)]
 pub enum Platform {
     iOS,
     Android,
     Web,
     Desktop,
+    #[default]
     Other,
-}
-
-impl Default for Platform {
-    fn default() -> Self {
-        Platform::Other
-    }
 }
 
 /// Device registration request

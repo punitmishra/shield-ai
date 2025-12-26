@@ -5,12 +5,14 @@
 //! - Threat vectors for pattern matching
 //! - ML feature vectors for classification
 
+#![allow(deprecated)]
+
 use crate::error::DbError;
 use crate::models::{DomainEmbedding, ThreatVector};
 use qdrant_client::prelude::*;
 use qdrant_client::qdrant::{
     value::Kind, vectors_config::Config, Condition, CreateCollection, Distance, FieldCondition,
-    Filter, Match, PointStruct, SearchPoints, Value as QdrantValue, VectorParams, VectorsConfig,
+    Filter, PointStruct, SearchPoints, Value as QdrantValue, VectorParams, VectorsConfig,
 };
 use std::collections::HashMap;
 use tracing::{debug, info, warn};

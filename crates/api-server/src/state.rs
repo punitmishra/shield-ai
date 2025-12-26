@@ -30,6 +30,7 @@ pub struct AppState {
     pub tiers: Arc<TierManager>,
     pub ml_engine: Arc<MLEngine>,
     pub auth: Arc<AuthService>,
+    #[allow(dead_code)]
     pub db: Arc<SqliteDb>,
 }
 
