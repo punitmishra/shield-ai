@@ -1,6 +1,6 @@
 # Shield AI - Project Checkpoint & Memory Context
 
-## Project State: v0.4.2-alpha (98% Feature Complete)
+## Project State: v0.4.3-alpha (98% Feature Complete)
 **Last Updated**: 2025-12-25
 
 ---
@@ -117,17 +117,19 @@ sequenceDiagram
 | RegisterScreen | `src/screens/auth/RegisterScreen.tsx` | ✅ User registration |
 | HomeScreen | `src/screens/dashboard/HomeScreen.tsx` | ✅ Stats, VPN toggle |
 | SettingsScreen | `src/screens/settings/SettingsScreen.tsx` | ✅ Account, logout |
-| ProtectionScreen | `src/screens/protection/ProtectionScreen.tsx` | ✅ VPN toggle, DNS settings, pro features |
-| AnalyticsScreen | `src/screens/analytics/AnalyticsScreen.tsx` | ✅ Query history, charts, stats |
-| FamilyScreen | `src/screens/family/FamilyScreen.tsx` | ✅ Profiles, parental controls |
+| ProtectionScreen | `src/screens/protection/ProtectionScreen.tsx` | ✅ VPN toggle, DNS settings, real API data |
+| AnalyticsScreen | `src/screens/analytics/AnalyticsScreen.tsx` | ✅ Query history, charts, real API data |
+| FamilyScreen | `src/screens/family/FamilyScreen.tsx` | ✅ Profiles, parental controls, real API data |
 | **Stores** | | |
 | authStore | `src/stores/authStore.ts` | ✅ JWT token management |
-| protectionStore | `src/stores/protectionStore.ts` | ✅ VPN/DNS state |
+| protectionStore | `src/stores/protectionStore.ts` | ✅ VPN/DNS state, blocklist stats |
 | notificationStore | `src/stores/notificationStore.ts` | ✅ Push notification state & preferences |
+| analyticsStore | `src/stores/analyticsStore.ts` | ✅ Query history, stats, tracker categories |
+| familyStore | `src/stores/familyStore.ts` | ✅ Family profiles, CRUD operations |
 | **Services** | | |
 | notifications | `src/services/notifications.ts` | ✅ Expo push token, listeners, channels |
 | **API** | | |
-| client | `src/api/client.ts` | ✅ Axios + token refresh |
+| client | `src/api/client.ts` | ✅ Axios + token refresh, 44 endpoints |
 
 ---
 
@@ -243,7 +245,35 @@ All 8 auth endpoints tested and working:
 
 ## Session History
 
-### Session 2025-12-25 (Part 6 - Current)
+### Session 2025-12-25 (Part 7 - Current)
+**Wired Real API Data to Mobile Screens**
+1. Created `analyticsStore.ts`:
+   - Fetches from /api/history, /api/stats, /api/analytics, /api/privacy-metrics
+   - Manages queryHistory, analytics, stats, trackerCategories
+   - Pull-to-refresh support
+2. Created `familyStore.ts`:
+   - Fetches profiles from /api/profiles
+   - CRUD operations (create, delete, assign device)
+   - Profile stats from /api/profiles/stats
+3. Updated AnalyticsScreen:
+   - Removed mockQueryLog and hardcoded data
+   - Uses useAnalyticsStore for real API data
+   - Added RefreshControl for pull-to-refresh
+4. Updated FamilyScreen:
+   - Removed mockProfiles constant
+   - Uses useFamilyStore for real profile data
+   - Profile creation via Alert.prompt
+5. Updated ProtectionScreen:
+   - Added listStats to protectionStore
+   - Replaced hardcoded "130 domains" / "5 domains" with real counts
+   - Fetches from /api/blocklist/stats
+6. Updated API client:
+   - Added profiles.getStats() endpoint
+   - Added networkDevices.list() and update() endpoints
+7. Fixed TypeScript error in FamilyScreen
+8. Committed and pushed: `075003b`
+
+### Session 2025-12-25 (Part 6)
 **Push Notifications Implemented**
 1. Installed expo-notifications, expo-device, expo-constants
 2. Created notification service (`src/services/notifications.ts`):
@@ -347,8 +377,8 @@ All 8 auth endpoints tested and working:
 - [x] Complete Analytics screen (query history, charts)
 - [x] Complete Family screen (profiles, parental controls)
 - [x] Add push notification support (Expo notifications, Android channels)
+- [x] Wire real API data to replace mock data in screens
 - [ ] Implement VPN native module (iOS: NetworkExtension, Android: VpnService)
-- [ ] Wire real API data to replace mock data in screens
 
 ### Phase 2: App Store Preparation
 - [ ] Create app icons (1024x1024 iOS, adaptive Android)
@@ -493,7 +523,7 @@ sheilds-ai/
 │   │   │   ├── analytics/ # Query history & charts
 │   │   │   ├── family/    # Profiles & parental controls
 │   │   │   └── settings/  # Account & logout
-│   │   ├── stores/        # Zustand (auth, protection, notifications)
+│   │   ├── stores/        # Zustand (auth, protection, notifications, analytics, family)
 │   │   └── services/      # Notification service
 │   └── package.json
 ├── landing/               # Marketing landing page
@@ -515,7 +545,7 @@ sheilds-ai/
 | **Backend** | ✅ Production Ready | 10 crates, 44 endpoints, zero warnings |
 | **Auth** | ✅ Complete & Tested | JWT + refresh tokens, device registration |
 | **Web Frontend** | ✅ Complete | 10+ components, real-time updates |
-| **Mobile App** | 🟡 95% Complete | All screens + push notifications, needs VPN native module |
+| **Mobile App** | 🟡 97% Complete | All screens wired to API, needs VPN native module |
 | **CI/CD** | ✅ Complete | 9-job pipeline, Railway deployment |
 | **Docker** | ✅ Ready | Multi-stage build, health checks |
 | **Tests** | ✅ 32 Passing | 21 Rust + 5 Vitest + 6 E2E |
