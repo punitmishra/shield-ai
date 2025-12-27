@@ -118,22 +118,73 @@ impl FilterEngine {
         self.check(domain) == FilterDecision::Block
     }
 
-    /// Load blocklist from file
+    /// Load blocklist from file (supports plain domain list and hosts file format)
     pub fn load_blocklist(&self, path: &str) -> std::io::Result<usize> {
         let content = std::fs::read_to_string(path)?;
         let mut count = 0;
 
         for line in content.lines() {
-            let trimmed = line.trim();
-            if trimmed.is_empty() || trimmed.starts_with('#') {
-                continue;
+            if let Some(domain) = Self::parse_blocklist_line(line) {
+                self.add_to_blocklist(&domain);
+                count += 1;
             }
-            self.add_to_blocklist(trimmed);
-            count += 1;
         }
 
         info!("Loaded {} entries from blocklist: {}", count, path);
         Ok(count)
+    }
+
+    /// Parse a blocklist line (supports multiple formats)
+    fn parse_blocklist_line(line: &str) -> Option<String> {
+        let trimmed = line.trim();
+
+        // Skip empty lines and comments
+        if trimmed.is_empty() || trimmed.starts_with('#') || trimmed.starts_with('!') {
+            return None;
+        }
+
+        // Check for hosts file format: "0.0.0.0 domain.com" or "127.0.0.1 domain.com"
+        if trimmed.starts_with("0.0.0.0")
+            || trimmed.starts_with("127.0.0.1")
+            || trimmed.starts_with("::1")
+            || trimmed.starts_with("::0")
+        {
+            // Split by whitespace and get the domain part
+            let parts: Vec<&str> = trimmed.split_whitespace().collect();
+            if parts.len() >= 2 {
+                let domain = parts[1].to_lowercase();
+                // Skip localhost entries
+                if domain != "localhost"
+                    && domain != "localhost.localdomain"
+                    && domain != "local"
+                    && !domain.is_empty()
+                {
+                    return Some(domain);
+                }
+            }
+            return None;
+        }
+
+        // Check for AdBlock format (basic support)
+        if trimmed.starts_with("||") && trimmed.ends_with('^') {
+            // ||example.com^ -> example.com
+            let domain = trimmed
+                .trim_start_matches("||")
+                .trim_end_matches('^')
+                .to_lowercase();
+            if !domain.is_empty() {
+                return Some(domain);
+            }
+            return None;
+        }
+
+        // Plain domain format
+        let domain = trimmed.to_lowercase();
+        if !domain.is_empty() && domain.contains('.') {
+            return Some(domain);
+        }
+
+        None
     }
 
     /// Get blocklist size

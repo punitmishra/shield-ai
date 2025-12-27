@@ -39,14 +39,23 @@ impl AppState {
     pub async fn new() -> anyhow::Result<Self> {
         info!("Initializing application state");
 
+        // Initialize SQLite database first (other services depend on it)
+        let db_path =
+            std::env::var("DATABASE_PATH").unwrap_or_else(|_| "data/shield.db".to_string());
+        let db = Arc::new(SqliteDb::new(&db_path)?);
+        info!("SQLite database initialized: {}", db_path);
+
         // Create DNS cache with 50,000 entries and 5 minute default TTL
         let cache = Arc::new(DNSCache::new(50_000, Duration::from_secs(300)));
 
         // Create and configure filter engine
         let filter = Arc::new(FilterEngine::new());
 
-        // Load blocklists if they exist
+        // Load blocklists from files
         Self::load_blocklists(&filter);
+
+        // Load custom blocklist/allowlist from database (persisted entries)
+        Self::load_custom_lists_from_db(&filter, &db);
 
         // Create DNS resolver with cache and filter
         let resolver = Resolver::new(cache, filter.clone()).await?;
@@ -62,12 +71,6 @@ impl AppState {
         // Initialize ML engine for DGA detection and risk analysis
         let ml_engine = Arc::new(MLEngine::new());
         info!("ML engine initialized");
-
-        // Initialize SQLite database (before services that depend on it)
-        let db_path =
-            std::env::var("DATABASE_PATH").unwrap_or_else(|_| "data/shield.db".to_string());
-        let db = Arc::new(SqliteDb::new(&db_path)?);
-        info!("SQLite database initialized: {}", db_path);
 
         // Initialize profile manager with SQLite persistence
         let profiles = Arc::new(ProfileManager::with_sqlite(db.clone()));
@@ -138,6 +141,41 @@ impl AppState {
                     Ok(count) => info!("Loaded {} domains from {}", count, filename),
                     Err(e) => warn!("Failed to load {}: {}", filename, e),
                 }
+            }
+        }
+    }
+
+    /// Load custom blocklist/allowlist entries from database
+    fn load_custom_lists_from_db(filter: &FilterEngine, db: &SqliteDb) {
+        // Load custom blocklist entries
+        match db.get_blocklist() {
+            Ok(entries) => {
+                let count = entries.len();
+                for entry in entries {
+                    filter.add_to_blocklist(&entry.domain);
+                }
+                if count > 0 {
+                    info!("Loaded {} custom blocklist entries from database", count);
+                }
+            }
+            Err(e) => {
+                warn!("Failed to load blocklist from database: {}", e);
+            }
+        }
+
+        // Load custom allowlist entries
+        match db.get_allowlist() {
+            Ok(entries) => {
+                let count = entries.len();
+                for entry in entries {
+                    filter.add_to_allowlist(&entry.domain);
+                }
+                if count > 0 {
+                    info!("Loaded {} custom allowlist entries from database", count);
+                }
+            }
+            Err(e) => {
+                warn!("Failed to load allowlist from database: {}", e);
             }
         }
     }

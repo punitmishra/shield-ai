@@ -19,6 +19,8 @@ use tracing::{debug, error, info, warn};
 
 use crate::rate_limiter::{RateLimitError, RateLimitResult, RateLimiterStats};
 use crate::state::AppState;
+use chrono::Utc;
+use shield_db::models::{DbAllowlistEntry, DbBlocklistEntry};
 
 // Re-exports for API responses
 pub use shield_ml_engine::{AnalyticsSnapshot, DeepRiskAnalysis};
@@ -440,7 +442,19 @@ pub async fn add_to_allowlist(
         });
     }
 
+    // Add to in-memory filter
     state.filter.add_to_allowlist(&domain);
+
+    // Persist to database
+    let entry = DbAllowlistEntry {
+        domain: domain.clone(),
+        added_by: Some("api".to_string()),
+        added_at: Utc::now(),
+    };
+    if let Err(e) = state.db.add_to_allowlist(&entry) {
+        warn!("Failed to persist allowlist entry to database: {}", e);
+    }
+
     info!("Added {} to allowlist", domain);
 
     Json(AllowlistResponse {
@@ -457,7 +471,14 @@ pub async fn remove_from_allowlist(
 ) -> Json<AllowlistResponse> {
     let domain = domain.to_lowercase();
 
+    // Remove from in-memory filter
     state.filter.remove_from_allowlist(&domain);
+
+    // Remove from database
+    if let Err(e) = state.db.remove_from_allowlist(&domain) {
+        warn!("Failed to remove allowlist entry from database: {}", e);
+    }
+
     info!("Removed {} from allowlist", domain);
 
     Json(AllowlistResponse {
@@ -479,6 +500,12 @@ pub async fn get_allowlist(State(state): State<Arc<AppState>>) -> Json<Vec<Strin
 #[derive(Deserialize)]
 pub struct BlocklistRequest {
     pub domain: String,
+    #[serde(default = "default_category")]
+    pub category: String,
+}
+
+fn default_category() -> String {
+    "custom".to_string()
 }
 
 #[derive(Serialize)]
@@ -494,6 +521,7 @@ pub async fn add_to_blocklist(
     Json(request): Json<BlocklistRequest>,
 ) -> Json<BlocklistResponse> {
     let domain = request.domain.to_lowercase();
+    let category = request.category.to_lowercase();
 
     if domain.is_empty() || domain.len() > 253 {
         return Json(BlocklistResponse {
@@ -503,8 +531,21 @@ pub async fn add_to_blocklist(
         });
     }
 
+    // Add to in-memory filter
     state.filter.add_to_blocklist(&domain);
-    info!("Added {} to blocklist", domain);
+
+    // Persist to database with category
+    let entry = DbBlocklistEntry {
+        domain: domain.clone(),
+        category: category.clone(),
+        source: "api".to_string(),
+        added_at: Utc::now(),
+    };
+    if let Err(e) = state.db.add_to_blocklist(&entry) {
+        warn!("Failed to persist blocklist entry to database: {}", e);
+    }
+
+    info!("Added {} to blocklist (category: {})", domain, category);
 
     Json(BlocklistResponse {
         success: true,
@@ -520,12 +561,111 @@ pub async fn remove_from_blocklist(
 ) -> Json<BlocklistResponse> {
     let domain = domain.to_lowercase();
 
+    // Remove from in-memory filter
     state.filter.remove_from_blocklist(&domain);
+
+    // Remove from database
+    if let Err(e) = state.db.remove_from_blocklist(&domain) {
+        warn!("Failed to remove blocklist entry from database: {}", e);
+    }
+
     info!("Removed {} from blocklist", domain);
 
     Json(BlocklistResponse {
         success: true,
         message: format!("Removed {} from blocklist", domain),
+        blocklist_size: state.filter.blocklist_size(),
+    })
+}
+
+/// Get blocklist statistics by category
+pub async fn get_blocklist_stats(
+    State(state): State<Arc<AppState>>,
+) -> Json<BlocklistStatsResponse> {
+    // Get stats from database
+    let db_stats = match state.db.get_blocklist() {
+        Ok(entries) => {
+            let mut categories: HashMap<String, usize> = HashMap::new();
+            for entry in &entries {
+                *categories.entry(entry.category.clone()).or_insert(0) += 1;
+            }
+            categories
+        }
+        Err(_) => HashMap::new(),
+    };
+
+    Json(BlocklistStatsResponse {
+        total_domains: state.filter.blocklist_size(),
+        allowlist_size: state.filter.allowlist_size(),
+        categories: db_stats,
+        enabled: true,
+    })
+}
+
+#[derive(Serialize)]
+pub struct BlocklistStatsResponse {
+    pub total_domains: usize,
+    pub allowlist_size: usize,
+    pub categories: HashMap<String, usize>,
+    pub enabled: bool,
+}
+
+/// Bulk add domains to blocklist
+#[derive(Deserialize)]
+pub struct BulkBlocklistRequest {
+    pub domains: Vec<String>,
+    #[serde(default = "default_category")]
+    pub category: String,
+}
+
+#[derive(Serialize)]
+pub struct BulkBlocklistResponse {
+    pub success: bool,
+    pub added: usize,
+    pub skipped: usize,
+    pub blocklist_size: usize,
+}
+
+pub async fn bulk_add_to_blocklist(
+    State(state): State<Arc<AppState>>,
+    Json(request): Json<BulkBlocklistRequest>,
+) -> Json<BulkBlocklistResponse> {
+    let category = request.category.to_lowercase();
+    let mut added = 0;
+    let mut skipped = 0;
+
+    for domain in request.domains {
+        let domain = domain.to_lowercase().trim().to_string();
+
+        // Validate domain
+        if domain.is_empty() || domain.len() > 253 || !domain.contains('.') {
+            skipped += 1;
+            continue;
+        }
+
+        // Add to in-memory filter
+        state.filter.add_to_blocklist(&domain);
+
+        // Persist to database
+        let entry = DbBlocklistEntry {
+            domain: domain.clone(),
+            category: category.clone(),
+            source: "api-bulk".to_string(),
+            added_at: Utc::now(),
+        };
+        if state.db.add_to_blocklist(&entry).is_ok() {
+            added += 1;
+        } else {
+            skipped += 1;
+        }
+    }
+
+    info!("Bulk added {} domains to blocklist ({} skipped)", added, skipped);
+
+    Json(BulkBlocklistResponse {
+        success: true,
+        added,
+        skipped,
         blocklist_size: state.filter.blocklist_size(),
     })
 }

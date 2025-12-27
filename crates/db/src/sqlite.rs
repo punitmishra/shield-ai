@@ -497,6 +497,26 @@ impl SqliteDb {
         Ok(stmt.exists(params![domain])?)
     }
 
+    /// Get all allowed domains
+    pub fn get_allowlist(&self) -> Result<Vec<DbAllowlistEntry>, DbError> {
+        let conn = self.conn()?;
+        let mut stmt = conn.prepare("SELECT domain, added_by, added_at FROM allowlist")?;
+
+        let entries = stmt
+            .query_map([], |row| {
+                Ok(DbAllowlistEntry {
+                    domain: row.get(0)?,
+                    added_by: row.get(1)?,
+                    added_at: DateTime::parse_from_rfc3339(&row.get::<_, String>(2)?)
+                        .unwrap()
+                        .with_timezone(&Utc),
+                })
+            })?
+            .collect::<Result<Vec<_>, _>>()?;
+
+        Ok(entries)
+    }
+
     /// Get allowlist size
     pub fn allowlist_size(&self) -> Result<usize, DbError> {
         let conn = self.conn()?;

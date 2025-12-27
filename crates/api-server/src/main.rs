@@ -70,6 +70,8 @@ async fn main() -> Result<()> {
         )
         // Blocklist management endpoints
         .route("/api/blocklist", post(handlers::add_to_blocklist))
+        .route("/api/blocklist/bulk", post(handlers::bulk_add_to_blocklist))
+        .route("/api/blocklist/stats", get(handlers::get_blocklist_stats))
         .route(
             "/api/blocklist/:domain",
             delete(handlers::remove_from_blocklist),

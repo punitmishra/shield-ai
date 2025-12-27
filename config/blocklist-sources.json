@@ -1,0 +1,48 @@
+{
+  "sources": [
+    {
+      "name": "Steven Black Unified Hosts",
+      "url": "https://raw.githubusercontent.com/StevenBlack/hosts/master/hosts",
+      "category": "ads",
+      "format": "hosts",
+      "enabled": true
+    },
+    {
+      "name": "AdGuard DNS Filter",
+      "url": "https://adguardteam.github.io/AdGuardSDNSFilter/Filters/filter.txt",
+      "category": "ads",
+      "format": "adblock",
+      "enabled": true
+    },
+    {
+      "name": "OISD Small",
+      "url": "https://small.oisd.nl/domainswild",
+      "category": "ads",
+      "format": "domains",
+      "enabled": true
+    },
+    {
+      "name": "Phishing Army",
+      "url": "https://phishing.army/download/phishing_army_blocklist.txt",
+      "category": "phishing",
+      "format": "domains",
+      "enabled": true
+    },
+    {
+      "name": "URLhaus Malware",
+      "url": "https://urlhaus.abuse.ch/downloads/hostfile/",
+      "category": "malware",
+      "format": "hosts",
+      "enabled": true
+    },
+    {
+      "name": "NoCoin Cryptominers",
+      "url": "https://raw.githubusercontent.com/nickkuk/nickkuk-adlist/master/nickkuk-adlist.txt",
+      "category": "cryptominers",
+      "format": "domains",
+      "enabled": false
+    }
+  ],
+  "update_interval_hours": 24,
+  "last_updated": null
+}
