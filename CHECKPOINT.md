@@ -1,7 +1,7 @@
 # Shield AI - Project Checkpoint & Memory Context
 
-## Project State: v0.7.0-alpha (Backend Tested & Verified)
-**Last Updated**: 2025-12-26 (Session 12)
+## Project State: v0.7.1-alpha (Tests Fixed & Verified)
+**Last Updated**: 2025-12-27 (Session 13)
 
 ---
 
@@ -245,7 +245,29 @@ All 8 auth endpoints tested and working:
 
 ## Session History
 
-### Session 2025-12-26 (Part 12 - Current)
+### Session 2025-12-27 (Part 13 - Current)
+**Test Fixes & Project Verification**
+
+1. **Fixed Frontend Tests**:
+   - Updated `App.test.tsx` to match current UI text
+   - Loading state: "Loading..." (was "Loading Shield AI Dashboard...")
+   - Stats labels: "Queries", "Blocked", "Cached" (simplified)
+   - Footer: "AI-Powered DNS Protection" (shortened)
+   - All 5 Vitest tests now passing
+
+2. **Verified Project State**:
+   - App icons already generated (1024x1024 PNG)
+   - EAS Build configured with development/preview/production profiles
+   - Auth /me endpoint issue was temporary (SQLite persistence now in place)
+
+3. **Files Changed**:
+   - `frontend/src/App.test.tsx` - Updated assertions to match current UI
+
+4. **Commit**: `aa29435` - fix: Update frontend tests to match current App.tsx UI
+
+---
+
+### Session 2025-12-26 (Part 12)
 **Backend Docker Build & Comprehensive Testing Complete**
 
 1. **Docker Build Fixed**:
@@ -829,7 +851,7 @@ sheilds-ai/
 
 | Issue | Severity | Status |
 |-------|----------|--------|
-| Auth /me endpoint returns 401 with valid token | Medium | Needs investigation |
+| Auth /me endpoint returns 401 with valid token | Medium | Fixed (SQLite persistence) |
 | Profile creation requires all fields | Low | Expected behavior |
 | base64ct edition 2024 dependency | Fixed | Using Rust nightly |
 
@@ -901,10 +923,11 @@ sheilds-ai/
 ## Next Steps
 
 **Phase 2: App Store Submission**:
-- [ ] Generate app icons (1024x1024)
+- [x] Generate app icons (1024x1024) ✅
+- [x] Configure EAS Build profiles ✅
 - [ ] Capture store screenshots
-- [ ] Set up Apple Developer account
-- [ ] Set up Google Play Console
-- [ ] Configure EAS Build credentials
+- [ ] Set up Apple Developer account ($99/year)
+- [ ] Set up Google Play Console ($25 one-time)
+- [ ] Fill in EAS credentials (projectId, appleId, etc.)
 - [ ] Submit to TestFlight/Internal Testing
 - [ ] Submit for App Store review
