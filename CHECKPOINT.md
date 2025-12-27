@@ -1,7 +1,7 @@
 # Shield AI - Project Checkpoint & Memory Context
 
-## Project State: v0.7.2-alpha (App Store Prep Continued)
-**Last Updated**: 2025-12-27 (Session 14)
+## Project State: v0.8.0-alpha (Data Persistence Complete)
+**Last Updated**: 2025-12-27 (Session 15)
 
 ---
 
@@ -245,7 +245,62 @@ All 8 auth endpoints tested and working:
 
 ## Session History
 
-### Session 2025-12-27 (Part 14 - Current)
+### Session 2025-12-27 (Part 15 - Current)
+**Data Persistence Architecture Complete**
+
+1. **Database Schema Enhancements**:
+   - Added `subscriptions` table for user tier data
+   - Added `usage` table for monthly query/profile/device tracking
+   - Extended `profiles` table with time_rules, device_ids, enabled fields
+
+2. **ProfileManager SQLite Persistence**:
+   - Added `with_sqlite()` constructor
+   - Profiles now persist across server restarts
+   - Load profiles from database on startup
+   - Automatic sync on create/update/delete operations
+
+3. **TierManager SQLite Persistence**:
+   - Added `with_sqlite()` constructor
+   - Subscriptions persist across server restarts
+   - Query usage tracked in database for billing
+   - Trial and cancellation data persisted
+
+4. **AppState Initialization Reorder**:
+   - Database initialized before dependent services
+   - ProfileManager uses `with_sqlite(db.clone())`
+   - TierManager uses `with_sqlite(db.clone())`
+   - All services now SQLite-backed
+
+5. **Models Added**:
+   - `DbSubscription`: tier, status, billing_cycle, stripe IDs, expiry
+   - `DbUsage`: monthly query counts, profile/device counts
+
+6. **Files Changed** (807 insertions):
+   - `crates/db/src/sqlite.rs` - Profile/subscription/usage CRUD
+   - `crates/db/src/models.rs` - DbSubscription, DbUsage models
+   - `crates/profiles/src/lib.rs` - SQLite-backed ProfileManager
+   - `crates/tiers/src/lib.rs` - SQLite-backed TierManager
+   - `crates/api-server/src/state.rs` - Initialization order fix
+   - `crates/profiles/Cargo.toml` - shield-db dependency
+   - `crates/tiers/Cargo.toml` - shield-db dependency
+
+7. **Commit**: `8856753` - feat: Add SQLite persistence for ProfileManager and TierManager
+
+**Data Persistence Status**:
+| Component | Before | After |
+|-----------|--------|-------|
+| Users/Devices | ✅ SQLite | ✅ SQLite |
+| Auth Tokens | ✅ SQLite | ✅ SQLite |
+| Blocklist/Allowlist | ✅ SQLite | ✅ SQLite |
+| Query History | ✅ SQLite | ✅ SQLite |
+| **Profiles** | ❌ In-Memory | ✅ SQLite |
+| **Subscriptions** | ❌ In-Memory | ✅ SQLite |
+| **Usage Tracking** | ❌ In-Memory | ✅ SQLite |
+| DNS Cache | ⚠️ In-Memory | ⚠️ In-Memory (by design) |
+
+---
+
+### Session 2025-12-27 (Part 14)
 **App Store Submission Prep & TypeScript Fixes**
 
 1. **Created Maestro Screenshot Automation**:
@@ -693,11 +748,13 @@ All 8 auth endpoints tested and working:
 
 ## Core Architecture Improvements
 
-### Priority 1: Data Persistence
-- [ ] Add SQLite/PostgreSQL for user data
-- [ ] Persist blocklist/allowlist to disk
-- [ ] Add device persistence (not just in-memory)
-- [ ] Migrate from DashMap to database-backed storage
+### Priority 1: Data Persistence ✅ COMPLETE
+- [x] Add SQLite for user data (users, devices, tokens)
+- [x] Persist blocklist/allowlist to disk (SQLite + config files)
+- [x] Add profile persistence (SQLite-backed ProfileManager)
+- [x] Add subscription persistence (SQLite-backed TierManager)
+- [x] Add usage tracking persistence (monthly query counts)
+- [x] Migrate ProfileManager/TierManager from DashMap-only to SQLite+cache
 
 ### Priority 2: VPN Infrastructure
 - [ ] Design VPN server architecture (WireGuard)
