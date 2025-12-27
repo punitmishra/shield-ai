@@ -578,37 +578,6 @@ pub async fn remove_from_blocklist(
     })
 }
 
-/// Get blocklist statistics by category
-pub async fn get_blocklist_stats(
-    State(state): State<Arc<AppState>>,
-) -> Json<BlocklistStatsResponse> {
-    // Get stats from database
-    let db_stats = match state.db.get_blocklist() {
-        Ok(entries) => {
-            let mut categories: HashMap<String, usize> = HashMap::new();
-            for entry in &entries {
-                *categories.entry(entry.category.clone()).or_insert(0) += 1;
-            }
-            categories
-        }
-        Err(_) => HashMap::new(),
-    };
-
-    Json(BlocklistStatsResponse {
-        total_domains: state.filter.blocklist_size(),
-        allowlist_size: state.filter.allowlist_size(),
-        categories: db_stats,
-        enabled: true,
-    })
-}
-
-#[derive(Serialize)]
-pub struct BlocklistStatsResponse {
-    pub total_domains: usize,
-    pub allowlist_size: usize,
-    pub categories: HashMap<String, usize>,
-    pub enabled: bool,
-}
 
 /// Bulk add domains to blocklist
 #[derive(Deserialize)]

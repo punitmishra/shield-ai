@@ -1,0 +1,37 @@
+{
+  "buildCommand": "npm run build",
+  "outputDirectory": "dist",
+  "framework": "vite",
+  "rewrites": [
+    {
+      "source": "/api/:path*",
+      "destination": "https://shield-ai-api.fly.dev/api/:path*"
+    },
+    {
+      "source": "/health",
+      "destination": "https://shield-ai-api.fly.dev/health"
+    },
+    {
+      "source": "/metrics",
+      "destination": "https://shield-ai-api.fly.dev/metrics"
+    },
+    {
+      "source": "/ws",
+      "destination": "https://shield-ai-api.fly.dev/ws"
+    },
+    {
+      "source": "/(.*)",
+      "destination": "/index.html"
+    }
+  ],
+  "headers": [
+    {
+      "source": "/(.*)",
+      "headers": [
+        { "key": "X-Content-Type-Options", "value": "nosniff" },
+        { "key": "X-Frame-Options", "value": "DENY" },
+        { "key": "X-XSS-Protection", "value": "1; mode=block" }
+      ]
+    }
+  ]
+}
