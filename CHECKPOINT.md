@@ -1,7 +1,7 @@
 # Shield AI - Project Checkpoint & Memory Context
 
-## Project State: v0.7.1-alpha (Tests Fixed & Verified)
-**Last Updated**: 2025-12-27 (Session 13)
+## Project State: v0.7.2-alpha (App Store Prep Continued)
+**Last Updated**: 2025-12-27 (Session 14)
 
 ---
 
@@ -245,7 +245,43 @@ All 8 auth endpoints tested and working:
 
 ## Session History
 
-### Session 2025-12-27 (Part 13 - Current)
+### Session 2025-12-27 (Part 14 - Current)
+**App Store Submission Prep & TypeScript Fixes**
+
+1. **Created Maestro Screenshot Automation**:
+   - Added `.maestro/screenshot-flow.yaml` for automated screenshot capture
+   - Covers all 8 key screens: Home, Analytics, Query Log, Family, Parental Controls, VPN, DNS Settings, Settings
+   - Ready for use with `maestro test .maestro/screenshot-flow.yaml`
+
+2. **Created Comprehensive Submission Checklist**:
+   - `mobile/assets/store/SUBMISSION_CHECKLIST.md` with step-by-step guide
+   - Developer account setup (Apple $99/yr, Google $25)
+   - EAS configuration requirements
+   - Screenshot requirements for all device sizes
+   - Build and submission commands
+   - Testing checklist
+
+3. **Fixed TypeScript Errors**:
+   - `notifications.ts`: Added missing `shouldShowBanner` and `shouldShowList` properties (Expo API update)
+   - `RegisterScreen.tsx`: Fixed register function call to match 2-arg signature
+
+4. **Verified Project Health**:
+   - All 17 Expo doctor checks passing
+   - Frontend tests: 5/5 passing
+   - TypeScript: Clean, no errors
+   - Mobile app config validated
+
+5. **Files Changed**:
+   - `mobile/.maestro/screenshot-flow.yaml` - NEW Maestro flow
+   - `mobile/assets/store/SUBMISSION_CHECKLIST.md` - NEW checklist
+   - `mobile/src/services/notifications.ts` - Fixed API compatibility
+   - `mobile/src/screens/auth/RegisterScreen.tsx` - Fixed function signature
+
+6. **Commit**: `244e3b3` - feat: Add app store submission checklist and fix TypeScript errors
+
+---
+
+### Session 2025-12-27 (Part 13)
 **Test Fixes & Project Verification**
 
 1. **Fixed Frontend Tests**:
@@ -925,7 +961,9 @@ sheilds-ai/
 **Phase 2: App Store Submission**:
 - [x] Generate app icons (1024x1024) ✅
 - [x] Configure EAS Build profiles ✅
-- [ ] Capture store screenshots
+- [x] Create Maestro screenshot automation ✅
+- [x] Create submission checklist ✅
+- [ ] Capture store screenshots (run `maestro test .maestro/screenshot-flow.yaml`)
 - [ ] Set up Apple Developer account ($99/year)
 - [ ] Set up Google Play Console ($25 one-time)
 - [ ] Fill in EAS credentials (projectId, appleId, etc.)
