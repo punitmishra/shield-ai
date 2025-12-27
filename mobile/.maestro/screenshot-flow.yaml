@@ -1,0 +1,81 @@
+appId: com.shieldai.app
+name: Shield AI Store Screenshots
+---
+# Shield AI - App Store Screenshot Automation
+# Run with: maestro test .maestro/screenshot-flow.yaml
+
+# Launch the app
+- launchApp:
+    clearState: true
+
+# Wait for app to load
+- waitForAnimationEnd
+
+# ============================================
+# SCENE 1: Home - Protection Active
+# ============================================
+- assertVisible: "Protection"
+- takeScreenshot: assets/store/screenshots/01-protection-active
+
+# ============================================
+# SCENE 2: Analytics Dashboard
+# ============================================
+- tapOn: "Analytics"
+- waitForAnimationEnd
+- takeScreenshot: assets/store/screenshots/02-analytics-dashboard
+
+# Scroll to show query log
+- scroll:
+    direction: DOWN
+    distance: 300
+- waitForAnimationEnd
+
+# Tap blocked filter for better screenshot
+- tapOn: "Blocked"
+- waitForAnimationEnd
+- takeScreenshot: assets/store/screenshots/03-query-log
+
+# ============================================
+# SCENE 3: Family Profiles
+# ============================================
+- tapOn: "Family"
+- waitForAnimationEnd
+- takeScreenshot: assets/store/screenshots/04-family-profiles
+
+# Open profile editor
+- tapOn:
+    id: "profile-card"
+    optional: true
+- waitForAnimationEnd
+- takeScreenshot: assets/store/screenshots/05-parental-controls
+
+# Close modal if open
+- tapOn:
+    text: "Close"
+    optional: true
+
+# ============================================
+# SCENE 4: Protection Settings
+# ============================================
+- tapOn: "Protection"
+- waitForAnimationEnd
+- takeScreenshot: assets/store/screenshots/06-vpn-protection
+
+# Scroll to show DNS settings
+- scroll:
+    direction: DOWN
+    distance: 400
+- waitForAnimationEnd
+- takeScreenshot: assets/store/screenshots/07-dns-settings
+
+# ============================================
+# SCENE 5: Settings
+# ============================================
+- tapOn: "Settings"
+- waitForAnimationEnd
+- takeScreenshot: assets/store/screenshots/08-settings
+
+# ============================================
+# Done
+# ============================================
+- stopApp

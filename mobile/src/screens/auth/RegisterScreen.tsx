@@ -114,7 +114,8 @@ export default function RegisterScreen({ navigation }: Props) {
     }
 
     try {
-      await register(email.trim(), password, name.trim());
+      // Note: name is collected but not used in API yet
+      await register(email.trim(), password);
     } catch (e: any) {
       Alert.alert('Registration Failed', e.message || 'Please try again');
     }
