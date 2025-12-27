@@ -1,7 +1,7 @@
 # Shield AI - Project Checkpoint & Memory Context
 
-## Project State: v0.8.0-alpha (Data Persistence Complete)
-**Last Updated**: 2025-12-27 (Session 15)
+## Project State: v0.9.0-alpha (Core DNS Blocking Enhanced)
+**Last Updated**: 2025-12-27 (Session 16)
 
 ---
 
@@ -245,7 +245,50 @@ All 8 auth endpoints tested and working:
 
 ## Session History
 
-### Session 2025-12-27 (Part 15 - Current)
+### Session 2025-12-27 (Part 16 - Current)
+**Core DNS Blocking Enhancements**
+
+1. **Multi-Format Blocklist Support**:
+   - Hosts file format: `0.0.0.0 domain.com`, `127.0.0.1 domain.com`
+   - AdBlock format: `||domain.com^`
+   - Plain domain list format
+   - IPv6 localhost support: `::1`, `::0`
+
+2. **Database Sync for Filter Changes**:
+   - API blocklist/allowlist changes now persist to SQLite
+   - Custom lists loaded from database on startup
+   - Merges file-based and database-based lists
+
+3. **New API Endpoints**:
+   - `GET /api/blocklist/stats` - Category breakdown
+   - `POST /api/blocklist/bulk` - Bulk domain import with category
+   - Enhanced `POST /api/blocklist` with category support
+
+4. **Autoconfigure Setup Script** (`scripts/setup.sh`):
+   - Creates required directories (data/, config/blocklists/, logs/)
+   - Downloads popular blocklists automatically
+   - Creates .env file with sensible defaults
+   - Sources: Steven Black, AdGuard, OISD, Phishing Army
+
+5. **Blocklist Sources Configuration**:
+   - `config/blocklist-sources.json` with popular lists
+   - Categories: ads, phishing, malware, cryptominers
+   - Format detection: hosts, adblock, domains
+   - Configurable update intervals
+
+6. **Files Changed** (472 insertions):
+   - `crates/dns-core/src/filter.rs` - Multi-format parsing
+   - `crates/api-server/src/handlers.rs` - Bulk add, stats, DB sync
+   - `crates/api-server/src/state.rs` - Load from DB on startup
+   - `crates/db/src/sqlite.rs` - get_allowlist() method
+   - `scripts/setup.sh` - Autoconfigure script (NEW)
+   - `config/blocklist-sources.json` - List source URLs (NEW)
+
+7. **Commit**: `d87b001` - feat: Core DNS blocking improvements and autoconfigure
+
+---
+
+### Session 2025-12-27 (Part 15)
 **Data Persistence Architecture Complete**
 
 1. **Database Schema Enhancements**:
