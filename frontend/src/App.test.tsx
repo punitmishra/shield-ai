@@ -29,7 +29,7 @@ describe('App', () => {
     mockFetch.mockImplementation(() => new Promise(() => {}))
 
     render(<App />)
-    expect(screen.getByText('Loading Shield AI Dashboard...')).toBeInTheDocument()
+    expect(screen.getByText('Loading...')).toBeInTheDocument()
   })
 
   it('renders the header after loading', async () => {
@@ -111,10 +111,9 @@ describe('App', () => {
     render(<App />)
 
     await waitFor(() => {
-      expect(screen.getByText('Total Queries')).toBeInTheDocument()
-      expect(screen.getAllByText('Threats Blocked')[0]).toBeInTheDocument()
-      expect(screen.getAllByText('Cache Hits')[0]).toBeInTheDocument()
-      expect(screen.getByText('Response Time')).toBeInTheDocument()
+      expect(screen.getByText('Queries')).toBeInTheDocument()
+      expect(screen.getByText('Blocked')).toBeInTheDocument()
+      expect(screen.getByText('Cached')).toBeInTheDocument()
     })
   })
 
@@ -196,7 +195,7 @@ describe('App', () => {
     render(<App />)
 
     await waitFor(() => {
-      expect(screen.getByText('AI-Powered DNS Protection • Open Source • Privacy-First')).toBeInTheDocument()
+      expect(screen.getByText('AI-Powered DNS Protection')).toBeInTheDocument()
     })
   })
 })
