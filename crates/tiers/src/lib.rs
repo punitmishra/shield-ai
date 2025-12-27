@@ -11,8 +11,11 @@
 use chrono::{DateTime, Duration, Utc};
 use dashmap::DashMap;
 use serde::{Deserialize, Serialize};
+use shield_db::models::DbSubscription;
+use shield_db::SqliteDb;
 use std::sync::atomic::{AtomicU64, Ordering};
-use tracing::info;
+use std::sync::Arc;
+use tracing::{error, info, warn};
 use uuid::Uuid;
 
 /// Subscription tier levels
@@ -203,40 +206,141 @@ pub struct FeatureCheck {
     pub upgrade_tier: Option<Tier>,
 }
 
-/// Tier management system
+/// Tier management system with SQLite persistence
 pub struct TierManager {
     subscriptions: DashMap<String, Subscription>,
     usage: DashMap<String, UsageTracker>,
+    db: Option<Arc<SqliteDb>>,
 }
 
 impl TierManager {
+    /// Create in-memory tier manager (for testing)
     pub fn new() -> Self {
-        info!("Initializing tier management system");
+        info!("Initializing tier management system (in-memory mode)");
         Self {
             subscriptions: DashMap::new(),
             usage: DashMap::new(),
+            db: None,
         }
+    }
+
+    /// Create tier manager with SQLite persistence
+    pub fn with_sqlite(db: Arc<SqliteDb>) -> Self {
+        info!("Initializing tier management system with SQLite persistence");
+        Self {
+            subscriptions: DashMap::new(),
+            usage: DashMap::new(),
+            db: Some(db),
+        }
+    }
+
+    /// Convert Subscription to DbSubscription
+    fn sub_to_db(sub: &Subscription) -> DbSubscription {
+        DbSubscription {
+            id: sub.id.to_string(),
+            user_id: sub.user_id.clone(),
+            tier: match sub.tier {
+                Tier::Free => "free".to_string(),
+                Tier::Pro => "pro".to_string(),
+                Tier::Enterprise => "enterprise".to_string(),
+            },
+            status: match sub.status {
+                SubscriptionStatus::Active => "active".to_string(),
+                SubscriptionStatus::Trialing => "trialing".to_string(),
+                SubscriptionStatus::PastDue => "past_due".to_string(),
+                SubscriptionStatus::Canceled => "canceled".to_string(),
+                SubscriptionStatus::Expired => "expired".to_string(),
+            },
+            billing_cycle: match sub.billing_cycle {
+                BillingCycle::Monthly => "monthly".to_string(),
+                BillingCycle::Yearly => "yearly".to_string(),
+                BillingCycle::Lifetime => "lifetime".to_string(),
+            },
+            stripe_customer_id: sub.stripe_customer_id.clone(),
+            stripe_subscription_id: sub.stripe_subscription_id.clone(),
+            expires_at: sub.expires_at,
+            created_at: sub.created_at,
+            updated_at: Utc::now(),
+        }
+    }
+
+    /// Convert DbSubscription to Subscription
+    fn db_to_sub(db: &DbSubscription) -> Option<Subscription> {
+        Some(Subscription {
+            id: Uuid::parse_str(&db.id).ok()?,
+            user_id: db.user_id.clone(),
+            tier: match db.tier.as_str() {
+                "pro" => Tier::Pro,
+                "enterprise" => Tier::Enterprise,
+                _ => Tier::Free,
+            },
+            status: match db.status.as_str() {
+                "trialing" => SubscriptionStatus::Trialing,
+                "past_due" => SubscriptionStatus::PastDue,
+                "canceled" => SubscriptionStatus::Canceled,
+                "expired" => SubscriptionStatus::Expired,
+                _ => SubscriptionStatus::Active,
+            },
+            billing_cycle: match db.billing_cycle.as_str() {
+                "yearly" => BillingCycle::Yearly,
+                "lifetime" => BillingCycle::Lifetime,
+                _ => BillingCycle::Monthly,
+            },
+            stripe_customer_id: db.stripe_customer_id.clone(),
+            stripe_subscription_id: db.stripe_subscription_id.clone(),
+            expires_at: db.expires_at,
+            created_at: db.created_at,
+        })
     }
 
     /// Get or create a subscription for a user
     pub fn get_subscription(&self, user_id: &str) -> Subscription {
-        self.subscriptions
-            .entry(user_id.to_string())
-            .or_insert_with(|| {
-                // Default to free tier
-                Subscription {
-                    id: Uuid::new_v4(),
-                    user_id: user_id.to_string(),
-                    tier: Tier::Free,
-                    status: SubscriptionStatus::Active,
-                    created_at: Utc::now(),
-                    expires_at: None,
-                    billing_cycle: BillingCycle::Monthly,
-                    stripe_customer_id: None,
-                    stripe_subscription_id: None,
+        // Check in-memory cache first
+        if let Some(sub) = self.subscriptions.get(user_id) {
+            return sub.clone();
+        }
+
+        // Try to load from database
+        if let Some(ref db) = self.db {
+            match db.get_subscription(user_id) {
+                Ok(Some(db_sub)) => {
+                    if let Some(sub) = Self::db_to_sub(&db_sub) {
+                        self.subscriptions.insert(user_id.to_string(), sub.clone());
+                        return sub;
+                    }
                 }
-            })
-            .clone()
+                Ok(None) => {
+                    // Create new subscription in database
+                }
+                Err(e) => {
+                    warn!("Failed to load subscription from database: {}", e);
+                }
+            }
+        }
+
+        // Create default free tier subscription
+        let sub = Subscription {
+            id: Uuid::new_v4(),
+            user_id: user_id.to_string(),
+            tier: Tier::Free,
+            status: SubscriptionStatus::Active,
+            created_at: Utc::now(),
+            expires_at: None,
+            billing_cycle: BillingCycle::Monthly,
+            stripe_customer_id: None,
+            stripe_subscription_id: None,
+        };
+
+        // Persist to database
+        if let Some(ref db) = self.db {
+            let db_sub = Self::sub_to_db(&sub);
+            if let Err(e) = db.upsert_subscription(&db_sub) {
+                warn!("Failed to persist subscription to database: {}", e);
+            }
+        }
+
+        self.subscriptions.insert(user_id.to_string(), sub.clone());
+        sub
     }
 
     /// Upgrade a user's subscription
@@ -256,6 +360,14 @@ impl TierManager {
             BillingCycle::Yearly => Utc::now() + Duration::days(365),
             BillingCycle::Lifetime => Utc::now() + Duration::days(36500), // ~100 years
         });
+
+        // Persist to database
+        if let Some(ref db) = self.db {
+            let db_sub = Self::sub_to_db(&sub);
+            if let Err(e) = db.upsert_subscription(&db_sub) {
+                warn!("Failed to persist subscription upgrade to database: {}", e);
+            }
+        }
 
         self.subscriptions.insert(user_id.to_string(), sub.clone());
         info!("Upgraded user {} to {:?}", user_id, tier);
@@ -328,12 +440,6 @@ impl TierManager {
         }
     }
 
-    /// Record a query for usage tracking
-    pub fn record_query(&self, user_id: &str) {
-        let usage = self.usage.entry(user_id.to_string()).or_default();
-        usage.increment_queries();
-    }
-
     /// Get usage statistics for a user
     pub fn get_usage(&self, user_id: &str) -> UsageStats {
         let sub = self.get_subscription(user_id);
@@ -380,6 +486,14 @@ impl TierManager {
         sub.status = SubscriptionStatus::Trialing;
         sub.expires_at = Some(Utc::now() + Duration::days(14)); // 14-day trial
 
+        // Persist to database
+        if let Some(ref db) = self.db {
+            let db_sub = Self::sub_to_db(&sub);
+            if let Err(e) = db.upsert_subscription(&db_sub) {
+                warn!("Failed to persist trial subscription to database: {}", e);
+            }
+        }
+
         self.subscriptions.insert(user_id.to_string(), sub.clone());
         info!("Started {:?} trial for user {}", tier, user_id);
 
@@ -394,9 +508,30 @@ impl TierManager {
             .ok_or(TierError::NotFound)?;
 
         sub.status = SubscriptionStatus::Canceled;
+
+        // Persist to database
+        if let Some(ref db) = self.db {
+            if let Err(e) = db.update_subscription_status(user_id, "canceled") {
+                warn!("Failed to persist subscription cancellation to database: {}", e);
+            }
+        }
+
         info!("Canceled subscription for user {}", user_id);
 
         Ok(sub.clone())
+    }
+
+    /// Record a query and persist to database
+    pub fn record_query(&self, user_id: &str) {
+        let usage = self.usage.entry(user_id.to_string()).or_default();
+        usage.increment_queries();
+
+        // Persist to database (async would be better, but this works for now)
+        if let Some(ref db) = self.db {
+            if let Err(e) = db.increment_query_count(user_id) {
+                warn!("Failed to persist query count to database: {}", e);
+            }
+        }
     }
 }
 

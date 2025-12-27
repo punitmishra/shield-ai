@@ -97,6 +97,35 @@ pub struct DbProfile {
     pub blocked_categories: Vec<String>,
     pub custom_blocklist: Vec<String>,
     pub custom_allowlist: Vec<String>,
+    pub time_rules: String, // JSON serialized TimeRule array
+    pub device_ids: Vec<String>,
+    pub enabled: bool,
     pub created_at: DateTime<Utc>,
+    pub updated_at: DateTime<Utc>,
+}
+
+/// Subscription stored in SQLite
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct DbSubscription {
+    pub id: String,
+    pub user_id: String,
+    pub tier: String, // "free", "pro", "enterprise"
+    pub status: String, // "active", "trialing", "past_due", "canceled", "expired"
+    pub billing_cycle: String, // "monthly", "yearly", "lifetime"
+    pub stripe_customer_id: Option<String>,
+    pub stripe_subscription_id: Option<String>,
+    pub expires_at: Option<DateTime<Utc>>,
+    pub created_at: DateTime<Utc>,
+    pub updated_at: DateTime<Utc>,
+}
+
+/// Usage tracking stored in SQLite
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct DbUsage {
+    pub user_id: String,
+    pub month: String, // YYYY-MM format
+    pub queries_count: i64,
+    pub profiles_count: i64,
+    pub devices_count: i64,
     pub updated_at: DateTime<Utc>,
 }

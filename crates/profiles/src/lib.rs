@@ -7,9 +7,11 @@ use dashmap::DashMap;
 use parking_lot::RwLock;
 use regex::Regex;
 use serde::{Deserialize, Serialize};
+use shield_db::models::DbProfile;
+use shield_db::SqliteDb;
 use std::collections::HashSet;
 use std::sync::Arc;
-use tracing::info;
+use tracing::{error, info, warn};
 use uuid::Uuid;
 
 /// Protection levels for profiles
@@ -175,26 +177,143 @@ impl Profile {
     }
 }
 
-/// Profile manager for CRUD operations
+/// Profile manager for CRUD operations with SQLite persistence
 pub struct ProfileManager {
     profiles: Arc<DashMap<Uuid, Profile>>,
     device_to_profile: Arc<DashMap<String, Uuid>>,
     default_profile_id: Arc<RwLock<Option<Uuid>>>,
+    db: Option<Arc<SqliteDb>>,
 }
 
 impl ProfileManager {
+    /// Create a new in-memory profile manager (for testing)
     pub fn new() -> Self {
-        info!("Initializing Profile Manager");
+        info!("Initializing Profile Manager (in-memory mode)");
         Self {
             profiles: Arc::new(DashMap::new()),
             device_to_profile: Arc::new(DashMap::new()),
             default_profile_id: Arc::new(RwLock::new(None)),
+            db: None,
         }
     }
 
+    /// Create a profile manager with SQLite persistence
+    pub fn with_sqlite(db: Arc<SqliteDb>) -> Self {
+        info!("Initializing Profile Manager with SQLite persistence");
+        let manager = Self {
+            profiles: Arc::new(DashMap::new()),
+            device_to_profile: Arc::new(DashMap::new()),
+            default_profile_id: Arc::new(RwLock::new(None)),
+            db: Some(db),
+        };
+
+        // Load existing profiles from database
+        manager.load_from_db();
+        manager
+    }
+
+    /// Load profiles from database into memory
+    fn load_from_db(&self) {
+        if let Some(ref db) = self.db {
+            match db.get_all_profiles() {
+                Ok(db_profiles) => {
+                    for db_profile in db_profiles {
+                        if let Some(profile) = Self::db_to_profile(&db_profile) {
+                            let id = profile.id;
+                            // Build device mapping
+                            for device_id in &profile.device_ids {
+                                self.device_to_profile.insert(device_id.clone(), id);
+                            }
+                            self.profiles.insert(id, profile);
+                        }
+                    }
+                    info!("Loaded {} profiles from database", self.profiles.len());
+                }
+                Err(e) => {
+                    error!("Failed to load profiles from database: {}", e);
+                }
+            }
+        }
+    }
+
+    /// Convert DbProfile to Profile
+    fn db_to_profile(db: &DbProfile) -> Option<Profile> {
+        let id = Uuid::parse_str(&db.id).ok()?;
+        let protection_level = match db.protection_level.as_str() {
+            "kid" => ProtectionLevel::Kid,
+            "teen" => ProtectionLevel::Teen,
+            "adult" => ProtectionLevel::Adult,
+            _ => ProtectionLevel::Custom,
+        };
+
+        // Parse time rules from JSON
+        let time_rules: Vec<TimeRule> =
+            serde_json::from_str(&db.time_rules).unwrap_or_default();
+
+        Some(Profile {
+            id,
+            name: db.name.clone(),
+            protection_level,
+            custom_blocklists: db.custom_blocklist.clone(),
+            custom_allowlists: db.custom_allowlist.clone(),
+            time_rules,
+            device_ids: db.device_ids.iter().cloned().collect(),
+            created_at: db.created_at,
+            enabled: db.enabled,
+        })
+    }
+
+    /// Convert Profile to DbProfile
+    fn profile_to_db(profile: &Profile, user_id: &str) -> DbProfile {
+        DbProfile {
+            id: profile.id.to_string(),
+            user_id: user_id.to_string(),
+            name: profile.name.clone(),
+            protection_level: match profile.protection_level {
+                ProtectionLevel::Kid => "kid".to_string(),
+                ProtectionLevel::Teen => "teen".to_string(),
+                ProtectionLevel::Adult => "adult".to_string(),
+                ProtectionLevel::Custom => "custom".to_string(),
+            },
+            blocked_categories: profile
+                .protection_level
+                .default_block_categories()
+                .iter()
+                .map(|s| s.to_string())
+                .collect(),
+            custom_blocklist: profile.custom_blocklists.clone(),
+            custom_allowlist: profile.custom_allowlists.clone(),
+            time_rules: serde_json::to_string(&profile.time_rules).unwrap_or_default(),
+            device_ids: profile.device_ids.iter().cloned().collect(),
+            enabled: profile.enabled,
+            created_at: profile.created_at,
+            updated_at: Utc::now(),
+        }
+    }
+
+    /// Create a profile (optionally with user_id for multi-user support)
     pub fn create_profile(&self, name: String, level: ProtectionLevel) -> Uuid {
+        self.create_profile_for_user(name, level, "default")
+    }
+
+    /// Create a profile for a specific user
+    pub fn create_profile_for_user(
+        &self,
+        name: String,
+        level: ProtectionLevel,
+        user_id: &str,
+    ) -> Uuid {
         let profile = Profile::new(name.clone(), level);
         let id = profile.id;
+
+        // Persist to database
+        if let Some(ref db) = self.db {
+            let db_profile = Self::profile_to_db(&profile, user_id);
+            if let Err(e) = db.create_profile(&db_profile) {
+                warn!("Failed to persist profile to database: {}", e);
+            }
+        }
+
         self.profiles.insert(id, profile);
         info!("Created profile '{}' with ID {}", name, id);
         id
@@ -208,14 +327,56 @@ impl ProfileManager {
         self.profiles.iter().map(|p| p.clone()).collect()
     }
 
+    /// Get profiles for a specific user
+    pub fn list_profiles_for_user(&self, user_id: &str) -> Vec<Profile> {
+        if let Some(ref db) = self.db {
+            match db.get_user_profiles(user_id) {
+                Ok(db_profiles) => {
+                    return db_profiles
+                        .iter()
+                        .filter_map(Self::db_to_profile)
+                        .collect();
+                }
+                Err(e) => {
+                    warn!("Failed to get user profiles from database: {}", e);
+                }
+            }
+        }
+        // Fallback to all profiles (for in-memory mode)
+        self.list_profiles()
+    }
+
     pub fn delete_profile(&self, id: &Uuid) -> bool {
-        self.profiles.remove(id).is_some()
+        // Remove from database
+        if let Some(ref db) = self.db {
+            if let Err(e) = db.delete_profile(&id.to_string()) {
+                warn!("Failed to delete profile from database: {}", e);
+            }
+        }
+
+        // Remove device mappings
+        if let Some((_, profile)) = self.profiles.remove(id) {
+            for device_id in profile.device_ids {
+                self.device_to_profile.remove(&device_id);
+            }
+            true
+        } else {
+            false
+        }
     }
 
     pub fn assign_device(&self, device_id: String, profile_id: &Uuid) -> bool {
         if let Some(mut profile) = self.profiles.get_mut(profile_id) {
             profile.device_ids.insert(device_id.clone());
             self.device_to_profile.insert(device_id, *profile_id);
+
+            // Update in database
+            if let Some(ref db) = self.db {
+                let db_profile = Self::profile_to_db(&profile, "default");
+                if let Err(e) = db.update_profile(&db_profile) {
+                    warn!("Failed to update profile in database: {}", e);
+                }
+            }
             true
         } else {
             false
@@ -239,6 +400,27 @@ impl ProfileManager {
         } else {
             true
         }
+    }
+
+    /// Update a profile
+    pub fn update_profile(&self, profile: Profile) -> bool {
+        let id = profile.id;
+
+        // Update in database
+        if let Some(ref db) = self.db {
+            let db_profile = Self::profile_to_db(&profile, "default");
+            if let Err(e) = db.update_profile(&db_profile) {
+                warn!("Failed to update profile in database: {}", e);
+            }
+        }
+
+        // Update device mappings
+        for device_id in &profile.device_ids {
+            self.device_to_profile.insert(device_id.clone(), id);
+        }
+
+        self.profiles.insert(id, profile);
+        true
     }
 
     pub fn stats(&self) -> ProfileStats {

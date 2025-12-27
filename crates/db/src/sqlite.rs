@@ -126,11 +126,42 @@ impl SqliteDb {
                 blocked_categories TEXT DEFAULT '[]',
                 custom_blocklist TEXT DEFAULT '[]',
                 custom_allowlist TEXT DEFAULT '[]',
+                time_rules TEXT DEFAULT '[]',
+                device_ids TEXT DEFAULT '[]',
+                enabled INTEGER DEFAULT 1,
                 created_at TEXT NOT NULL,
                 updated_at TEXT NOT NULL,
                 FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
             );
             CREATE INDEX IF NOT EXISTS idx_profiles_user ON profiles(user_id);
+
+            -- Subscriptions table
+            CREATE TABLE IF NOT EXISTS subscriptions (
+                id TEXT PRIMARY KEY,
+                user_id TEXT UNIQUE NOT NULL,
+                tier TEXT DEFAULT 'free',
+                status TEXT DEFAULT 'active',
+                billing_cycle TEXT DEFAULT 'monthly',
+                stripe_customer_id TEXT,
+                stripe_subscription_id TEXT,
+                expires_at TEXT,
+                created_at TEXT NOT NULL,
+                updated_at TEXT NOT NULL,
+                FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+            );
+            CREATE INDEX IF NOT EXISTS idx_subscriptions_user ON subscriptions(user_id);
+
+            -- Usage tracking table
+            CREATE TABLE IF NOT EXISTS usage (
+                user_id TEXT NOT NULL,
+                month TEXT NOT NULL,
+                queries_count INTEGER DEFAULT 0,
+                profiles_count INTEGER DEFAULT 0,
+                devices_count INTEGER DEFAULT 0,
+                updated_at TEXT NOT NULL,
+                PRIMARY KEY (user_id, month),
+                FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+            );
         "#,
         )?;
 
@@ -553,6 +584,392 @@ impl SqliteDb {
             params![cutoff.to_rfc3339()],
         )?;
         Ok(deleted)
+    }
+
+    // =========================================================================
+    // Profile Operations
+    // =========================================================================
+
+    /// Create a new profile
+    pub fn create_profile(&self, profile: &DbProfile) -> Result<(), DbError> {
+        let conn = self.conn()?;
+        conn.execute(
+            "INSERT INTO profiles (id, user_id, name, protection_level, blocked_categories,
+             custom_blocklist, custom_allowlist, time_rules, device_ids, enabled, created_at, updated_at)
+             VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12)",
+            params![
+                profile.id,
+                profile.user_id,
+                profile.name,
+                profile.protection_level,
+                serde_json::to_string(&profile.blocked_categories).unwrap_or_default(),
+                serde_json::to_string(&profile.custom_blocklist).unwrap_or_default(),
+                serde_json::to_string(&profile.custom_allowlist).unwrap_or_default(),
+                profile.time_rules,
+                serde_json::to_string(&profile.device_ids).unwrap_or_default(),
+                profile.enabled,
+                profile.created_at.to_rfc3339(),
+                profile.updated_at.to_rfc3339(),
+            ],
+        )?;
+        debug!("Created profile: {} for user {}", profile.name, profile.user_id);
+        Ok(())
+    }
+
+    /// Get profile by ID
+    pub fn get_profile(&self, id: &str) -> Result<Option<DbProfile>, DbError> {
+        let conn = self.conn()?;
+        let mut stmt = conn.prepare(
+            "SELECT id, user_id, name, protection_level, blocked_categories, custom_blocklist,
+             custom_allowlist, time_rules, device_ids, enabled, created_at, updated_at
+             FROM profiles WHERE id = ?1",
+        )?;
+
+        let profile = stmt
+            .query_row(params![id], |row| {
+                Ok(DbProfile {
+                    id: row.get(0)?,
+                    user_id: row.get(1)?,
+                    name: row.get(2)?,
+                    protection_level: row.get(3)?,
+                    blocked_categories: serde_json::from_str(&row.get::<_, String>(4)?)
+                        .unwrap_or_default(),
+                    custom_blocklist: serde_json::from_str(&row.get::<_, String>(5)?)
+                        .unwrap_or_default(),
+                    custom_allowlist: serde_json::from_str(&row.get::<_, String>(6)?)
+                        .unwrap_or_default(),
+                    time_rules: row.get(7)?,
+                    device_ids: serde_json::from_str(&row.get::<_, String>(8)?)
+                        .unwrap_or_default(),
+                    enabled: row.get(9)?,
+                    created_at: DateTime::parse_from_rfc3339(&row.get::<_, String>(10)?)
+                        .unwrap()
+                        .with_timezone(&Utc),
+                    updated_at: DateTime::parse_from_rfc3339(&row.get::<_, String>(11)?)
+                        .unwrap()
+                        .with_timezone(&Utc),
+                })
+            })
+            .optional()?;
+
+        Ok(profile)
+    }
+
+    /// Get all profiles for a user
+    pub fn get_user_profiles(&self, user_id: &str) -> Result<Vec<DbProfile>, DbError> {
+        let conn = self.conn()?;
+        let mut stmt = conn.prepare(
+            "SELECT id, user_id, name, protection_level, blocked_categories, custom_blocklist,
+             custom_allowlist, time_rules, device_ids, enabled, created_at, updated_at
+             FROM profiles WHERE user_id = ?1",
+        )?;
+
+        let profiles = stmt
+            .query_map(params![user_id], |row| {
+                Ok(DbProfile {
+                    id: row.get(0)?,
+                    user_id: row.get(1)?,
+                    name: row.get(2)?,
+                    protection_level: row.get(3)?,
+                    blocked_categories: serde_json::from_str(&row.get::<_, String>(4)?)
+                        .unwrap_or_default(),
+                    custom_blocklist: serde_json::from_str(&row.get::<_, String>(5)?)
+                        .unwrap_or_default(),
+                    custom_allowlist: serde_json::from_str(&row.get::<_, String>(6)?)
+                        .unwrap_or_default(),
+                    time_rules: row.get(7)?,
+                    device_ids: serde_json::from_str(&row.get::<_, String>(8)?)
+                        .unwrap_or_default(),
+                    enabled: row.get(9)?,
+                    created_at: DateTime::parse_from_rfc3339(&row.get::<_, String>(10)?)
+                        .unwrap()
+                        .with_timezone(&Utc),
+                    updated_at: DateTime::parse_from_rfc3339(&row.get::<_, String>(11)?)
+                        .unwrap()
+                        .with_timezone(&Utc),
+                })
+            })?
+            .collect::<Result<Vec<_>, _>>()?;
+
+        Ok(profiles)
+    }
+
+    /// Get all profiles
+    pub fn get_all_profiles(&self) -> Result<Vec<DbProfile>, DbError> {
+        let conn = self.conn()?;
+        let mut stmt = conn.prepare(
+            "SELECT id, user_id, name, protection_level, blocked_categories, custom_blocklist,
+             custom_allowlist, time_rules, device_ids, enabled, created_at, updated_at
+             FROM profiles",
+        )?;
+
+        let profiles = stmt
+            .query_map([], |row| {
+                Ok(DbProfile {
+                    id: row.get(0)?,
+                    user_id: row.get(1)?,
+                    name: row.get(2)?,
+                    protection_level: row.get(3)?,
+                    blocked_categories: serde_json::from_str(&row.get::<_, String>(4)?)
+                        .unwrap_or_default(),
+                    custom_blocklist: serde_json::from_str(&row.get::<_, String>(5)?)
+                        .unwrap_or_default(),
+                    custom_allowlist: serde_json::from_str(&row.get::<_, String>(6)?)
+                        .unwrap_or_default(),
+                    time_rules: row.get(7)?,
+                    device_ids: serde_json::from_str(&row.get::<_, String>(8)?)
+                        .unwrap_or_default(),
+                    enabled: row.get(9)?,
+                    created_at: DateTime::parse_from_rfc3339(&row.get::<_, String>(10)?)
+                        .unwrap()
+                        .with_timezone(&Utc),
+                    updated_at: DateTime::parse_from_rfc3339(&row.get::<_, String>(11)?)
+                        .unwrap()
+                        .with_timezone(&Utc),
+                })
+            })?
+            .collect::<Result<Vec<_>, _>>()?;
+
+        Ok(profiles)
+    }
+
+    /// Update a profile
+    pub fn update_profile(&self, profile: &DbProfile) -> Result<(), DbError> {
+        let conn = self.conn()?;
+        conn.execute(
+            "UPDATE profiles SET name = ?1, protection_level = ?2, blocked_categories = ?3,
+             custom_blocklist = ?4, custom_allowlist = ?5, time_rules = ?6, device_ids = ?7,
+             enabled = ?8, updated_at = ?9 WHERE id = ?10",
+            params![
+                profile.name,
+                profile.protection_level,
+                serde_json::to_string(&profile.blocked_categories).unwrap_or_default(),
+                serde_json::to_string(&profile.custom_blocklist).unwrap_or_default(),
+                serde_json::to_string(&profile.custom_allowlist).unwrap_or_default(),
+                profile.time_rules,
+                serde_json::to_string(&profile.device_ids).unwrap_or_default(),
+                profile.enabled,
+                Utc::now().to_rfc3339(),
+                profile.id,
+            ],
+        )?;
+        Ok(())
+    }
+
+    /// Delete a profile
+    pub fn delete_profile(&self, id: &str) -> Result<bool, DbError> {
+        let conn = self.conn()?;
+        let deleted = conn.execute("DELETE FROM profiles WHERE id = ?1", params![id])?;
+        Ok(deleted > 0)
+    }
+
+    /// Get profile count
+    pub fn profile_count(&self) -> Result<usize, DbError> {
+        let conn = self.conn()?;
+        let count: i64 = conn.query_row("SELECT COUNT(*) FROM profiles", [], |row| row.get(0))?;
+        Ok(count as usize)
+    }
+
+    // =========================================================================
+    // Subscription Operations
+    // =========================================================================
+
+    /// Create or update a subscription
+    pub fn upsert_subscription(&self, sub: &DbSubscription) -> Result<(), DbError> {
+        let conn = self.conn()?;
+        conn.execute(
+            "INSERT OR REPLACE INTO subscriptions
+             (id, user_id, tier, status, billing_cycle, stripe_customer_id,
+              stripe_subscription_id, expires_at, created_at, updated_at)
+             VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10)",
+            params![
+                sub.id,
+                sub.user_id,
+                sub.tier,
+                sub.status,
+                sub.billing_cycle,
+                sub.stripe_customer_id,
+                sub.stripe_subscription_id,
+                sub.expires_at.map(|dt| dt.to_rfc3339()),
+                sub.created_at.to_rfc3339(),
+                sub.updated_at.to_rfc3339(),
+            ],
+        )?;
+        debug!("Upserted subscription for user: {}", sub.user_id);
+        Ok(())
+    }
+
+    /// Get subscription by user ID
+    pub fn get_subscription(&self, user_id: &str) -> Result<Option<DbSubscription>, DbError> {
+        let conn = self.conn()?;
+        let mut stmt = conn.prepare(
+            "SELECT id, user_id, tier, status, billing_cycle, stripe_customer_id,
+             stripe_subscription_id, expires_at, created_at, updated_at
+             FROM subscriptions WHERE user_id = ?1",
+        )?;
+
+        let sub = stmt
+            .query_row(params![user_id], |row| {
+                let expires_at_str: Option<String> = row.get(7)?;
+                Ok(DbSubscription {
+                    id: row.get(0)?,
+                    user_id: row.get(1)?,
+                    tier: row.get(2)?,
+                    status: row.get(3)?,
+                    billing_cycle: row.get(4)?,
+                    stripe_customer_id: row.get(5)?,
+                    stripe_subscription_id: row.get(6)?,
+                    expires_at: expires_at_str.map(|s| {
+                        DateTime::parse_from_rfc3339(&s)
+                            .unwrap()
+                            .with_timezone(&Utc)
+                    }),
+                    created_at: DateTime::parse_from_rfc3339(&row.get::<_, String>(8)?)
+                        .unwrap()
+                        .with_timezone(&Utc),
+                    updated_at: DateTime::parse_from_rfc3339(&row.get::<_, String>(9)?)
+                        .unwrap()
+                        .with_timezone(&Utc),
+                })
+            })
+            .optional()?;
+
+        Ok(sub)
+    }
+
+    /// Update subscription status
+    pub fn update_subscription_status(&self, user_id: &str, status: &str) -> Result<(), DbError> {
+        let conn = self.conn()?;
+        conn.execute(
+            "UPDATE subscriptions SET status = ?1, updated_at = ?2 WHERE user_id = ?3",
+            params![status, Utc::now().to_rfc3339(), user_id],
+        )?;
+        Ok(())
+    }
+
+    /// Update subscription tier
+    pub fn update_subscription_tier(
+        &self,
+        user_id: &str,
+        tier: &str,
+        expires_at: Option<DateTime<Utc>>,
+    ) -> Result<(), DbError> {
+        let conn = self.conn()?;
+        conn.execute(
+            "UPDATE subscriptions SET tier = ?1, expires_at = ?2, updated_at = ?3 WHERE user_id = ?4",
+            params![
+                tier,
+                expires_at.map(|dt| dt.to_rfc3339()),
+                Utc::now().to_rfc3339(),
+                user_id
+            ],
+        )?;
+        Ok(())
+    }
+
+    // =========================================================================
+    // Usage Tracking Operations
+    // =========================================================================
+
+    /// Get or create usage for current month
+    pub fn get_or_create_usage(&self, user_id: &str) -> Result<DbUsage, DbError> {
+        let month = Utc::now().format("%Y-%m").to_string();
+        let conn = self.conn()?;
+
+        // Try to get existing
+        let mut stmt = conn.prepare(
+            "SELECT user_id, month, queries_count, profiles_count, devices_count, updated_at
+             FROM usage WHERE user_id = ?1 AND month = ?2",
+        )?;
+
+        let usage = stmt
+            .query_row(params![user_id, &month], |row| {
+                Ok(DbUsage {
+                    user_id: row.get(0)?,
+                    month: row.get(1)?,
+                    queries_count: row.get(2)?,
+                    profiles_count: row.get(3)?,
+                    devices_count: row.get(4)?,
+                    updated_at: DateTime::parse_from_rfc3339(&row.get::<_, String>(5)?)
+                        .unwrap()
+                        .with_timezone(&Utc),
+                })
+            })
+            .optional()?;
+
+        match usage {
+            Some(u) => Ok(u),
+            None => {
+                // Create new usage record
+                let new_usage = DbUsage {
+                    user_id: user_id.to_string(),
+                    month: month.clone(),
+                    queries_count: 0,
+                    profiles_count: 0,
+                    devices_count: 0,
+                    updated_at: Utc::now(),
+                };
+                conn.execute(
+                    "INSERT INTO usage (user_id, month, queries_count, profiles_count, devices_count, updated_at)
+                     VALUES (?1, ?2, ?3, ?4, ?5, ?6)",
+                    params![
+                        new_usage.user_id,
+                        new_usage.month,
+                        new_usage.queries_count,
+                        new_usage.profiles_count,
+                        new_usage.devices_count,
+                        new_usage.updated_at.to_rfc3339(),
+                    ],
+                )?;
+                Ok(new_usage)
+            }
+        }
+    }
+
+    /// Increment query count for a user
+    pub fn increment_query_count(&self, user_id: &str) -> Result<(), DbError> {
+        let month = Utc::now().format("%Y-%m").to_string();
+        let conn = self.conn()?;
+
+        // Upsert with increment
+        conn.execute(
+            "INSERT INTO usage (user_id, month, queries_count, profiles_count, devices_count, updated_at)
+             VALUES (?1, ?2, 1, 0, 0, ?3)
+             ON CONFLICT(user_id, month) DO UPDATE SET
+             queries_count = queries_count + 1, updated_at = ?3",
+            params![user_id, month, Utc::now().to_rfc3339()],
+        )?;
+        Ok(())
+    }
+
+    /// Update profile count for a user
+    pub fn update_profile_count(&self, user_id: &str, count: i64) -> Result<(), DbError> {
+        let month = Utc::now().format("%Y-%m").to_string();
+        let conn = self.conn()?;
+
+        conn.execute(
+            "INSERT INTO usage (user_id, month, queries_count, profiles_count, devices_count, updated_at)
+             VALUES (?1, ?2, 0, ?3, 0, ?4)
+             ON CONFLICT(user_id, month) DO UPDATE SET
+             profiles_count = ?3, updated_at = ?4",
+            params![user_id, month, count, Utc::now().to_rfc3339()],
+        )?;
+        Ok(())
+    }
+
+    /// Update device count for a user
+    pub fn update_device_count(&self, user_id: &str, count: i64) -> Result<(), DbError> {
+        let month = Utc::now().format("%Y-%m").to_string();
+        let conn = self.conn()?;
+
+        conn.execute(
+            "INSERT INTO usage (user_id, month, queries_count, profiles_count, devices_count, updated_at)
+             VALUES (?1, ?2, 0, 0, ?3, ?4)
+             ON CONFLICT(user_id, month) DO UPDATE SET
+             devices_count = ?3, updated_at = ?4",
+            params![user_id, month, count, Utc::now().to_rfc3339()],
+        )?;
+        Ok(())
     }
 }
 

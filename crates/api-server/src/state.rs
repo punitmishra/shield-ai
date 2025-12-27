@@ -59,23 +59,23 @@ impl AppState {
         let threat_intel = Arc::new(ThreatIntelEngine::new().await?);
         info!("Threat intelligence engine initialized");
 
-        // Initialize profile manager
-        let profiles = Arc::new(ProfileManager::new());
-        info!("Profile manager initialized");
-
-        // Initialize tier manager
-        let tiers = Arc::new(TierManager::new());
-        info!("Tier manager initialized");
-
         // Initialize ML engine for DGA detection and risk analysis
         let ml_engine = Arc::new(MLEngine::new());
         info!("ML engine initialized");
 
-        // Initialize SQLite database
+        // Initialize SQLite database (before services that depend on it)
         let db_path =
             std::env::var("DATABASE_PATH").unwrap_or_else(|_| "data/shield.db".to_string());
         let db = Arc::new(SqliteDb::new(&db_path)?);
         info!("SQLite database initialized: {}", db_path);
+
+        // Initialize profile manager with SQLite persistence
+        let profiles = Arc::new(ProfileManager::with_sqlite(db.clone()));
+        info!("Profile manager initialized (SQLite-backed)");
+
+        // Initialize tier manager with SQLite persistence
+        let tiers = Arc::new(TierManager::with_sqlite(db.clone()));
+        info!("Tier manager initialized (SQLite-backed)");
 
         // Initialize authentication service with SQLite persistence
         let jwt_secret = std::env::var("JWT_SECRET")

@@ -11,3 +11,6 @@ chrono = { workspace = true }
 dashmap = { workspace = true }
 tracing = { workspace = true }
 uuid = { workspace = true }
+
+# Database persistence
+shield-db = { path = "../db" }
