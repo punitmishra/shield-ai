@@ -9,9 +9,35 @@ interface HealthStatus {
   blocklist_size: number
 }
 
+// Launch date: February 1st, 2026
+const LAUNCH_DATE = new Date('2026-02-01T00:00:00')
+
+function useCountdown(targetDate: Date) {
+  const [timeLeft, setTimeLeft] = useState({ days: 0, hours: 0, minutes: 0, seconds: 0 })
+
+  useEffect(() => {
+    const timer = setInterval(() => {
+      const now = new Date()
+      const diff = targetDate.getTime() - now.getTime()
+      if (diff > 0) {
+        setTimeLeft({
+          days: Math.floor(diff / (1000 * 60 * 60 * 24)),
+          hours: Math.floor((diff / (1000 * 60 * 60)) % 24),
+          minutes: Math.floor((diff / (1000 * 60)) % 60),
+          seconds: Math.floor((diff / 1000) % 60)
+        })
+      }
+    }, 1000)
+    return () => clearInterval(timer)
+  }, [targetDate])
+
+  return timeLeft
+}
+
 export default function LandingPage({ onEnterDashboard }: { onEnterDashboard: () => void }) {
   const [health, setHealth] = useState<HealthStatus | null>(null)
   const [activeTab, setActiveTab] = useState<'ios' | 'android' | 'router'>('ios')
+  const countdown = useCountdown(LAUNCH_DATE)
 
   useEffect(() => {
     fetch(`${API_BASE}/health`)
@@ -57,7 +83,7 @@ export default function LandingPage({ onEnterDashboard }: { onEnterDashboard: ()
             </div>
             <div className="flex items-center gap-4">
               <a
-                href="https://github.com/anthropics/shield-ai"
+                href="https://github.com/punitmishra/shield-ai"
                 target="_blank"
                 rel="noopener noreferrer"
                 className="text-slate-400 hover:text-white transition-colors"
@@ -78,9 +104,32 @@ export default function LandingPage({ onEnterDashboard }: { onEnterDashboard: ()
 
         {/* Hero */}
         <section className="max-w-6xl mx-auto px-6 py-20 text-center">
+          {/* Launch Countdown */}
+          <div className="mb-8">
+            <p className="text-sm text-slate-500 uppercase tracking-wider mb-3">Launching February 1st, 2026</p>
+            <div className="flex items-center justify-center gap-4">
+              <div className="px-4 py-3 rounded-xl bg-slate-800/50 border border-slate-700/50">
+                <p className="text-2xl font-bold text-white">{countdown.days}</p>
+                <p className="text-xs text-slate-500">Days</p>
+              </div>
+              <div className="px-4 py-3 rounded-xl bg-slate-800/50 border border-slate-700/50">
+                <p className="text-2xl font-bold text-white">{countdown.hours}</p>
+                <p className="text-xs text-slate-500">Hours</p>
+              </div>
+              <div className="px-4 py-3 rounded-xl bg-slate-800/50 border border-slate-700/50">
+                <p className="text-2xl font-bold text-white">{countdown.minutes}</p>
+                <p className="text-xs text-slate-500">Mins</p>
+              </div>
+              <div className="px-4 py-3 rounded-xl bg-slate-800/50 border border-slate-700/50">
+                <p className="text-2xl font-bold text-white">{countdown.seconds}</p>
+                <p className="text-xs text-slate-500">Secs</p>
+              </div>
+            </div>
+          </div>
+
           <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-emerald-500/10 text-emerald-400 text-sm mb-6">
             <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
-            {health?.status === 'healthy' ? 'System Operational' : 'Connecting...'}
+            {health?.status === 'healthy' ? 'Beta Available Now' : 'Connecting...'}
           </div>
 
           <h1 className="text-5xl md:text-6xl font-bold mb-6 bg-gradient-to-r from-white via-blue-100 to-emerald-200 bg-clip-text text-transparent">
@@ -172,6 +221,23 @@ export default function LandingPage({ onEnterDashboard }: { onEnterDashboard: ()
             Set up Shield AI on your devices in minutes. Choose your platform below.
           </p>
 
+          {/* Quick Install - DNS Profile */}
+          <div className="max-w-2xl mx-auto mb-8 p-4 rounded-2xl bg-gradient-to-r from-blue-500/10 to-emerald-500/10 border border-blue-500/20">
+            <div className="flex items-center justify-between gap-4">
+              <div>
+                <p className="font-medium text-white">Quick Setup for macOS & iOS</p>
+                <p className="text-sm text-slate-400">Download and install the DNS profile to get protected instantly</p>
+              </div>
+              <a
+                href="/ShieldAI-DNS.mobileconfig"
+                download="ShieldAI-DNS.mobileconfig"
+                className="px-4 py-2 rounded-lg bg-blue-500 hover:bg-blue-600 transition-colors text-sm font-medium whitespace-nowrap"
+              >
+                Download Profile
+              </a>
+            </div>
+          </div>
+
           {/* Platform tabs */}
           <div className="flex justify-center gap-2 mb-8">
             {(['ios', 'android', 'router'] as const).map((tab) => (
@@ -184,7 +250,7 @@ export default function LandingPage({ onEnterDashboard }: { onEnterDashboard: ()
                     : 'bg-slate-800 text-slate-400 hover:text-white'
                 }`}
               >
-                {tab === 'ios' ? 'iOS' : tab === 'android' ? 'Android' : 'Router'}
+                {tab === 'ios' ? 'iOS / macOS' : tab === 'android' ? 'Android' : 'Router'}
               </button>
             ))}
           </div>
@@ -196,22 +262,26 @@ export default function LandingPage({ onEnterDashboard }: { onEnterDashboard: ()
                 <div className="p-6 rounded-2xl bg-slate-800/30 border border-slate-700/50">
                   <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">
                     <span className="w-6 h-6 rounded-full bg-blue-500 text-white text-sm flex items-center justify-center">1</span>
-                    Download the App
+                    Install DNS Profile
                   </h3>
                   <p className="text-slate-400 text-sm mb-4">
-                    Download Shield AI from the App Store or scan the QR code.
+                    Download and install the DNS configuration profile. This works on both iOS and macOS.
                   </p>
-                  <div className="flex items-center gap-4">
-                    <a href="#" className="px-4 py-2 rounded-lg bg-slate-700 hover:bg-slate-600 transition-colors text-sm">
-                      App Store (Coming Soon)
+                  <div className="flex flex-wrap items-center gap-3">
+                    <a
+                      href="/ShieldAI-DNS.mobileconfig"
+                      download="ShieldAI-DNS.mobileconfig"
+                      className="px-4 py-2 rounded-lg bg-blue-500 hover:bg-blue-600 transition-colors text-sm font-medium"
+                    >
+                      Download DNS Profile
                     </a>
                     <a
                       href="https://expo.dev/@punitmishra/shield-ai"
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="px-4 py-2 rounded-lg bg-blue-500/20 text-blue-400 hover:bg-blue-500/30 transition-colors text-sm"
+                      className="px-4 py-2 rounded-lg bg-slate-700 hover:bg-slate-600 transition-colors text-sm"
                     >
-                      Expo Preview
+                      Or get the App (Preview)
                     </a>
                   </div>
                 </div>
@@ -219,13 +289,17 @@ export default function LandingPage({ onEnterDashboard }: { onEnterDashboard: ()
                 <div className="p-6 rounded-2xl bg-slate-800/30 border border-slate-700/50">
                   <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">
                     <span className="w-6 h-6 rounded-full bg-blue-500 text-white text-sm flex items-center justify-center">2</span>
-                    Configure DNS Profile
+                    Approve the Profile
                   </h3>
                   <p className="text-slate-400 text-sm mb-4">
-                    The app will automatically install a DNS configuration profile. You can also manually configure:
+                    After downloading:
                   </p>
-                  <div className="bg-slate-900/50 rounded-lg p-4 font-mono text-sm">
-                    <p className="text-slate-500 mb-2"># DNS-over-HTTPS URL</p>
+                  <ul className="text-slate-400 text-sm space-y-2 ml-4">
+                    <li><strong className="text-white">iOS:</strong> Go to Settings → General → VPN & Device Management → Install</li>
+                    <li><strong className="text-white">macOS:</strong> Open System Settings → Privacy & Security → Profiles → Install</li>
+                  </ul>
+                  <div className="mt-4 bg-slate-900/50 rounded-lg p-4 font-mono text-sm">
+                    <p className="text-slate-500 mb-2"># DoH Endpoint (for manual config)</p>
                     <p className="text-emerald-400">https://api.shields-ai.greplabs.com/dns-query</p>
                   </div>
                 </div>
@@ -235,9 +309,15 @@ export default function LandingPage({ onEnterDashboard }: { onEnterDashboard: ()
                     <span className="w-6 h-6 rounded-full bg-blue-500 text-white text-sm flex items-center justify-center">3</span>
                     Verify Protection
                   </h3>
-                  <p className="text-slate-400 text-sm">
-                    Open the app and verify the shield shows "Protected". You can test by visiting an ad-heavy site.
+                  <p className="text-slate-400 text-sm mb-4">
+                    Test that DNS blocking is working:
                   </p>
+                  <div className="bg-slate-900/50 rounded-lg p-4 font-mono text-xs space-y-2">
+                    <p className="text-slate-500"># Should be blocked (no IP returned)</p>
+                    <p className="text-white">curl "https://api.shields-ai.greplabs.com/api/dns/resolve/doubleclick.net"</p>
+                    <p className="text-slate-500 mt-3"># Should resolve normally</p>
+                    <p className="text-white">curl "https://api.shields-ai.greplabs.com/api/dns/resolve/google.com"</p>
+                  </div>
                 </div>
               </div>
             )}
@@ -400,7 +480,7 @@ export default function LandingPage({ onEnterDashboard }: { onEnterDashboard: ()
               <span className="text-slate-500 text-sm">v{health?.version || '0.1.0'}</span>
             </div>
             <div className="flex items-center gap-6 text-sm text-slate-400">
-              <a href="https://github.com/anthropics/shield-ai" target="_blank" rel="noopener noreferrer" className="hover:text-white transition-colors">GitHub</a>
+              <a href="https://github.com/punitmishra/shield-ai" target="_blank" rel="noopener noreferrer" className="hover:text-white transition-colors">GitHub</a>
               <a href="#" className="hover:text-white transition-colors">Documentation</a>
               <a href="#" className="hover:text-white transition-colors">Privacy</a>
             </div>

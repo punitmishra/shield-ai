@@ -1109,6 +1109,289 @@ sheilds-ai/
 - [x] Release notes template
 - [x] Signing configuration guide
 
+## DNS Blocking Test Results (2025-12-28)
+
+### Live API Testing
+
+All tests performed against production API: `https://api.shields-ai.greplabs.com`
+
+| Test Domain | Expected | Actual | Response Time | Status |
+|-------------|----------|--------|---------------|--------|
+| `google.com` | Allowed | ✅ Allowed | 1ms | IP: 172.217.12.110 |
+| `doubleclick.net` | Blocked | ✅ Blocked | 0ms | Empty response |
+| `ads.facebook.com` | Allowed | ✅ Allowed | ~1ms | IP: 157.240.22.35 |
+| `malware-test.com` | Blocked | ✅ Blocked | 0ms | Empty response |
+| `suspicious-domain.xyz` | ML Analyzed | ✅ Analyzed | <1ms | Risk: 37%, Level: medium |
+
+### DoH (DNS-over-HTTPS) RFC 8484 Compliance
+
+```bash
+# Test allowed domain
+curl -H "Accept: application/dns-json" \
+  "https://api.shields-ai.greplabs.com/dns-query?name=google.com&type=A"
+# Response: {"Status":0,"TC":false,"RD":true,"RA":true,"Question":[{"name":"google.com","type":1}],"Answer":[{"name":"google.com","type":1,"TTL":300,"data":"172.217.12.110"}]}
+
+# Test blocked domain
+curl -H "Accept: application/dns-json" \
+  "https://api.shields-ai.greplabs.com/dns-query?name=doubleclick.net&type=A"
+# Response: {"Status":3,"TC":false,"RD":true,"RA":true,"Question":[{"name":"doubleclick.net","type":1}],"Answer":[]}
+```
+
+### Blocklist Statistics
+
+- **Total Blocked Domains**: 130 (default blocklists)
+- **Categories**: malware, ads, phishing, tracking, social-trackers, cryptominers, gambling
+- **Block Rate**: ~20% of test queries
+- **Sources**: Steven Black, AdGuard, OISD, Phishing Army
+
+---
+
+## API Usage Guide
+
+### Base URLs
+
+| Environment | URL |
+|-------------|-----|
+| **Production** | `https://api.shields-ai.greplabs.com` |
+| **Local Dev** | `http://localhost:8080` |
+
+### Quick Start Examples
+
+#### 1. Check DNS Resolution
+```bash
+# Resolve a domain
+curl "https://api.shields-ai.greplabs.com/api/dns/resolve/google.com"
+# {"domain":"google.com","ip_addresses":["172.217.12.110"],"blocked":false,"cached":false,"query_time_ms":1}
+
+# Check if a domain is blocked
+curl "https://api.shields-ai.greplabs.com/api/dns/resolve/doubleclick.net"
+# {"domain":"doubleclick.net","ip_addresses":[],"blocked":true,"cached":false,"query_time_ms":0}
+```
+
+#### 2. DNS-over-HTTPS (DoH) - RFC 8484
+```bash
+# Standard DoH query
+curl -H "Accept: application/dns-json" \
+  "https://api.shields-ai.greplabs.com/dns-query?name=example.com&type=A"
+```
+
+#### 3. ML Analysis
+```bash
+# Get ML risk analysis
+curl "https://api.shields-ai.greplabs.com/api/ml/analyze/suspicious-domain.xyz"
+# {"domain":"suspicious-domain.xyz","overall_risk":0.37,"risk_level":"medium","recommendation":"allow","inference_time_us":12}
+
+# DGA (Domain Generation Algorithm) detection
+curl "https://api.shields-ai.greplabs.com/api/ml/dga/xkjhsdf8923jksdf.com"
+# {"domain":"xkjhsdf8923jksdf.com","is_dga":false,"confidence":0.14}
+```
+
+#### 4. Deep Threat Analysis
+```bash
+# Combined AI + ML + Threat Intel analysis
+curl "https://api.shields-ai.greplabs.com/api/deep/suspicious-domain.xyz"
+```
+
+#### 5. Statistics & Health
+```bash
+# Get query statistics
+curl "https://api.shields-ai.greplabs.com/api/stats"
+# {"total_queries":10,"blocked_queries":2,"cache_hits":3,"cache_misses":7,"cache_hit_rate":0.3,"block_rate":0.2,"blocklist_size":130}
+
+# Health check
+curl "https://api.shields-ai.greplabs.com/health"
+# {"status":"healthy","version":"0.1.0","uptime_seconds":3600,"blocklist_size":130,"cache_hit_rate":0.3}
+```
+
+#### 6. Blocklist Management
+```bash
+# Add domain to blocklist
+curl -X POST "https://api.shields-ai.greplabs.com/api/blocklist" \
+  -H "Content-Type: application/json" \
+  -d '{"domain":"bad-domain.com","category":"custom"}'
+
+# Remove from blocklist
+curl -X DELETE "https://api.shields-ai.greplabs.com/api/blocklist/bad-domain.com"
+
+# Add to allowlist
+curl -X POST "https://api.shields-ai.greplabs.com/api/allowlist" \
+  -H "Content-Type: application/json" \
+  -d '{"domain":"trusted-domain.com"}'
+```
+
+---
+
+## Setup Instructions
+
+### macOS DNS Configuration
+
+#### Option 1: System-Wide DoH (macOS 11+)
+Create a DNS configuration profile:
+
+1. Create file `ShieldAI-DNS.mobileconfig`:
+```xml
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <key>PayloadContent</key>
+    <array>
+        <dict>
+            <key>DNSSettings</key>
+            <dict>
+                <key>DNSProtocol</key>
+                <string>HTTPS</string>
+                <key>ServerURL</key>
+                <string>https://api.shields-ai.greplabs.com/dns-query</string>
+            </dict>
+            <key>PayloadDisplayName</key>
+            <string>Shield AI DNS</string>
+            <key>PayloadIdentifier</key>
+            <string>com.shieldai.dns</string>
+            <key>PayloadType</key>
+            <string>com.apple.dnsSettings.managed</string>
+            <key>PayloadUUID</key>
+            <string>12345678-1234-1234-1234-123456789012</string>
+            <key>PayloadVersion</key>
+            <integer>1</integer>
+        </dict>
+    </array>
+    <key>PayloadDisplayName</key>
+    <string>Shield AI DNS Protection</string>
+    <key>PayloadIdentifier</key>
+    <string>com.shieldai.dns.profile</string>
+    <key>PayloadType</key>
+    <string>Configuration</string>
+    <key>PayloadUUID</key>
+    <string>87654321-4321-4321-4321-210987654321</string>
+    <key>PayloadVersion</key>
+    <integer>1</integer>
+</dict>
+</plist>
+```
+
+2. Double-click to install, or use:
+```bash
+open ShieldAI-DNS.mobileconfig
+```
+
+3. Go to System Preferences → Profiles → Install
+
+#### Option 2: Test with curl/dig
+```bash
+# Direct API test
+curl "https://api.shields-ai.greplabs.com/api/dns/resolve/ads.google.com"
+
+# Test DoH endpoint
+curl -H "Accept: application/dns-json" \
+  "https://api.shields-ai.greplabs.com/dns-query?name=doubleclick.net&type=A"
+```
+
+### iOS/iPadOS Configuration
+
+#### Option 1: Install DNS Profile
+1. Open Safari on your iOS device
+2. Navigate to: `https://shields-ai.greplabs.com/dns-profile`
+3. Tap "Allow" when prompted to download profile
+4. Go to Settings → General → VPN & Device Management
+5. Tap "Shield AI DNS" → Install
+
+#### Option 2: Mobile App (Coming Feb 2026)
+1. Download Shield AI from App Store
+2. Open app and tap "Enable Protection"
+3. Approve VPN configuration when prompted
+4. DNS queries are now filtered through Shield AI
+
+### iOS Simulator Testing
+```bash
+# The iOS Simulator uses Mac's network
+# Install the DNS profile on your Mac, then:
+# 1. Open Simulator
+# 2. Open Safari
+# 3. Try visiting blocked domains (ads will be blocked)
+
+# Or test directly via API from terminal:
+curl "https://api.shields-ai.greplabs.com/api/dns/resolve/tracking.example.com"
+```
+
+### Router/Network-Wide Setup
+Configure your router's DNS settings to use Shield AI:
+
+1. **Primary DNS**: Use the API endpoint for DoH
+2. **Or** run Shield AI locally and point router to local IP
+
+```bash
+# Run Shield AI locally (Docker)
+docker run -d -p 53:53/udp -p 8080:8080 ghcr.io/punitmishra/shield-ai:latest
+
+# Point router DNS to your machine's IP
+# Example: 192.168.1.100
+```
+
+---
+
+## Authentication & API Tokens
+
+### Getting Started with Auth
+
+#### 1. Register a User
+```bash
+curl -X POST "https://api.shields-ai.greplabs.com/api/auth/register" \
+  -H "Content-Type: application/json" \
+  -d '{"email":"user@example.com","password":"securePassword123"}'
+# {"success":true,"message":"User created","user":{"id":"uuid","email":"user@example.com"}}
+```
+
+#### 2. Login to Get Tokens
+```bash
+curl -X POST "https://api.shields-ai.greplabs.com/api/auth/login" \
+  -H "Content-Type: application/json" \
+  -d '{"email":"user@example.com","password":"securePassword123"}'
+# {"access_token":"eyJ...","refresh_token":"abc123...","expires_in":3600}
+```
+
+#### 3. Use Access Token for Protected Endpoints
+```bash
+# Get current user info
+curl "https://api.shields-ai.greplabs.com/api/auth/me" \
+  -H "Authorization: Bearer eyJ..."
+
+# Register a device
+curl -X POST "https://api.shields-ai.greplabs.com/api/auth/devices/register" \
+  -H "Authorization: Bearer eyJ..." \
+  -H "Content-Type: application/json" \
+  -d '{"device_name":"My iPhone","platform":"ios"}'
+```
+
+#### 4. Refresh Expired Tokens
+```bash
+curl -X POST "https://api.shields-ai.greplabs.com/api/auth/refresh" \
+  -H "Content-Type: application/json" \
+  -d '{"refresh_token":"abc123..."}'
+# {"access_token":"eyJ_new_token...","expires_in":3600}
+```
+
+### Token Configuration
+
+| Token Type | Expiry | Purpose |
+|------------|--------|---------|
+| Access Token | 1 hour | API authentication (JWT HS256) |
+| Refresh Token | 30 days | Obtain new access tokens |
+
+### Protected vs Public Endpoints
+
+| Public (No Auth) | Protected (Token Required) |
+|------------------|---------------------------|
+| `GET /health` | `GET /api/auth/me` |
+| `GET /api/stats` | `GET /api/auth/devices` |
+| `GET /api/dns/resolve/:domain` | `POST /api/auth/devices/register` |
+| `GET /dns-query` | `PUT /api/auth/devices/:id/push-token` |
+| `POST /api/auth/register` | `GET /api/profiles` |
+| `POST /api/auth/login` | `POST /api/profiles` |
+| `GET /api/ml/analyze/:domain` | `PUT /api/tiers/:user_id/upgrade` |
+
+---
+
 ## Next Steps
 
 **Phase 2: App Store Submission**:
