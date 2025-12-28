@@ -469,6 +469,67 @@ pub async fn doh_query(
     }
 }
 
+/// DNS-over-HTTPS POST endpoint (RFC 8484 wire format)
+/// iOS/macOS send POST requests with binary DNS message in body
+pub async fn doh_query_post(
+    State(state): State<Arc<AppState>>,
+    body: axum::body::Bytes,
+) -> Result<impl axum::response::IntoResponse, (StatusCode, Json<ErrorResponse>)> {
+    use base64::{engine::general_purpose::STANDARD, Engine};
+
+    // Convert body bytes to base64 for parsing
+    let dns_base64 = STANDARD.encode(&body);
+
+    // Parse the DNS query
+    let (domain, record_type_num) = match parse_dns_wire_query(&dns_base64) {
+        Some(parsed) => parsed,
+        None => {
+            return Err((
+                StatusCode::BAD_REQUEST,
+                Json(ErrorResponse {
+                    error: "invalid_dns_query".to_string(),
+                    message: "Failed to parse DNS wire format query".to_string(),
+                }),
+            ));
+        }
+    };
+
+    info!("DoH POST query: {} type={}", domain, record_type_num);
+
+    // Check if blocked
+    let blocked = state.filter.is_blocked(&domain);
+    if blocked {
+        state
+            .metrics
+            .record_query_with_details(domain.clone(), "0.0.0.0".to_string(), true, 0);
+    }
+
+    // Resolve domain if not blocked
+    let ips: Vec<std::net::IpAddr> = if blocked {
+        vec![]
+    } else {
+        state.resolver.resolve(&domain).await.unwrap_or_default()
+    };
+
+    if !blocked {
+        state.metrics.record_query_with_details(
+            domain.clone(),
+            "0.0.0.0".to_string(),
+            false,
+            0,
+        );
+    }
+
+    // Build wire format response
+    let response_bytes = build_dns_wire_response(&body, &domain, &ips, blocked);
+
+    Ok((
+        StatusCode::OK,
+        [(axum::http::header::CONTENT_TYPE, "application/dns-message")],
+        response_bytes,
+    ))
+}
+
 /// Handle DNS wire format queries (RFC 8484 binary format for iOS/macOS)
 async fn doh_query_wire_format(
     dns_base64: &str,

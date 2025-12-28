@@ -56,7 +56,8 @@ async fn main() -> Result<()> {
         // AI analysis endpoint
         .route("/api/ai/analyze/:domain", get(handlers::analyze_domain))
         // DNS-over-HTTPS (DoH) endpoint (RFC 8484)
-        .route("/dns-query", get(handlers::doh_query))
+        // GET with ?dns= or ?name= query params, POST with binary DNS message body
+        .route("/dns-query", get(handlers::doh_query).post(handlers::doh_query_post))
         // Analytics endpoint
         .route("/api/analytics", get(handlers::get_analytics))
         // Allowlist management endpoints
