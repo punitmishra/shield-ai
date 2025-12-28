@@ -1,7 +1,29 @@
 # Shield AI - Project Checkpoint & Memory Context
 
 ## Project State: v1.0.0-beta (Production Deployed)
-**Last Updated**: 2025-12-28 (Session 17)
+**Last Updated**: 2025-12-28 (Session 18)
+
+---
+
+## Live Production URLs
+
+| Service | URL | Status |
+|---------|-----|--------|
+| **Web Dashboard** | https://shields-ai.greplabs.com | ✅ Live |
+| **API Backend** | https://api.shields-ai.greplabs.com | ✅ Live |
+| **Health Check** | https://api.shields-ai.greplabs.com/health | ✅ Healthy |
+| **DNS Profile** | https://shields-ai.greplabs.com/ShieldAI-DNS.mobileconfig | ✅ Available |
+| **GitHub Repo** | https://github.com/punitmishra/shield-ai | ✅ Public |
+| **Expo Project** | https://expo.dev/@punitmishra/shield-ai | ✅ Available |
+| **iOS Build** | [EAS Build](https://expo.dev/accounts/punitmishra/projects/shield-ai/builds/9a07d7cd-5344-4063-b10d-425945d7e423) | ✅ Complete |
+
+### Deployment Infrastructure
+
+| Component | Platform | Region |
+|-----------|----------|--------|
+| Backend API | Fly.io | iad (US East) |
+| Frontend | Vercel | Edge Network |
+| DNS | Name.com | Custom domain |
 
 ---
 
@@ -245,7 +267,46 @@ All 8 auth endpoints tested and working:
 
 ## Session History
 
-### Session 2025-12-28 (Part 17 - Current)
+### Session 2025-12-28 (Part 18 - Current)
+**Comprehensive Testing & Documentation**
+
+1. **Ran 16 API Tests Against Production**:
+   - All endpoints verified working
+   - Health check, stats, DNS resolution, ML analysis, auth
+   - DoH (RFC 8484) compliance verified
+   - Protected endpoints properly reject unauthenticated requests
+
+2. **Created DNS Profile for macOS/iOS**:
+   - `ShieldAI-DNS.mobileconfig` for one-click DNS setup
+   - Available at: https://shields-ai.greplabs.com/ShieldAI-DNS.mobileconfig
+   - Works on macOS Big Sur+ and iOS 14+
+
+3. **Updated Landing Page**:
+   - Added "Download DNS Profile" button
+   - Updated iOS/macOS setup instructions
+   - Added verification commands
+
+4. **Documentation Updates**:
+   - Added complete test case examples with request/response
+   - Added current system metrics (uptime, cache rate, block rate)
+   - Added API usage guide with curl examples
+   - Added authentication token documentation
+   - Added setup instructions for Mac, iOS, Android, Router
+
+5. **Files Changed**:
+   - `CHECKPOINT.md` - Comprehensive updates with test results
+   - `frontend/src/pages/LandingPage.tsx` - DNS profile download
+   - `frontend/public/ShieldAI-DNS.mobileconfig` - NEW DNS profile
+
+6. **Verified System Health**:
+   - Backend: Healthy, 17944+ seconds uptime
+   - 130 blocked domains active
+   - 33% cache hit rate
+   - ML inference: 61µs average
+
+---
+
+### Session 2025-12-28 (Part 17)
 **Production Deployment & Landing Page**
 
 1. **Production Deployment Complete**:
@@ -983,16 +1044,28 @@ sheilds-ai/
 
 | Area | Status | Details |
 |------|--------|---------|
-| **Backend** | ✅ Production Ready | 10 crates, 44 endpoints, Docker tested |
+| **Backend** | ✅ Production Live | api.shields-ai.greplabs.com (Fly.io) |
+| **Frontend** | ✅ Production Live | shields-ai.greplabs.com (Vercel) |
 | **Auth** | ✅ Complete & Tested | JWT + refresh tokens, device registration |
-| **Web Frontend** | ✅ Complete | 10+ components, real-time updates |
-| **Mobile App** | ✅ App Store Ready | 35+ icons, all screens polished, skeletons, animations |
-| **CI/CD** | ✅ Complete | 9-job pipeline, Railway deployment |
-| **Docker** | ✅ Verified | Rust nightly, multi-stage, health checks |
-| **Tests** | ✅ 32 Passing | 21 Rust + 5 Vitest + 6 E2E |
-| **API Testing** | ✅ Verified | All 11 endpoint categories passing |
-| **App Store** | ✅ Prepared | Store metadata, descriptions, signing guide |
-| **Documentation** | ✅ Updated | CHECKPOINT, CLAUDE.md, OpenAPI, store assets |
+| **DNS Blocking** | ✅ Working | 130 domains blocked, 0ms response |
+| **ML Analysis** | ✅ Working | 61µs inference, DGA detection |
+| **DoH (RFC 8484)** | ✅ Working | /dns-query endpoint |
+| **Mobile App** | ⚠️ Partial | iOS build complete, Android failing |
+| **DNS Profile** | ✅ Available | macOS/iOS profile download |
+| **API Tests** | ✅ 16/16 Passing | All endpoints verified |
+| **Uptime** | ✅ Healthy | 17944+ seconds |
+| **Documentation** | ✅ Complete | API guide, test cases, setup instructions |
+
+### Production Metrics (Live)
+
+| Metric | Value |
+|--------|-------|
+| Blocklist Size | 130 domains |
+| Cache Hit Rate | 33% |
+| Block Rate | 25% |
+| ML Inference | 61µs |
+| DNS Resolution | 1ms (cold) |
+| Blocked Domain | 0ms |
 
 ---
 
@@ -1109,40 +1182,237 @@ sheilds-ai/
 - [x] Release notes template
 - [x] Signing configuration guide
 
-## DNS Blocking Test Results (2025-12-28)
-
-### Live API Testing
+## Verified API Test Results (2025-12-28)
 
 All tests performed against production API: `https://api.shields-ai.greplabs.com`
 
+### Test Summary
+
+| # | Test Category | Endpoint | Status | Response Time |
+|---|---------------|----------|--------|---------------|
+| 1 | Health Check | GET /health | ✅ Pass | <1ms |
+| 2 | Statistics | GET /api/stats | ✅ Pass | <1ms |
+| 3 | DNS Allowed | GET /api/dns/resolve/google.com | ✅ Pass | 1ms |
+| 4 | DNS Blocked | GET /api/dns/resolve/doubleclick.net | ✅ Pass | 0ms |
+| 5 | DoH (RFC 8484) | GET /dns-query?name=example.com | ✅ Pass | <1ms |
+| 6 | ML Analysis | GET /api/ml/analyze/suspicious-domain.xyz | ✅ Pass | 61µs |
+| 7 | DGA Detection | GET /api/ml/dga/xkjhsdf8923jksdf.com | ✅ Pass | <1ms |
+| 8 | Deep Analysis | GET /api/deep/suspicious-domain.xyz | ✅ Pass | <1ms |
+| 9 | Privacy Metrics | GET /api/privacy-metrics | ✅ Pass | <1ms |
+| 10 | Tier Pricing | GET /api/tiers/pricing | ✅ Pass | <1ms |
+| 11 | Query History | GET /api/history | ✅ Pass | <1ms |
+| 12 | Blocklist Stats | GET /api/blocklist/stats | ✅ Pass | <1ms |
+| 13 | Auth Register | POST /api/auth/register | ✅ Pass | ~10ms |
+| 14 | Auth Login | POST /api/auth/login | ✅ Pass | ~5ms |
+| 15 | Protected Endpoint | GET /api/auth/me | ✅ Pass | <1ms |
+| 16 | Auth Rejection | GET /api/auth/me (no token) | ✅ Pass | 401 |
+
+### DNS Resolution Tests
+
 | Test Domain | Expected | Actual | Response Time | Status |
 |-------------|----------|--------|---------------|--------|
-| `google.com` | Allowed | ✅ Allowed | 1ms | IP: 172.217.12.110 |
+| `google.com` | Allowed | ✅ Allowed | 1ms | IP: 142.251.46.206 |
 | `doubleclick.net` | Blocked | ✅ Blocked | 0ms | Empty response |
+| `example.com` | Allowed | ✅ Allowed | 1ms | IP: 104.18.26.120 |
 | `ads.facebook.com` | Allowed | ✅ Allowed | ~1ms | IP: 157.240.22.35 |
-| `malware-test.com` | Blocked | ✅ Blocked | 0ms | Empty response |
-| `suspicious-domain.xyz` | ML Analyzed | ✅ Analyzed | <1ms | Risk: 37%, Level: medium |
 
-### DoH (DNS-over-HTTPS) RFC 8484 Compliance
+### Complete Test Case Examples with Request/Response
 
+#### Test 1: Health Check
 ```bash
-# Test allowed domain
-curl -H "Accept: application/dns-json" \
-  "https://api.shields-ai.greplabs.com/dns-query?name=google.com&type=A"
-# Response: {"Status":0,"TC":false,"RD":true,"RA":true,"Question":[{"name":"google.com","type":1}],"Answer":[{"name":"google.com","type":1,"TTL":300,"data":"172.217.12.110"}]}
-
-# Test blocked domain
-curl -H "Accept: application/dns-json" \
-  "https://api.shields-ai.greplabs.com/dns-query?name=doubleclick.net&type=A"
-# Response: {"Status":3,"TC":false,"RD":true,"RA":true,"Question":[{"name":"doubleclick.net","type":1}],"Answer":[]}
+curl -s "https://api.shields-ai.greplabs.com/health"
+```
+**Response:**
+```json
+{
+  "status": "healthy",
+  "version": "0.1.0",
+  "uptime_seconds": 17944,
+  "blocklist_size": 130,
+  "cache_hit_rate": 0.33
+}
 ```
 
-### Blocklist Statistics
+#### Test 2: DNS Resolution (Allowed Domain)
+```bash
+curl -s "https://api.shields-ai.greplabs.com/api/dns/resolve/google.com"
+```
+**Response:**
+```json
+{
+  "domain": "google.com",
+  "ip_addresses": ["142.251.46.206"],
+  "blocked": false,
+  "cached": false,
+  "query_time_ms": 1
+}
+```
 
-- **Total Blocked Domains**: 130 (default blocklists)
-- **Categories**: malware, ads, phishing, tracking, social-trackers, cryptominers, gambling
-- **Block Rate**: ~20% of test queries
-- **Sources**: Steven Black, AdGuard, OISD, Phishing Army
+#### Test 3: DNS Resolution (Blocked Domain)
+```bash
+curl -s "https://api.shields-ai.greplabs.com/api/dns/resolve/doubleclick.net"
+```
+**Response:**
+```json
+{
+  "domain": "doubleclick.net",
+  "ip_addresses": [],
+  "blocked": true,
+  "cached": false,
+  "query_time_ms": 0
+}
+```
+
+#### Test 4: DoH (RFC 8484)
+```bash
+curl -s -H "Accept: application/dns-json" \
+  "https://api.shields-ai.greplabs.com/dns-query?name=example.com&type=A"
+```
+**Response:**
+```json
+{
+  "Status": 0,
+  "TC": false,
+  "RD": true,
+  "RA": true,
+  "Question": [{"name": "example.com", "type": 1}],
+  "Answer": [
+    {"name": "example.com", "type": 1, "TTL": 300, "data": "104.18.26.120"},
+    {"name": "example.com", "type": 1, "TTL": 300, "data": "104.18.27.120"}
+  ]
+}
+```
+
+#### Test 5: ML Domain Analysis
+```bash
+curl -s "https://api.shields-ai.greplabs.com/api/ml/analyze/suspicious-domain.xyz"
+```
+**Response:**
+```json
+{
+  "domain": "suspicious-domain.xyz",
+  "overall_risk": 0.37,
+  "risk_level": "medium",
+  "recommendation": "monitor",
+  "inference_time_us": 61,
+  "dga_analysis": {
+    "is_dga": false,
+    "confidence": 0.08
+  },
+  "factors": [
+    {"name": "DGA Detection", "weight": 0.3, "score": 0.08},
+    {"name": "TLD Risk", "weight": 0.15, "score": 0.8},
+    {"name": "Neural Analysis", "weight": 0.2, "score": 0.53}
+  ]
+}
+```
+
+#### Test 6: Auth Register
+```bash
+curl -s -X POST "https://api.shields-ai.greplabs.com/api/auth/register" \
+  -H "Content-Type: application/json" \
+  -d '{"email":"demo@shieldai.com","password":"SecurePassword123"}'
+```
+**Response:**
+```json
+{
+  "success": true,
+  "user": {
+    "id": "453e13fc-d5c9-4a8f-a9bc-d2cba892a78e",
+    "email": "demo@shieldai.com",
+    "tier": "free",
+    "email_verified": false
+  }
+}
+```
+
+#### Test 7: Auth Login
+```bash
+curl -s -X POST "https://api.shields-ai.greplabs.com/api/auth/login" \
+  -H "Content-Type: application/json" \
+  -d '{"email":"demo@shieldai.com","password":"SecurePassword123"}'
+```
+**Response:**
+```json
+{
+  "success": true,
+  "tokens": {
+    "access_token": "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9...",
+    "refresh_token": "rt_3fc9d280fe02468498a1d491c01cc3f8",
+    "token_type": "Bearer",
+    "expires_in": 3600
+  }
+}
+```
+
+#### Test 8: Protected Endpoint (with token)
+```bash
+curl -s "https://api.shields-ai.greplabs.com/api/auth/me" \
+  -H "Authorization: Bearer eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9..."
+```
+**Response:**
+```json
+{
+  "success": true,
+  "user": {
+    "id": "453e13fc-d5c9-4a8f-a9bc-d2cba892a78e",
+    "email": "demo@shieldai.com",
+    "tier": "free"
+  }
+}
+```
+
+#### Test 9: Protected Endpoint (no token - should fail)
+```bash
+curl -s "https://api.shields-ai.greplabs.com/api/auth/me"
+```
+**Response:**
+```json
+{
+  "error": "missing_token",
+  "message": "Authorization header required"
+}
+```
+
+#### Test 10: Privacy Metrics
+```bash
+curl -s "https://api.shields-ai.greplabs.com/api/privacy-metrics"
+```
+**Response:**
+```json
+{
+  "privacy_score": 78,
+  "privacy_grade": "C",
+  "trackers_blocked": 3,
+  "ad_requests_blocked": 1,
+  "analytics_blocked": 0,
+  "top_trackers": [
+    {"domain": "doubleclick.net", "blocked_count": 3}
+  ]
+}
+```
+
+### Current System Metrics
+
+| Metric | Value |
+|--------|-------|
+| **Uptime** | 17944+ seconds |
+| **Blocklist Size** | 130 domains |
+| **Cache Hit Rate** | 33% |
+| **Block Rate** | 25% |
+| **Total Queries** | 8+ (test session) |
+
+### Blocklist Categories
+
+- malware
+- ads
+- phishing
+- tracking
+- social-trackers
+- cryptominers
+- gambling
+
+**Sources**: Steven Black, AdGuard, OISD, Phishing Army
 
 ---
 
@@ -1392,16 +1662,73 @@ curl -X POST "https://api.shields-ai.greplabs.com/api/auth/refresh" \
 
 ---
 
-## Next Steps
+## Next Steps & Roadmap
 
-**Phase 2: App Store Submission**:
-- [x] Generate app icons (1024x1024) ✅
-- [x] Configure EAS Build profiles ✅
-- [x] Create Maestro screenshot automation ✅
-- [x] Create submission checklist ✅
-- [ ] Capture store screenshots (run `maestro test .maestro/screenshot-flow.yaml`)
+### Immediate (Before Launch - Feb 1, 2026)
+
+**Mobile App Store Submission**:
+- [x] Generate app icons (1024x1024)
+- [x] Configure EAS Build profiles
+- [x] iOS build complete
+- [ ] Fix Android Gradle build errors
+- [ ] Capture store screenshots
 - [ ] Set up Apple Developer account ($99/year)
 - [ ] Set up Google Play Console ($25 one-time)
-- [ ] Fill in EAS credentials (projectId, appleId, etc.)
 - [ ] Submit to TestFlight/Internal Testing
 - [ ] Submit for App Store review
+
+**Backend Improvements**:
+- [ ] Add more blocklist sources (expand from 130 to 100K+ domains)
+- [ ] Implement Redis caching for horizontal scaling
+- [ ] Add rate limiting per API key
+- [ ] Set up monitoring alerts (uptime, error rates)
+
+**Documentation**:
+- [x] API usage guide with curl examples
+- [x] DNS profile for macOS/iOS
+- [x] Test case documentation
+- [ ] OpenAPI spec update for new endpoints
+- [ ] Developer API documentation site
+
+### Short-Term (Q1 2026)
+
+**Features**:
+- [ ] Custom blocklist/allowlist per user
+- [ ] Webhook notifications for threats
+- [ ] Query analytics dashboard improvements
+- [ ] Family profile scheduling (bedtime mode)
+
+**Infrastructure**:
+- [ ] Multi-region deployment (EU, Asia)
+- [ ] CDN for static assets
+- [ ] Database backup automation
+- [ ] Log aggregation (Loki/ELK)
+
+### Medium-Term (Q2-Q3 2026)
+
+**VPN Infrastructure**:
+- [ ] WireGuard VPN server setup
+- [ ] DNS-over-VPN integration
+- [ ] Split tunneling support
+- [ ] Regional VPN endpoints
+
+**Enterprise Features**:
+- [ ] SSO/SAML integration
+- [ ] Audit logging
+- [ ] Team management
+- [ ] Custom domain DNS
+
+### Launch Checklist
+
+| Item | Status | Notes |
+|------|--------|-------|
+| Backend deployed | ✅ | api.shields-ai.greplabs.com |
+| Frontend deployed | ✅ | shields-ai.greplabs.com |
+| DNS profile available | ✅ | Download from landing page |
+| API tested | ✅ | 16/16 tests passing |
+| Auth working | ✅ | Register, login, JWT, refresh |
+| ML analysis working | ✅ | 61µs inference time |
+| iOS app build | ✅ | Available on Expo |
+| Android app build | ⚠️ | Gradle errors |
+| App Store listing | ❌ | Needs developer account |
+| Play Store listing | ❌ | Needs developer account |
