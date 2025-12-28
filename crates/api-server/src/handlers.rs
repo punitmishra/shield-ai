@@ -80,11 +80,122 @@ pub struct BlocklistStatsResponse {
 
 #[derive(Deserialize)]
 pub struct DohQuery {
-    #[allow(dead_code)] // Reserved for binary DNS message format (RFC 8484)
-    pub dns: Option<String>, // Base64url encoded DNS query
+    pub dns: Option<String>,  // Base64url encoded DNS query (RFC 8484 wire format)
     pub name: Option<String>, // Domain name for JSON API
     #[serde(rename = "type")]
     pub record_type: Option<String>,
+}
+
+/// Parse domain name from DNS wire format query
+fn parse_dns_wire_query(dns_base64: &str) -> Option<(String, u16)> {
+    use base64::{engine::general_purpose::URL_SAFE_NO_PAD, Engine};
+
+    // Decode base64url (with or without padding)
+    let data = URL_SAFE_NO_PAD.decode(dns_base64)
+        .or_else(|_| {
+            // Try standard base64 as fallback
+            use base64::engine::general_purpose::STANDARD;
+            STANDARD.decode(dns_base64)
+        })
+        .ok()?;
+
+    // DNS header is 12 bytes, need at least that plus some question
+    if data.len() < 13 {
+        return None;
+    }
+
+    // Skip header (12 bytes), parse question section
+    let mut pos = 12;
+    let mut domain_parts: Vec<String> = Vec::new();
+
+    // Parse labels
+    while pos < data.len() {
+        let len = data[pos] as usize;
+        if len == 0 {
+            pos += 1;
+            break;
+        }
+        if len > 63 || pos + 1 + len > data.len() {
+            return None; // Invalid label
+        }
+        let label = String::from_utf8_lossy(&data[pos + 1..pos + 1 + len]).to_string();
+        domain_parts.push(label);
+        pos += 1 + len;
+    }
+
+    // Get record type (2 bytes after domain)
+    let record_type = if pos + 2 <= data.len() {
+        ((data[pos] as u16) << 8) | (data[pos + 1] as u16)
+    } else {
+        1 // Default to A record
+    };
+
+    let domain = domain_parts.join(".");
+    if domain.is_empty() {
+        return None;
+    }
+
+    Some((domain, record_type))
+}
+
+/// Build DNS wire format response
+fn build_dns_wire_response(query_data: &[u8], domain: &str, ips: &[std::net::IpAddr], blocked: bool) -> Vec<u8> {
+    let mut response = Vec::with_capacity(512);
+
+    // Copy transaction ID from query (first 2 bytes)
+    if query_data.len() >= 2 {
+        response.extend_from_slice(&query_data[0..2]);
+    } else {
+        response.extend_from_slice(&[0x00, 0x00]);
+    }
+
+    // Flags: QR=1 (response), RD=1 (recursion desired), RA=1 (recursion available)
+    // RCODE=3 (NXDOMAIN) if blocked, 0 (NOERROR) otherwise
+    let rcode = if blocked { 3u8 } else { 0u8 };
+    response.push(0x81); // QR=1, Opcode=0, AA=0, TC=0, RD=1
+    response.push(0x80 | rcode); // RA=1, Z=0, RCODE
+
+    // QDCOUNT = 1
+    response.extend_from_slice(&[0x00, 0x01]);
+
+    // ANCOUNT = number of IPs (0 if blocked)
+    let answer_count = if blocked { 0u16 } else { ips.len() as u16 };
+    response.extend_from_slice(&answer_count.to_be_bytes());
+
+    // NSCOUNT = 0, ARCOUNT = 0
+    response.extend_from_slice(&[0x00, 0x00, 0x00, 0x00]);
+
+    // Question section - encode domain
+    for label in domain.split('.') {
+        let len = label.len() as u8;
+        response.push(len);
+        response.extend_from_slice(label.as_bytes());
+    }
+    response.push(0x00); // End of domain
+    response.extend_from_slice(&[0x00, 0x01]); // QTYPE = A
+    response.extend_from_slice(&[0x00, 0x01]); // QCLASS = IN
+
+    // Answer section (if not blocked)
+    if !blocked {
+        for ip in ips {
+            if let std::net::IpAddr::V4(ipv4) = ip {
+                // Name pointer to question (offset 12)
+                response.extend_from_slice(&[0xC0, 0x0C]);
+                // Type A
+                response.extend_from_slice(&[0x00, 0x01]);
+                // Class IN
+                response.extend_from_slice(&[0x00, 0x01]);
+                // TTL (300 seconds)
+                response.extend_from_slice(&[0x00, 0x00, 0x01, 0x2C]);
+                // RDLENGTH (4 for IPv4)
+                response.extend_from_slice(&[0x00, 0x04]);
+                // RDATA (IP address)
+                response.extend_from_slice(&ipv4.octets());
+            }
+        }
+    }
+
+    response
 }
 
 #[derive(Serialize)]
@@ -250,13 +361,20 @@ pub async fn analyze_domain(
 // DNS-over-HTTPS (DoH) Endpoint
 // ============================================================================
 
-/// DNS-over-HTTPS endpoint (RFC 8484 JSON format)
-/// Supports: GET /dns-query?name=example.com&type=A
+/// DNS-over-HTTPS endpoint (RFC 8484)
+/// Supports both:
+/// - Wire format: GET /dns-query?dns=base64url_encoded_query (for iOS/macOS)
+/// - JSON format: GET /dns-query?name=example.com&type=A
 pub async fn doh_query(
     Query(params): Query<DohQuery>,
     State(state): State<Arc<AppState>>,
 ) -> Result<Json<DohResponse>, (StatusCode, Json<ErrorResponse>)> {
-    // Get domain from query params
+    // Check for wire format first (iOS/macOS use this)
+    if let Some(ref dns_query) = params.dns {
+        return doh_query_wire_format(dns_query, state).await;
+    }
+
+    // Fall back to JSON format
     let domain = match params.name {
         Some(name) => name,
         None => {
@@ -264,7 +382,7 @@ pub async fn doh_query(
                 StatusCode::BAD_REQUEST,
                 Json(ErrorResponse {
                     error: "missing_parameter".to_string(),
-                    message: "Query parameter 'name' is required".to_string(),
+                    message: "Query parameter 'name' or 'dns' is required".to_string(),
                 }),
             ));
         }
@@ -281,7 +399,96 @@ pub async fn doh_query(
         _ => 1,
     };
 
-    info!("DoH query: {} type={}", domain, record_type);
+    info!("DoH query (JSON): {} type={}", domain, record_type);
+
+    // Check if blocked
+    if state.filter.is_blocked(&domain) {
+        state
+            .metrics
+            .record_query_with_details(domain.clone(), "0.0.0.0".to_string(), true, 0);
+        return Ok(Json(DohResponse {
+            status: 3, // NXDOMAIN
+            truncated: false,
+            recursion_desired: true,
+            recursion_available: true,
+            question: vec![DohQuestion {
+                name: domain.clone(),
+                record_type: record_type_num,
+            }],
+            answer: vec![],
+        }));
+    }
+
+    // Resolve domain
+    let start = std::time::Instant::now();
+    match state.resolver.resolve(&domain).await {
+        Ok(ips) => {
+            let query_time_ms = start.elapsed().as_millis() as u64;
+            let answers: Vec<DohAnswer> = ips
+                .iter()
+                .map(|ip| {
+                    let ip_str = ip.to_string();
+                    DohAnswer {
+                        name: domain.clone(),
+                        record_type: if ip_str.contains(':') { 28 } else { 1 },
+                        ttl: 300,
+                        data: ip_str,
+                    }
+                })
+                .collect();
+
+            state.metrics.record_query_with_details(
+                domain.clone(),
+                "0.0.0.0".to_string(),
+                false,
+                query_time_ms,
+            );
+
+            Ok(Json(DohResponse {
+                status: 0, // NOERROR
+                truncated: false,
+                recursion_desired: true,
+                recursion_available: true,
+                question: vec![DohQuestion {
+                    name: domain.clone(),
+                    record_type: record_type_num,
+                }],
+                answer: answers,
+            }))
+        }
+        Err(e) => {
+            error!("DoH resolution failed for {}: {}", domain, e);
+            Err((
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(ErrorResponse {
+                    error: "resolution_failed".to_string(),
+                    message: format!("Failed to resolve domain: {}", e),
+                }),
+            ))
+        }
+    }
+}
+
+/// Handle DNS wire format queries (RFC 8484 binary format for iOS/macOS)
+async fn doh_query_wire_format(
+    dns_base64: &str,
+    state: Arc<AppState>,
+) -> Result<Json<DohResponse>, (StatusCode, Json<ErrorResponse>)> {
+    // Parse the DNS query
+    let (domain, record_type_num) = match parse_dns_wire_query(dns_base64) {
+        Some(parsed) => parsed,
+        None => {
+            return Err((
+                StatusCode::BAD_REQUEST,
+                Json(ErrorResponse {
+                    error: "invalid_dns_query".to_string(),
+                    message: "Failed to parse DNS wire format query".to_string(),
+                }),
+            ));
+        }
+    };
+
+    info!("DoH query (wire): {} type={}", domain, record_type_num);
 
     // Check if blocked
     if state.filter.is_blocked(&domain) {

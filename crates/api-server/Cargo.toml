@@ -29,6 +29,7 @@ uuid = { workspace = true }
 dashmap = { workspace = true }
 rand = { workspace = true }
 futures = "0.3"
+base64 = "0.22.1"
 
 [[bin]]
 name = "api-server"
