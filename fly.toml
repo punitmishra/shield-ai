@@ -33,22 +33,11 @@ primary_region = "sjc"
   source = "shield_data"
   destination = "/data"
 
-[[services]]
-  protocol = "tcp"
-  internal_port = 8080
-  processes = ["app"]
-
-  [[services.ports]]
-    port = 80
-    handlers = ["http"]
-
-  [[services.ports]]
-    port = 443
-    handlers = ["tls", "http"]
-
-  [[services.http_checks]]
+[checks]
+  [checks.health]
+    type = "http"
+    port = 8080
+    path = "/health"
     interval = "10s"
     timeout = "2s"
     grace_period = "5s"
-    method = "get"
-    path = "/health"

@@ -26,7 +26,7 @@
         "buildType": "apk"
       },
       "env": {
-        "API_URL": "https://shield-ai-api.fly.dev"
+        "API_URL": "https://api.shields-ai.greplabs.com"
       }
     },
     "production": {
@@ -40,7 +40,7 @@
         "buildType": "app-bundle"
       },
       "env": {
-        "API_URL": "https://shield-ai-api.fly.dev"
+        "API_URL": "https://api.shields-ai.greplabs.com"
       }
     }
   },

@@ -5,19 +5,19 @@
   "rewrites": [
     {
       "source": "/api/:path*",
-      "destination": "https://shield-ai-api.fly.dev/api/:path*"
+      "destination": "https://api.shields-ai.greplabs.com/api/:path*"
     },
     {
       "source": "/health",
-      "destination": "https://shield-ai-api.fly.dev/health"
+      "destination": "https://api.shields-ai.greplabs.com/health"
     },
     {
       "source": "/metrics",
-      "destination": "https://shield-ai-api.fly.dev/metrics"
+      "destination": "https://api.shields-ai.greplabs.com/metrics"
     },
     {
       "source": "/ws",
-      "destination": "https://shield-ai-api.fly.dev/ws"
+      "destination": "https://api.shields-ai.greplabs.com/ws"
     },
     {
       "source": "/(.*)",
