@@ -1,7 +1,7 @@
 # Shield AI - Project Checkpoint & Memory Context
 
-## Project State: v0.9.0-alpha (Core DNS Blocking Enhanced)
-**Last Updated**: 2025-12-27 (Session 16)
+## Project State: v1.0.0-beta (Production Deployed)
+**Last Updated**: 2025-12-28 (Session 17)
 
 ---
 
@@ -245,7 +245,60 @@ All 8 auth endpoints tested and working:
 
 ## Session History
 
-### Session 2025-12-27 (Part 16 - Current)
+### Session 2025-12-28 (Part 17 - Current)
+**Production Deployment & Landing Page**
+
+1. **Production Deployment Complete**:
+   - Backend deployed to Fly.io: https://api.shields-ai.greplabs.com
+   - Frontend deployed to Vercel: https://shields-ai.greplabs.com
+   - Custom domains configured with SSL certificates
+   - API proxy working through Vercel rewrites
+
+2. **Landing Page Created**:
+   - New `LandingPage.tsx` component with:
+     - Hero section with animated status indicator
+     - Feature cards (Ultra-Fast, AI Threat Detection, Privacy First)
+     - Platform-specific setup instructions (iOS, Android, Router)
+     - API endpoints documentation section
+     - Responsive design with dark theme
+   - Routing updated to show landing page for first-time visitors
+   - Dashboard accessible via "Open Dashboard" button
+
+3. **DNS Configuration**:
+   - `api.shields-ai.greplabs.com` → Fly.io (A + AAAA records)
+   - `shields-ai.greplabs.com` → Vercel (CNAME)
+   - SSL certificates auto-provisioned via Let's Encrypt
+
+4. **Mobile App Build Status**:
+   - EAS project created: @punitmishra/shield-ai
+   - Project ID: 351ec236-9531-468c-95d5-5accda6a1ff7
+   - Android builds failing with Gradle error (investigating)
+   - iOS build in progress
+   - Expo preview available at: https://expo.dev/@punitmishra/shield-ai
+
+5. **Configuration Updates**:
+   - `fly.toml` - Fly.io deployment config
+   - `frontend/vercel.json` - API proxy to custom domain
+   - `mobile/eas.json` - Updated API_URL to production
+   - `mobile/app.json` - EAS project ID configured
+
+6. **Files Created/Changed**:
+   - `frontend/src/pages/LandingPage.tsx` - NEW landing page component
+   - `frontend/src/App.tsx` - Added routing between landing/dashboard
+   - `fly.toml` - Fly.io configuration
+   - `frontend/vercel.json` - Vercel rewrites for API proxy
+   - `mobile/eas.json` - Production API URL
+   - `mobile/app.json` - EAS project configuration
+
+7. **Live URLs**:
+   - Frontend: https://shields-ai.greplabs.com
+   - Backend API: https://api.shields-ai.greplabs.com
+   - Health Check: https://api.shields-ai.greplabs.com/health
+   - Expo Project: https://expo.dev/@punitmishra/shield-ai
+
+---
+
+### Session 2025-12-27 (Part 16)
 **Core DNS Blocking Enhancements**
 
 1. **Multi-Format Blocklist Support**:

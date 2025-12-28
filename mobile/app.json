@@ -3,13 +3,11 @@
     "name": "Shield AI",
     "slug": "shield-ai",
     "version": "1.0.0",
-    "runtimeVersion": {
-      "policy": "appVersion"
-    },
+    "runtimeVersion": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "dark",
-    "newArchEnabled": true,
+    "newArchEnabled": false,
     "scheme": "shieldai",
     "splash": {
       "image": "./assets/splash-icon.png",
@@ -38,7 +36,7 @@
         "foregroundImage": "./assets/adaptive-icon.png",
         "backgroundColor": "#0f172a"
       },
-      "edgeToEdgeEnabled": true,
+      "edgeToEdgeEnabled": false,
       "predictiveBackGestureEnabled": false,
       "package": "com.shieldai.app",
       "versionCode": 1,
@@ -64,19 +62,11 @@
         }
       ]
     ],
-    "notification": {
-      "icon": "./assets/notification-icon.png",
-      "color": "#3b82f6",
-      "iosDisplayInForeground": true
-    },
-    "owner": "shieldai",
+    "owner": "punitmishra",
     "extra": {
       "eas": {
-        "projectId": "YOUR_EAS_PROJECT_ID"
+        "projectId": "351ec236-9531-468c-95d5-5accda6a1ff7"
       }
-    },
-    "updates": {
-      "url": "https://u.expo.dev/YOUR_EAS_PROJECT_ID"
     }
   }
 }

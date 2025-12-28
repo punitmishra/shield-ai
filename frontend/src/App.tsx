@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
+import LandingPage from './pages/LandingPage'
 
 // API base URL
 const API_BASE = import.meta.env.VITE_API_URL || ''
@@ -27,7 +28,7 @@ interface QueryLogEntry {
   response_time_ms: number
 }
 
-function App() {
+function Dashboard() {
   const [stats, setStats] = useState<Stats | null>(null)
   const [health, setHealth] = useState<HealthStatus | null>(null)
   const [queryHistory, setQueryHistory] = useState<QueryLogEntry[]>([])
@@ -359,6 +360,25 @@ function App() {
       </div>
     </div>
   )
+}
+
+function App() {
+  const [view, setView] = useState<'landing' | 'dashboard'>(() => {
+    // Check if user has visited before
+    const hasVisited = localStorage.getItem('shield-ai-visited')
+    return hasVisited ? 'dashboard' : 'landing'
+  })
+
+  const handleEnterDashboard = () => {
+    localStorage.setItem('shield-ai-visited', 'true')
+    setView('dashboard')
+  }
+
+  if (view === 'landing') {
+    return <LandingPage onEnterDashboard={handleEnterDashboard} />
+  }
+
+  return <Dashboard />
 }
 
 export default App
