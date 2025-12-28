@@ -5,44 +5,282 @@
       "url": "https://raw.githubusercontent.com/StevenBlack/hosts/master/hosts",
       "category": "ads",
       "format": "hosts",
-      "enabled": true
+      "enabled": true,
+      "description": "Comprehensive hosts file with ads + malware"
     },
     {
       "name": "AdGuard DNS Filter",
       "url": "https://adguardteam.github.io/AdGuardSDNSFilter/Filters/filter.txt",
       "category": "ads",
       "format": "adblock",
-      "enabled": true
+      "enabled": true,
+      "description": "AdGuard's DNS-level ad blocking filter"
     },
     {
-      "name": "OISD Small",
-      "url": "https://small.oisd.nl/domainswild",
+      "name": "OISD Big",
+      "url": "https://big.oisd.nl/domainswild",
       "category": "ads",
       "format": "domains",
-      "enabled": true
+      "enabled": true,
+      "description": "OISD comprehensive blocklist (200K+ domains)"
     },
     {
-      "name": "Phishing Army",
-      "url": "https://phishing.army/download/phishing_army_blocklist.txt",
+      "name": "Phishing Army Extended",
+      "url": "https://phishing.army/download/phishing_army_blocklist_extended.txt",
       "category": "phishing",
       "format": "domains",
-      "enabled": true
+      "enabled": true,
+      "description": "Extended phishing domain blocklist"
     },
     {
-      "name": "URLhaus Malware",
+      "name": "URLhaus Malware Hosts",
       "url": "https://urlhaus.abuse.ch/downloads/hostfile/",
       "category": "malware",
       "format": "hosts",
-      "enabled": true
+      "enabled": true,
+      "description": "Abuse.ch malware URL blocklist"
+    },
+    {
+      "name": "Pi-hole Suspicious",
+      "url": "https://raw.githubusercontent.com/PolishFiltersTeam/KADhosts/master/KADhosts.txt",
+      "category": "ads",
+      "format": "hosts",
+      "enabled": true,
+      "description": "Polish Filters Team suspicious hosts"
+    },
+    {
+      "name": "Firebog - AdGuard",
+      "url": "https://v.firebog.net/hosts/AdguardDNS.txt",
+      "category": "ads",
+      "format": "domains",
+      "enabled": true,
+      "description": "Firebog curated AdGuard list"
+    },
+    {
+      "name": "Firebog - Easylist",
+      "url": "https://v.firebog.net/hosts/Easylist.txt",
+      "category": "ads",
+      "format": "domains",
+      "enabled": true,
+      "description": "Firebog curated EasyList"
+    },
+    {
+      "name": "Firebog - Easyprivacy",
+      "url": "https://v.firebog.net/hosts/Easyprivacy.txt",
+      "category": "tracking",
+      "format": "domains",
+      "enabled": true,
+      "description": "Firebog curated EasyPrivacy"
+    },
+    {
+      "name": "Firebog - Prigent Ads",
+      "url": "https://v.firebog.net/hosts/Prigent-Ads.txt",
+      "category": "ads",
+      "format": "domains",
+      "enabled": true,
+      "description": "Prigent advertising blocklist"
+    },
+    {
+      "name": "Dan Pollock Hosts",
+      "url": "https://someonewhocares.org/hosts/zero/hosts",
+      "category": "ads",
+      "format": "hosts",
+      "enabled": true,
+      "description": "Dan Pollock's ad-blocking hosts file"
+    },
+    {
+      "name": "WindowsSpyBlocker - Hosts Spy",
+      "url": "https://raw.githubusercontent.com/crazy-max/WindowsSpyBlocker/master/data/hosts/spy.txt",
+      "category": "tracking",
+      "format": "hosts",
+      "enabled": true,
+      "description": "Windows telemetry blocking"
+    },
+    {
+      "name": "Disconnect.me - Simple Ad",
+      "url": "https://s3.amazonaws.com/lists.disconnect.me/simple_ad.txt",
+      "category": "ads",
+      "format": "domains",
+      "enabled": true,
+      "description": "Disconnect.me advertising"
+    },
+    {
+      "name": "Disconnect.me - Simple Tracking",
+      "url": "https://s3.amazonaws.com/lists.disconnect.me/simple_tracking.txt",
+      "category": "tracking",
+      "format": "domains",
+      "enabled": true,
+      "description": "Disconnect.me tracking"
+    },
+    {
+      "name": "Disconnect.me - Simple Malvertising",
+      "url": "https://s3.amazonaws.com/lists.disconnect.me/simple_malvertising.txt",
+      "category": "malware",
+      "format": "domains",
+      "enabled": true,
+      "description": "Disconnect.me malvertising"
+    },
+    {
+      "name": "HaGeZi - Multi Normal",
+      "url": "https://raw.githubusercontent.com/hagezi/dns-blocklists/main/domains/multi.txt",
+      "category": "ads",
+      "format": "domains",
+      "enabled": true,
+      "description": "HaGeZi multi-source blocklist"
+    },
+    {
+      "name": "HaGeZi - Threat Intelligence",
+      "url": "https://raw.githubusercontent.com/hagezi/dns-blocklists/main/domains/tif.txt",
+      "category": "malware",
+      "format": "domains",
+      "enabled": true,
+      "description": "HaGeZi threat intelligence feeds"
+    },
+    {
+      "name": "1Hosts - Lite",
+      "url": "https://o0.pages.dev/Lite/domains.txt",
+      "category": "ads",
+      "format": "domains",
+      "enabled": true,
+      "description": "1Hosts lite blocklist"
+    },
+    {
+      "name": "NoTracking",
+      "url": "https://raw.githubusercontent.com/notracking/hosts-blocklists/master/hostnames.txt",
+      "category": "tracking",
+      "format": "domains",
+      "enabled": true,
+      "description": "NoTracking comprehensive list"
+    },
+    {
+      "name": "Energized Basic",
+      "url": "https://block.energized.pro/basic/formats/domains.txt",
+      "category": "ads",
+      "format": "domains",
+      "enabled": false,
+      "description": "Energized Protection basic list (optional - very large)"
     },
     {
       "name": "NoCoin Cryptominers",
-      "url": "https://raw.githubusercontent.com/nickkuk/nickkuk-adlist/master/nickkuk-adlist.txt",
+      "url": "https://raw.githubusercontent.com/hoshsadiq/adblock-nocoin-list/master/hosts.txt",
       "category": "cryptominers",
+      "format": "hosts",
+      "enabled": true,
+      "description": "Crypto mining blocklist"
+    },
+    {
+      "name": "Spam404",
+      "url": "https://raw.githubusercontent.com/Spam404/lists/master/main-blacklist.txt",
+      "category": "spam",
       "format": "domains",
-      "enabled": false
+      "enabled": true,
+      "description": "Spam and scam domains"
+    },
+    {
+      "name": "Malware Domain List",
+      "url": "https://www.malwaredomainlist.com/hostslist/hosts.txt",
+      "category": "malware",
+      "format": "hosts",
+      "enabled": true,
+      "description": "Known malware domains"
+    },
+    {
+      "name": "Pi-hole - Regex Advertising",
+      "url": "https://raw.githubusercontent.com/mmotti/pihole-regex/master/regex.list",
+      "category": "ads",
+      "format": "regex",
+      "enabled": false,
+      "description": "Regex patterns for ads (requires regex support)"
+    },
+    {
+      "name": "DShield Suspicious",
+      "url": "https://www.dshield.org/feeds/suspiciousdomains_Low.txt",
+      "category": "malware",
+      "format": "domains",
+      "enabled": true,
+      "description": "DShield suspicious domains"
+    },
+    {
+      "name": "Gambling Filter",
+      "url": "https://raw.githubusercontent.com/Sinfonietta/hostfiles/master/gambling-hosts",
+      "category": "gambling",
+      "format": "hosts",
+      "enabled": false,
+      "description": "Gambling sites (family filter)"
+    },
+    {
+      "name": "Social Media Filter",
+      "url": "https://raw.githubusercontent.com/Sinfonietta/hostfiles/master/social-hosts",
+      "category": "social",
+      "format": "hosts",
+      "enabled": false,
+      "description": "Social media blocking (optional)"
+    },
+    {
+      "name": "Adult Content Filter",
+      "url": "https://raw.githubusercontent.com/Sinfonietta/hostfiles/master/pornography-hosts",
+      "category": "adult",
+      "format": "hosts",
+      "enabled": false,
+      "description": "Adult content blocking (family filter)"
     }
   ],
   "update_interval_hours": 24,
-  "last_updated": null
+  "last_updated": null,
+  "categories": {
+    "ads": {
+      "description": "Advertising and ad networks",
+      "priority": 1
+    },
+    "tracking": {
+      "description": "Analytics and user tracking",
+      "priority": 2
+    },
+    "malware": {
+      "description": "Malicious domains and malware distribution",
+      "priority": 1
+    },
+    "phishing": {
+      "description": "Phishing and credential theft",
+      "priority": 1
+    },
+    "cryptominers": {
+      "description": "Cryptocurrency mining scripts",
+      "priority": 2
+    },
+    "spam": {
+      "description": "Spam and scam domains",
+      "priority": 2
+    },
+    "gambling": {
+      "description": "Gambling sites (optional)",
+      "priority": 3
+    },
+    "social": {
+      "description": "Social media (optional)",
+      "priority": 3
+    },
+    "adult": {
+      "description": "Adult content (optional)",
+      "priority": 3
+    }
+  },
+  "presets": {
+    "minimal": {
+      "description": "Minimal blocking - ads only",
+      "enabled_categories": ["ads"]
+    },
+    "recommended": {
+      "description": "Recommended - ads, tracking, malware, phishing",
+      "enabled_categories": ["ads", "tracking", "malware", "phishing", "cryptominers", "spam"]
+    },
+    "strict": {
+      "description": "Strict - all categories",
+      "enabled_categories": ["ads", "tracking", "malware", "phishing", "cryptominers", "spam", "gambling"]
+    },
+    "family": {
+      "description": "Family - includes adult content blocking",
+      "enabled_categories": ["ads", "tracking", "malware", "phishing", "cryptominers", "spam", "gambling", "adult"]
+    }
+  }
 }

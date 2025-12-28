@@ -11,7 +11,8 @@
         "simulator": true
       },
       "android": {
-        "buildType": "apk"
+        "buildType": "apk",
+        "gradleCommand": ":app:assembleDebug"
       },
       "env": {
         "API_URL": "http://localhost:8080"
@@ -24,7 +25,8 @@
       },
       "android": {
         "buildType": "apk",
-        "withoutCredentials": true
+        "withoutCredentials": true,
+        "image": "ubuntu-22.04-jdk-17-ndk-r26b"
       },
       "env": {
         "API_URL": "https://api.shields-ai.greplabs.com"
@@ -38,7 +40,9 @@
       },
       "android": {
         "credentialsSource": "remote",
-        "buildType": "app-bundle"
+        "buildType": "app-bundle",
+        "gradleCommand": ":app:bundleRelease",
+        "image": "latest"
       },
       "env": {
         "API_URL": "https://api.shields-ai.greplabs.com"

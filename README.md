@@ -9,22 +9,42 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg)](http://makeapullrequest.com)
 
-<!-- Status Badges -->
-| Component | Tests | Build | Status |
-|-----------|-------|-------|--------|
-| **Rust Backend** | 17 passing | `cargo build --release` | ![Rust Tests](https://img.shields.io/badge/tests-17%20passing-brightgreen) |
-| **React Frontend** | 5 passing | `npm run build` | ![Frontend Tests](https://img.shields.io/badge/tests-5%20passing-brightgreen) |
-| **Total** | **22 tests** | All green | ![All Tests](https://img.shields.io/badge/all%20tests-22%20passing-brightgreen) |
+## Live Demo
 
-[![Deploy on Railway](https://railway.com/button.svg)](https://railway.com/template/shield-ai)
+| Service | URL |
+|---------|-----|
+| **Web Dashboard** | https://shields-ai.greplabs.com |
+| **API Backend** | https://api.shields-ai.greplabs.com |
+| **Health Check** | https://api.shields-ai.greplabs.com/health |
+| **DNS Profile** | [Download for macOS/iOS](https://shields-ai.greplabs.com/ShieldAI-DNS.mobileconfig) |
+
+**Launching February 1st, 2026**
 
 ```
-Memory: ~15MB | Latency: <1ms | Throughput: 100K+ QPS | 22 Tests Passing
+Memory: ~15MB | Latency: <1ms | Throughput: 100K+ QPS | 32 Tests Passing
 ```
 
 ---
 
-## Local Verification
+## Quick Test (No Install Required)
+
+```bash
+# Check if a domain is blocked
+curl "https://api.shields-ai.greplabs.com/api/dns/resolve/doubleclick.net"
+# {"domain":"doubleclick.net","ip_addresses":[],"blocked":true}
+
+# ML-powered threat analysis
+curl "https://api.shields-ai.greplabs.com/api/ml/analyze/suspicious-domain.xyz"
+# {"domain":"suspicious-domain.xyz","overall_risk":0.37,"risk_level":"medium"}
+
+# Resolve DNS
+curl "https://api.shields-ai.greplabs.com/api/dns/resolve/google.com"
+# {"domain":"google.com","ip_addresses":["142.251.46.206"],"blocked":false}
+```
+
+---
+
+## Local Development
 
 Run these commands to verify everything works locally:
 
@@ -126,24 +146,30 @@ cargo run --release --bin api-server  # API on :8080
 npm run dev                            # Dashboard on :3000
 ```
 
-### Try It Now (No Install)
+### GitHub Codespaces (One-Click)
+
+[![Open in GitHub Codespaces](https://github.com/codespaces/badge.svg)](https://codespaces.new/punitmishra/shield-ai)
 
 ```bash
-# Check if a domain is safe
-curl https://shield-ai-production.up.railway.app/api/ai/analyze/facebook.com
+# In Codespaces terminal:
+./scripts/setup.sh        # Download blocklists & configure
+cargo run --bin api-server # Start backend on port 8080
 
-# ML-powered DGA detection
-curl https://shield-ai-production.up.railway.app/api/ml/dga/xyzabc123random.com
-
-# Resolve DNS
-curl https://shield-ai-production.up.railway.app/api/dns/resolve/google.com
+# In another terminal:
+cd frontend && npm install && npm run dev  # Start frontend on port 3000
 ```
 
-**[📖 Full Getting Started Guide](docs/GETTING_STARTED.md)** - Docker, Cloud Deploy, Device Setup
+### Docker Compose
+
+```bash
+git clone https://github.com/punitmishra/shield-ai.git && cd shield-ai
+./scripts/setup.sh        # Download blocklists
+cd docker && docker-compose up -d
+```
 
 **Live Demo**:
-- API: https://shield-ai-production.up.railway.app/health
-- Dashboard: https://artistic-integrity-production.up.railway.app
+- Dashboard: https://shields-ai.greplabs.com
+- API: https://api.shields-ai.greplabs.com/health
 
 ## Features
 
@@ -324,86 +350,82 @@ graph TD
 
 ## API Reference
 
+Base URL: `https://api.shields-ai.greplabs.com`
+
 ### Health & Metrics
 ```bash
-curl https://your-domain.com/health
-# {"status":"healthy","version":"0.3.0","uptime_seconds":3600}
+curl https://api.shields-ai.greplabs.com/health
+# {"status":"healthy","version":"0.1.0","uptime_seconds":17944,"blocklist_size":130}
 
-curl https://your-domain.com/metrics
-# Prometheus format metrics
+curl https://api.shields-ai.greplabs.com/api/stats
+# {"total_queries":8,"blocked_queries":2,"cache_hit_rate":0.33,"block_rate":0.25}
 ```
 
 ### DNS Resolution
 ```bash
-curl https://your-domain.com/api/dns/resolve/google.com
-# {"domain":"google.com","ip_addresses":["142.250.80.46"],"blocked":false,"cached":true}
+# Allowed domain
+curl https://api.shields-ai.greplabs.com/api/dns/resolve/google.com
+# {"domain":"google.com","ip_addresses":["142.251.46.206"],"blocked":false,"query_time_ms":1}
+
+# Blocked domain
+curl https://api.shields-ai.greplabs.com/api/dns/resolve/doubleclick.net
+# {"domain":"doubleclick.net","ip_addresses":[],"blocked":true,"query_time_ms":0}
 
 # DNS-over-HTTPS (RFC 8484)
-curl "https://your-domain.com/dns-query?name=google.com&type=A"
+curl -H "Accept: application/dns-json" \
+  "https://api.shields-ai.greplabs.com/dns-query?name=example.com&type=A"
 ```
 
 ### ML/AI Analysis
 ```bash
+# ML Risk Analysis
+curl https://api.shields-ai.greplabs.com/api/ml/analyze/suspicious-domain.xyz
+# {"domain":"suspicious-domain.xyz","overall_risk":0.37,"risk_level":"medium","inference_time_us":61}
+
 # DGA Detection
-curl https://your-domain.com/api/ml/dga/suspicious-domain.com
-# {"domain":"suspicious-domain.com","is_dga":false,"confidence":0.85}
+curl https://api.shields-ai.greplabs.com/api/ml/dga/xkjhsdf8923jksdf.com
+# {"domain":"xkjhsdf8923jksdf.com","is_dga":false,"confidence":0.14}
 
 # Deep Analysis (AI + ML + Threat Intel)
-curl https://your-domain.com/api/deep/facebook.com
-# {"domain":"facebook.com","risk_score":0.15,"dga_analysis":{...},"threat_analysis":{...}}
-
-# AI Analysis
-curl https://your-domain.com/api/ai/analyze/facebook.com
-# {"domain":"facebook.com","threat_score":0.15,"privacy_score":{"score":35,"grade":"D"}}
+curl https://api.shields-ai.greplabs.com/api/deep/suspicious-domain.xyz
 ```
 
-### Threat Intelligence
+### Authentication
 ```bash
-curl https://your-domain.com/api/threat/analyze/suspicious.com
-# {"domain":"suspicious.com","risk_level":"medium","categories":["tracking"]}
+# Register
+curl -X POST https://api.shields-ai.greplabs.com/api/auth/register \
+  -H "Content-Type: application/json" \
+  -d '{"email":"user@example.com","password":"SecurePass123"}'
 
-curl https://your-domain.com/api/threat/feeds/stats
-# {"total_entries":15000,"sources":5,"last_update":"2024-12-21T00:00:00Z"}
+# Login
+curl -X POST https://api.shields-ai.greplabs.com/api/auth/login \
+  -H "Content-Type: application/json" \
+  -d '{"email":"user@example.com","password":"SecurePass123"}'
+# {"access_token":"eyJ...","refresh_token":"rt_...","expires_in":3600}
+
+# Protected endpoint
+curl https://api.shields-ai.greplabs.com/api/auth/me \
+  -H "Authorization: Bearer eyJ..."
 ```
 
 ### Management
 ```bash
-# Allowlist
-curl -X POST https://your-domain.com/api/allowlist \
-  -H "Content-Type: application/json" \
-  -d '{"domain":"example.com"}'
-
-# Blocklist
-curl -X POST https://your-domain.com/api/blocklist \
+# Add to blocklist
+curl -X POST https://api.shields-ai.greplabs.com/api/blocklist \
   -H "Content-Type: application/json" \
   -d '{"domain":"bad-domain.com"}'
 
-# Statistics
-curl https://your-domain.com/api/stats
-# {"total_queries":1000,"blocked_queries":150,"cache_hit_rate":0.8}
-
-# Query History
-curl https://your-domain.com/api/history
-# {"queries":[{"timestamp":1703123456,"domain":"google.com","blocked":false}]}
+# Add to allowlist
+curl -X POST https://api.shields-ai.greplabs.com/api/allowlist \
+  -H "Content-Type: application/json" \
+  -d '{"domain":"trusted-domain.com"}'
 
 # Privacy Metrics
-curl https://your-domain.com/api/privacy-metrics
-# {"privacy_score":85,"trackers_blocked":1234,"privacy_grade":"A"}
+curl https://api.shields-ai.greplabs.com/api/privacy-metrics
+# {"privacy_score":78,"privacy_grade":"C","trackers_blocked":3}
 
-# Devices
-curl https://your-domain.com/api/devices
-# {"devices":[{"id":"1","name":"Device 1","ip_address":"192.168.1.100"}]}
-```
-
-### Profiles & Tiers
-```bash
-# Create profile
-curl -X POST https://your-domain.com/api/profiles \
-  -H "Content-Type: application/json" \
-  -d '{"name":"Kids","protection_level":"strict"}'
-
-# Get pricing
-curl https://your-domain.com/api/tiers/pricing
+# Pricing
+curl https://api.shields-ai.greplabs.com/api/tiers/pricing
 ```
 
 ## Configuration
@@ -583,8 +605,19 @@ MIT License - see [LICENSE](LICENSE)
 
 **Built with Rust for speed, privacy, and reliability.**
 
-| Tests | Build | Coverage |
-|-------|-------|----------|
-| 17 Rust + 5 Frontend | ✅ Passing | Coming Soon |
+| Tests | Build | Status |
+|-------|-------|--------|
+| 21 Rust + 5 Frontend + 6 E2E | ✅ 32 Passing | Production |
 
-[GitHub](https://github.com/punitmishra/shield-ai) | [Demo](https://shield-ai-production.up.railway.app) | [Dashboard](https://artistic-integrity-production.up.railway.app) | [API Docs](docs/openapi.yaml)
+---
+
+## Links
+
+| Resource | URL |
+|----------|-----|
+| **Dashboard** | https://shields-ai.greplabs.com |
+| **API** | https://api.shields-ai.greplabs.com |
+| **GitHub** | https://github.com/punitmishra/shield-ai |
+| **Expo Project** | https://expo.dev/@punitmishra/shield-ai |
+| **DNS Profile** | https://shields-ai.greplabs.com/ShieldAI-DNS.mobileconfig |
+| **API Docs** | [OpenAPI Spec](docs/openapi.yaml) |
