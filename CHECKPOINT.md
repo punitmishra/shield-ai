@@ -1,7 +1,7 @@
 # Shield AI - Project Checkpoint & Memory Context
 
 ## Project State: v1.0.0-beta (Production Deployed)
-**Last Updated**: 2025-12-28 (Session 18)
+**Last Updated**: 2025-12-28 (Session 19)
 
 ---
 
@@ -267,7 +267,64 @@ All 8 auth endpoints tested and working:
 
 ## Session History
 
-### Session 2025-12-28 (Part 18 - Current)
+### Session 2025-12-28 (Part 19 - Current)
+**Blocklist Expansion, Codespaces Support & Android Build Fix**
+
+1. **Expanded Blocklist Sources** (6 → 28 sources):
+   - Added Pi-hole curated lists (Firebog)
+   - Added HaGeZi Multi and Threat Intelligence feeds
+   - Added Dan Pollock, Disconnect.me, NoTracking lists
+   - Added NoCoin Cryptominers, Spam404 lists
+   - Added category-based filtering: ads, tracking, malware, phishing, cryptominers, spam, gambling, social, adult
+   - Added presets: minimal, recommended, strict, family
+   - Potential coverage: 200K+ domains from all sources
+
+2. **Updated setup.sh Autoconfigure**:
+   - Downloads 17+ blocklists automatically
+   - Steven Black, AdGuard, OISD, Phishing Army, URLhaus
+   - Firebog curated lists, HaGeZi, NoCoin, Spam404, NoTracking
+   - Shows download progress with domain counts
+   - Creates .env and Docker environment files
+
+3. **Added GitHub Codespaces Support**:
+   - Created `.devcontainer/devcontainer.json`
+   - Rust 1.x with Node.js 20 features
+   - Docker-in-docker for development
+   - VS Code extensions: rust-analyzer, ESLint, Prettier, Tailwind
+   - Ports 3000 (frontend) and 8080 (API) auto-forwarded
+   - Post-create command runs setup.sh
+
+4. **Updated README.md**:
+   - Added Codespaces "Open in Codespaces" badge
+   - Added Quick Test section with curl commands
+   - Live production URLs table
+   - DNS profile download link
+
+5. **Android Build Fix Attempt**:
+   - Updated eas.json to use `ubuntu-22.04-jdk-17-ndk-r26b` image
+   - Previous builds failed with EAS_BUILD_UNKNOWN_GRADLE_ERROR
+   - JDK 17 required for React Native 0.81 / Gradle 8.x
+   - Build submitted: fbfd2ca6-5f11-405a-bfe3-a41329cf4de5
+
+6. **Comprehensive API Testing**:
+   - All 16 tests passing against production
+   - DNS blocking verified (doubleclick.net blocked, google.com allowed)
+   - ML analysis working (18µs inference time)
+   - Privacy metrics: score 80, grade B
+   - Auth endpoints all working
+
+7. **Files Changed**:
+   - `config/blocklist-sources.json` - 28 sources with categories and presets
+   - `scripts/setup.sh` - Enhanced with 17+ blocklist downloads
+   - `mobile/eas.json` - JDK 17 image for Android
+   - `.devcontainer/devcontainer.json` - NEW Codespaces config
+   - `README.md` - Updated with Codespaces and live URLs
+
+8. **Commit**: `65f40ee` - feat: Expand blocklists, add Codespaces support, update docs
+
+---
+
+### Session 2025-12-28 (Part 18)
 **Comprehensive Testing & Documentation**
 
 1. **Ran 16 API Tests Against Production**:
@@ -1047,7 +1104,7 @@ sheilds-ai/
 | **Backend** | ✅ Production Live | api.shields-ai.greplabs.com (Fly.io) |
 | **Frontend** | ✅ Production Live | shields-ai.greplabs.com (Vercel) |
 | **Auth** | ✅ Complete & Tested | JWT + refresh tokens, device registration |
-| **DNS Blocking** | ✅ Working | 130 domains blocked, 0ms response |
+| **DNS Blocking** | ✅ Working | 130+ domains (28 sources configured for 200K+), 0ms response |
 | **ML Analysis** | ✅ Working | 61µs inference, DGA detection |
 | **DoH (RFC 8484)** | ✅ Working | /dns-query endpoint |
 | **Mobile App** | ⚠️ Partial | iOS build complete, Android failing |
@@ -1412,7 +1469,7 @@ curl -s "https://api.shields-ai.greplabs.com/api/privacy-metrics"
 - cryptominers
 - gambling
 
-**Sources**: Steven Black, AdGuard, OISD, Phishing Army
+**Sources**: Steven Black, AdGuard, OISD, Phishing Army, Firebog, HaGeZi, Dan Pollock, Disconnect.me, NoTracking, NoCoin, Spam404, URLhaus (28 total sources configured)
 
 ---
 
