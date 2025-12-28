@@ -268,7 +268,7 @@ All 8 auth endpoints tested and working:
 ## Session History
 
 ### Session 2025-12-28 (Part 19 - Current)
-**Blocklist Expansion, Codespaces Support & Android Build Fix**
+**Blocklist Expansion, DoH Wire Format, iOS DNS Testing**
 
 1. **Expanded Blocklist Sources** (6 → 28 sources):
    - Added Pi-hole curated lists (Firebog)
@@ -279,48 +279,55 @@ All 8 auth endpoints tested and working:
    - Added presets: minimal, recommended, strict, family
    - Potential coverage: 200K+ domains from all sources
 
-2. **Updated setup.sh Autoconfigure**:
-   - Downloads 17+ blocklists automatically
-   - Steven Black, AdGuard, OISD, Phishing Army, URLhaus
-   - Firebog curated lists, HaGeZi, NoCoin, Spam404, NoTracking
-   - Shows download progress with domain counts
-   - Creates .env and Docker environment files
+2. **DNS-over-HTTPS Wire Format Support** (RFC 8484):
+   - Added POST method support for `/dns-query` endpoint
+   - iOS/macOS send POST with binary DNS message in body
+   - Parse base64url encoded DNS queries (`?dns=` parameter)
+   - Build proper DNS wire format responses
+   - Added `base64` crate dependency
+   - Both GET (JSON) and POST (wire) formats now supported
 
-3. **Added GitHub Codespaces Support**:
+3. **iOS DNS Profile Updates**:
+   - Added `OnDemandRules` with Action "Connect"
+   - Added `ServerAddresses` fallback (1.1.1.1, 8.8.8.8)
+   - Updated PayloadUUIDs for fresh installation
+   - **Note**: Unsigned profiles have limitations on iOS - may need signing or VPN approach
+
+4. **Firefox iOS DoH Testing**:
+   - Configured Firefox with custom DoH URL
+   - DNS queries successfully reaching server (verified in logs)
+   - Wire format parsing and response working
+   - **Status**: Queries arriving but blocking behavior needs more debugging
+
+5. **Added Domains to Blocklist**:
+   - ads.google.com, google-analytics.com, googleadservices.com
+   - pagead2.googlesyndication.com, ad.doubleclick.net
+   - www.googletagmanager.com
+   - Total: 135 blocked domains
+
+6. **GitHub Codespaces Support**:
    - Created `.devcontainer/devcontainer.json`
-   - Rust 1.x with Node.js 20 features
-   - Docker-in-docker for development
-   - VS Code extensions: rust-analyzer, ESLint, Prettier, Tailwind
-   - Ports 3000 (frontend) and 8080 (API) auto-forwarded
-   - Post-create command runs setup.sh
-
-4. **Updated README.md**:
-   - Added Codespaces "Open in Codespaces" badge
-   - Added Quick Test section with curl commands
-   - Live production URLs table
-   - DNS profile download link
-
-5. **Android Build Fix Attempt**:
-   - Updated eas.json to use `ubuntu-22.04-jdk-17-ndk-r26b` image
-   - Previous builds failed with EAS_BUILD_UNKNOWN_GRADLE_ERROR
-   - JDK 17 required for React Native 0.81 / Gradle 8.x
-   - Build submitted: fbfd2ca6-5f11-405a-bfe3-a41329cf4de5
-
-6. **Comprehensive API Testing**:
-   - All 16 tests passing against production
-   - DNS blocking verified (doubleclick.net blocked, google.com allowed)
-   - ML analysis working (18µs inference time)
-   - Privacy metrics: score 80, grade B
-   - Auth endpoints all working
+   - Rust 1.x with Node.js 20, Docker-in-docker
+   - Auto-runs setup.sh on creation
 
 7. **Files Changed**:
-   - `config/blocklist-sources.json` - 28 sources with categories and presets
-   - `scripts/setup.sh` - Enhanced with 17+ blocklist downloads
-   - `mobile/eas.json` - JDK 17 image for Android
+   - `crates/api-server/src/handlers.rs` - Wire format parsing, POST handler
+   - `crates/api-server/src/main.rs` - Added POST route for dns-query
+   - `crates/api-server/Cargo.toml` - Added base64 dependency
+   - `frontend/public/ShieldAI-DNS.mobileconfig` - OnDemandRules, ServerAddresses
+   - `config/blocklist-sources.json` - 28 sources with categories
    - `.devcontainer/devcontainer.json` - NEW Codespaces config
-   - `README.md` - Updated with Codespaces and live URLs
 
-8. **Commit**: `65f40ee` - feat: Expand blocklists, add Codespaces support, update docs
+8. **Commits**:
+   - `65f40ee` - feat: Expand blocklists, add Codespaces support
+   - `959a6b4` - feat: Add DNS wire format support for iOS/macOS DoH
+   - `ce6ee5d` - fix: Add OnDemandRules to iOS DNS profile
+
+9. **Known Issues to Debug Next Session**:
+   - iOS DNS profile installs but may not activate (unsigned profile limitation)
+   - Firefox iOS DoH queries reaching server but blocking not confirmed in browser
+   - Consider: Sign profile with Apple Developer cert, or use VPN-based DNS approach
+   - Android EAS build status unknown (requires EAS login to check)
 
 ---
 
