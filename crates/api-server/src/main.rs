@@ -105,6 +105,7 @@ async fn main() -> Result<()> {
         .route("/api/filter/categories/enabled", get(handlers::get_enabled_categories))
         .route("/api/filter/categories/:category", put(handlers::toggle_category))
         .route("/api/filter/profile/ip", post(handlers::assign_profile_to_ip))
+        .route("/api/filter/refresh", post(handlers::refresh_blocklists))
         // Tier management endpoints
         .route("/api/tiers/pricing", get(handlers::get_pricing))
         .route("/api/tiers/check", post(handlers::check_feature))

@@ -1,7 +1,7 @@
 # Shield AI - Project Checkpoint & Memory Context
 
 ## Project State: v1.0.0-beta (Production Deployed)
-**Last Updated**: 2026-01-04 (Session 20)
+**Last Updated**: 2026-01-04 (Session 21)
 
 ---
 
@@ -44,7 +44,7 @@ flowchart TB
     end
 
     subgraph API["API Gateway (Axum :8080)"]
-        REST["44 REST Endpoints"]
+        REST["51 REST Endpoints"]
         WSS["WebSocket Server"]
         DoH["DNS-over-HTTPS"]
         Auth["JWT Auth Middleware"]
@@ -113,7 +113,7 @@ sequenceDiagram
 
 | Crate | Purpose | Status | Tests |
 |-------|---------|--------|-------|
-| `shield-dns-core` | DNS resolution, caching, unified filtering | ✅ Complete | 7 |
+| `shield-dns-core` | DNS resolution, caching, unified filtering | ✅ Complete | 9 |
 | `shield-api-server` | REST API, WebSocket, handlers | ✅ Complete | 0 |
 | `shield-ai-engine` | AI-powered domain analysis | ✅ Complete | 0 |
 | `shield-ml-engine` | DGA detection, risk ranking | ✅ Complete | 5 |
@@ -125,7 +125,7 @@ sequenceDiagram
 | `shield-auth` | JWT auth, device registration | ✅ Complete | 4 |
 | `shield-db` | SQLite persistence | ✅ Complete | 5 |
 
-**Total Rust Tests**: 37 passing
+**Total Rust Tests**: 39 passing
 
 ---
 
@@ -157,7 +157,7 @@ sequenceDiagram
 
 ---
 
-## API Endpoints (50 Total)
+## API Endpoints (51 Total)
 
 ### Authentication (8 endpoints) - NEW
 | Method | Endpoint | Auth | Description |
@@ -212,13 +212,14 @@ sequenceDiagram
 - `GET/DELETE /api/profiles/:id` - Single profile
 - `POST /api/profiles/device` - Assign device
 
-### Unified Filter (6 new endpoints)
+### Unified Filter (7 endpoints)
 - `GET /api/filter/stats` - Unified filter statistics (total blocked, by category)
 - `GET /api/filter/check/:domain` - Check if domain blocked with detailed reason
 - `GET /api/filter/categories` - List available blocking categories
 - `GET /api/filter/categories/enabled` - List currently enabled categories
 - `PUT /api/filter/categories/:category` - Toggle category on/off
 - `POST /api/filter/profile/ip` - Assign device profile to IP address
+- `POST /api/filter/refresh` - Manually refresh blocklists from remote sources
 
 ### Tiers
 - `GET /api/tiers/pricing` - Pricing info ($0.99/mo, $7.99/yr)
@@ -277,7 +278,51 @@ All 8 auth endpoints tested and working:
 
 ## Session History
 
-### Session 2026-01-04 (Part 20 - Current)
+### Session 2026-01-04 (Part 21 - Current)
+**Blocklist Refresh Endpoint & Test Coverage**
+
+**Improvements Made:**
+
+1. **Blocklist Refresh API Endpoint**:
+   - `POST /api/filter/refresh` - Manually trigger blocklist refresh from remote sources
+   - Returns detailed stats: total domains loaded, sources loaded/failed, domains by category
+   - Useful for ensuring blocklists are fully loaded after server restart
+
+2. **Enhanced Ad Blocking in Default Blocklist**:
+   - Uncommented google-analytics.com and analytics.google.com in ads.txt
+   - Added googletagmanager.com and googletagservices.com
+   - These are now blocked by default
+
+3. **New Unit Tests for Ad Blocking**:
+   - `test_default_ads_blocked` - Verifies common ad domains (doubleclick.net, googlesyndication.com, etc.) are blocked by default
+   - `test_filter_result_details` - Verifies FilterResult contains proper category info
+
+**Test Results:**
+- 9 DNS core tests passing (was 7)
+- Added 2 new tests for ad blocking verification
+
+**Files Changed:**
+- `crates/api-server/src/handlers.rs` - Added `refresh_blocklists` endpoint
+- `crates/api-server/src/main.rs` - Added route for `/api/filter/refresh`
+- `crates/dns-core/src/unified_filter.rs` - Added 2 new tests
+- `config/blocklists/ads.txt` - Enabled analytics blocking by default
+
+**New Endpoint:**
+```
+POST /api/filter/refresh
+Response: {
+  "success": true,
+  "total_domains": 150000,
+  "sources_loaded": 20,
+  "sources_failed": 2,
+  "by_category": {"ads": 80000, "tracking": 30000, ...},
+  "message": "Loaded 150000 domains from 20 sources (2 failed)"
+}
+```
+
+---
+
+### Session 2026-01-04 (Part 20)
 **Unified Filter Engine: Fixed Ads Blocking & Profile Integration**
 
 **Issues Identified & Fixed:**
@@ -1207,8 +1252,8 @@ sheilds-ai/
 | **DoH (RFC 8484)** | ✅ Working | GET/POST with profile-aware filtering |
 | **Mobile App** | ⚠️ Partial | iOS build complete, Android failing |
 | **DNS Profile** | ✅ Available | macOS/iOS profile download |
-| **API Endpoints** | ✅ 50 Total | 6 new filter management endpoints |
-| **Rust Tests** | ✅ 37 Passing | +16 new tests for unified filter |
+| **API Endpoints** | ✅ 51 Total | 7 filter management endpoints |
+| **Rust Tests** | ✅ 39 Passing | +2 new tests for ad blocking verification |
 | **Documentation** | ✅ Complete | API guide, test cases, setup instructions |
 
 ### Production Metrics (Live)

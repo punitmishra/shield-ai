@@ -421,4 +421,36 @@ mod tests {
         // Allowlist wins
         assert!(!filter.is_blocked("allowed.example.com"));
     }
+
+    #[test]
+    fn test_default_ads_blocked() {
+        let legacy = Arc::new(FilterEngine::new());
+        let filter = UnifiedFilter::new(legacy);
+
+        // These common ad domains should be blocked by default embedded list
+        assert!(filter.is_blocked("doubleclick.net"), "doubleclick.net should be blocked");
+        assert!(filter.is_blocked("googlesyndication.com"), "googlesyndication.com should be blocked");
+        assert!(filter.is_blocked("googleadservices.com"), "googleadservices.com should be blocked");
+        assert!(filter.is_blocked("adnxs.com"), "adnxs.com should be blocked");
+        assert!(filter.is_blocked("criteo.com"), "criteo.com should be blocked");
+
+        // Safe domains should not be blocked
+        assert!(!filter.is_blocked("google.com"), "google.com should NOT be blocked");
+        assert!(!filter.is_blocked("github.com"), "github.com should NOT be blocked");
+    }
+
+    #[test]
+    fn test_filter_result_details() {
+        let legacy = Arc::new(FilterEngine::new());
+        let filter = UnifiedFilter::new(legacy);
+
+        // Check a blocked domain and verify the filter result
+        let result = filter.check("doubleclick.net", None);
+        assert_eq!(result.decision, crate::filter::FilterDecision::Block);
+        assert!(result.category.is_some(), "Category should be set for blocked domain");
+
+        // Check an allowed domain
+        let result = filter.check("example.com", None);
+        assert_eq!(result.decision, crate::filter::FilterDecision::Allow);
+    }
 }

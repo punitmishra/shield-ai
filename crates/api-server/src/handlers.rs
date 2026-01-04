@@ -1561,6 +1561,52 @@ pub async fn get_enabled_categories(State(state): State<Arc<AppState>>) -> Json<
     Json(state.unified_filter.get_enabled_categories())
 }
 
+/// Refresh blocklists from remote sources
+#[derive(Serialize)]
+pub struct BlocklistRefreshResponse {
+    pub success: bool,
+    pub total_domains: usize,
+    pub sources_loaded: usize,
+    pub sources_failed: usize,
+    pub by_category: HashMap<String, usize>,
+    pub message: String,
+}
+
+pub async fn refresh_blocklists(State(state): State<Arc<AppState>>) -> Json<BlocklistRefreshResponse> {
+    info!("Manual blocklist refresh triggered");
+
+    match state.unified_filter.init_blocklists("config/blocklist-sources.json").await {
+        Ok(stats) => {
+            info!(
+                "Blocklist refresh complete: {} domains from {} sources",
+                stats.total_domains, stats.sources_loaded
+            );
+            Json(BlocklistRefreshResponse {
+                success: true,
+                total_domains: stats.total_domains,
+                sources_loaded: stats.sources_loaded,
+                sources_failed: stats.sources_failed,
+                by_category: stats.by_category,
+                message: format!(
+                    "Loaded {} domains from {} sources ({} failed)",
+                    stats.total_domains, stats.sources_loaded, stats.sources_failed
+                ),
+            })
+        }
+        Err(e) => {
+            warn!("Blocklist refresh failed: {}", e);
+            Json(BlocklistRefreshResponse {
+                success: false,
+                total_domains: 0,
+                sources_loaded: 0,
+                sources_failed: 0,
+                by_category: HashMap::new(),
+                message: format!("Failed to refresh blocklists: {}", e),
+            })
+        }
+    }
+}
+
 // ============================================================================
 // Tier Management Endpoints
 // ============================================================================
