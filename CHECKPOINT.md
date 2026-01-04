@@ -1,7 +1,7 @@
 # Shield AI - Project Checkpoint & Memory Context
 
 ## Project State: v1.0.0-beta (Production Deployed)
-**Last Updated**: 2025-12-28 (Session 19)
+**Last Updated**: 2026-01-04 (Session 20)
 
 ---
 
@@ -50,12 +50,13 @@ flowchart TB
         Auth["JWT Auth Middleware"]
     end
 
-    subgraph Core["Core Services (10 Rust Crates)"]
+    subgraph Core["Core Services (11 Rust Crates)"]
         DNS["DNS Engine"]
         ML["ML Engine"]
         AI["AI Engine"]
         TI["Threat Intel"]
-        Filter["Filter Engine"]
+        Filter["Unified Filter"]
+        Blocklist["Blocklist Manager"]
         Metrics["Metrics"]
         AuthSvc["Auth Service"]
     end
@@ -112,7 +113,7 @@ sequenceDiagram
 
 | Crate | Purpose | Status | Tests |
 |-------|---------|--------|-------|
-| `shield-dns-core` | DNS resolution, caching, filtering | ✅ Complete | 0 |
+| `shield-dns-core` | DNS resolution, caching, unified filtering | ✅ Complete | 7 |
 | `shield-api-server` | REST API, WebSocket, handlers | ✅ Complete | 0 |
 | `shield-ai-engine` | AI-powered domain analysis | ✅ Complete | 0 |
 | `shield-ml-engine` | DGA detection, risk ranking | ✅ Complete | 5 |
@@ -122,8 +123,9 @@ sequenceDiagram
 | `shield-tiers` | Subscription tier management | ✅ Complete | 3 |
 | `shield-plugin-system` | WASM extensibility framework | ✅ Complete | 4 |
 | `shield-auth` | JWT auth, device registration | ✅ Complete | 4 |
+| `shield-db` | SQLite persistence | ✅ Complete | 5 |
 
-**Total Rust Tests**: 21 passing
+**Total Rust Tests**: 37 passing
 
 ---
 
@@ -155,7 +157,7 @@ sequenceDiagram
 
 ---
 
-## API Endpoints (44 Total)
+## API Endpoints (50 Total)
 
 ### Authentication (8 endpoints) - NEW
 | Method | Endpoint | Auth | Description |
@@ -210,6 +212,14 @@ sequenceDiagram
 - `GET/DELETE /api/profiles/:id` - Single profile
 - `POST /api/profiles/device` - Assign device
 
+### Unified Filter (6 new endpoints)
+- `GET /api/filter/stats` - Unified filter statistics (total blocked, by category)
+- `GET /api/filter/check/:domain` - Check if domain blocked with detailed reason
+- `GET /api/filter/categories` - List available blocking categories
+- `GET /api/filter/categories/enabled` - List currently enabled categories
+- `PUT /api/filter/categories/:category` - Toggle category on/off
+- `POST /api/filter/profile/ip` - Assign device profile to IP address
+
 ### Tiers
 - `GET /api/tiers/pricing` - Pricing info ($0.99/mo, $7.99/yr)
 - `POST /api/tiers/check` - Feature check
@@ -246,10 +256,10 @@ All 8 auth endpoints tested and working:
 
 | Component | Framework | Tests | Status |
 |-----------|-----------|-------|--------|
-| Rust Workspace | cargo test | 21 | ✅ Passing |
+| Rust Workspace | cargo test | 37 | ✅ Passing |
 | Frontend | Vitest | 5 | ✅ Passing |
 | E2E | Playwright | 6 | ✅ Passing |
-| **Total** | - | **32** | ✅ All Green |
+| **Total** | - | **48** | ✅ All Green |
 
 ---
 
@@ -267,7 +277,86 @@ All 8 auth endpoints tested and working:
 
 ## Session History
 
-### Session 2025-12-28 (Part 19 - Current)
+### Session 2026-01-04 (Part 20 - Current)
+**Unified Filter Engine: Fixed Ads Blocking & Profile Integration**
+
+**Issues Identified & Fixed:**
+
+1. **Ads Not Blocking** - Blocklist sources in `config/blocklist-sources.json` defined 20+ URLs but:
+   - No code was fetching remote blocklists
+   - Only looked for local files in `config/blocklists/*.txt` (which didn't exist)
+   - **Fix**: Created `BlocklistManager` to fetch, parse, and cache remote blocklists
+
+2. **Profiles Not Working** - `ProfileManager.is_domain_allowed_for_device()` existed but:
+   - Never called during DNS resolution
+   - Handlers only checked `state.filter.is_blocked()` ignoring profiles
+   - **Fix**: Created `UnifiedFilter` combining blocklists + categories + profiles
+
+**New Files Created:**
+
+| File | Purpose |
+|------|---------|
+| `crates/dns-core/src/blocklist_fetcher.rs` | Fetches/parses remote blocklists (hosts, adblock, domain formats) |
+| `crates/dns-core/src/unified_filter.rs` | Combines blocklists, categories, and per-device profiles |
+
+**Key Changes:**
+
+1. **BlocklistManager** (`blocklist_fetcher.rs`):
+   - Fetches blocklists from URLs defined in config
+   - Parses hosts format (`0.0.0.0 domain.com`, `127.0.0.1 domain.com`)
+   - Parses adblock format (`||domain.com^`)
+   - Parses plain domain lists
+   - Category-based filtering (ads, tracking, malware, phishing, adult, gambling, social, cryptominers)
+   - Default embedded blocklist with 60+ common ad/tracking domains
+   - Wildcard pattern support (`*.example.com`)
+
+2. **UnifiedFilter** (`unified_filter.rs`):
+   - Combines `BlocklistManager` + `FilterEngine` + per-device profiles
+   - Profile priority chain: Global Allowlist → Profile Allowlist → Profile Blocklist → Global Blocklist → Category Blocks → Default Allow
+   - Each device IP can have custom `DeviceProfile` with:
+     - `blocked_categories`: Which categories to block for this device
+     - `custom_blocklist`: Additional domains to block
+     - `custom_allowlist`: Domains to always allow
+   - Full filter result includes: decision, reason, category, profile name
+
+3. **Handler Updates**:
+   - `resolve_domain`: Now extracts client IP, passes to `unified_filter.check()`
+   - `doh_query` (GET): Now uses unified filter with client IP
+   - `doh_query_post` (POST): Now uses unified filter with client IP
+   - `doh_query_wire_format`: Updated signature to accept client IP
+
+4. **New API Endpoints** (6 total):
+   - `GET /api/filter/stats` - Filter statistics (total blocked, by category)
+   - `GET /api/filter/check/:domain` - Check if domain blocked with detailed info
+   - `GET /api/filter/categories` - Available blocking categories
+   - `GET /api/filter/categories/enabled` - Currently enabled categories
+   - `PUT /api/filter/categories/:category` - Toggle category on/off
+   - `POST /api/filter/profile/ip` - Assign device profile to IP
+
+5. **AppState Changes**:
+   - Added `unified_filter: Arc<UnifiedFilter>` field
+   - Initializes unified filter on startup
+   - Spawns async task to fetch remote blocklists (non-blocking)
+
+**Test Results:**
+- 37 tests passing (up from 21)
+- New tests: `test_hosts_parsing`, `test_adblock_parsing`, `test_domain_blocking`, `test_category_filtering`, `test_unified_filter_basic`, `test_profile_based_filtering`, `test_allowlist_priority`
+
+**Files Changed:**
+- `crates/dns-core/src/blocklist_fetcher.rs` - NEW (520 lines)
+- `crates/dns-core/src/unified_filter.rs` - NEW (340 lines)
+- `crates/dns-core/src/lib.rs` - Added module exports
+- `crates/dns-core/src/filter.rs` - Added Serialize/Deserialize to FilterDecision
+- `crates/dns-core/Cargo.toml` - Added reqwest dependency
+- `crates/api-server/src/handlers.rs` - Updated DNS handlers, added 6 new endpoints
+- `crates/api-server/src/state.rs` - Added unified_filter to AppState
+- `crates/api-server/src/main.rs` - Added routes for new endpoints
+
+**Commit**: `ee1081d` - feat: Add unified filter with profile-aware ad blocking
+
+---
+
+### Session 2025-12-28 (Part 19)
 **Blocklist Expansion, DoH Wire Format, iOS DNS Testing**
 
 1. **Expanded Blocklist Sources** (6 → 28 sources):
@@ -1111,20 +1200,23 @@ sheilds-ai/
 | **Backend** | ✅ Production Live | api.shields-ai.greplabs.com (Fly.io) |
 | **Frontend** | ✅ Production Live | shields-ai.greplabs.com (Vercel) |
 | **Auth** | ✅ Complete & Tested | JWT + refresh tokens, device registration |
-| **DNS Blocking** | ✅ Working | 130+ domains (28 sources configured for 200K+), 0ms response |
+| **DNS Blocking** | ✅ Fixed & Enhanced | Unified filter with category-based blocking + profiles |
+| **Profile Filtering** | ✅ Fixed | Per-device profiles now integrated into DNS resolution |
+| **Blocklist Fetcher** | ✅ New | Fetches remote blocklists (hosts, adblock, domain formats) |
 | **ML Analysis** | ✅ Working | 61µs inference, DGA detection |
-| **DoH (RFC 8484)** | ✅ Working | /dns-query endpoint |
+| **DoH (RFC 8484)** | ✅ Working | GET/POST with profile-aware filtering |
 | **Mobile App** | ⚠️ Partial | iOS build complete, Android failing |
 | **DNS Profile** | ✅ Available | macOS/iOS profile download |
-| **API Tests** | ✅ 16/16 Passing | All endpoints verified |
-| **Uptime** | ✅ Healthy | 17944+ seconds |
+| **API Endpoints** | ✅ 50 Total | 6 new filter management endpoints |
+| **Rust Tests** | ✅ 37 Passing | +16 new tests for unified filter |
 | **Documentation** | ✅ Complete | API guide, test cases, setup instructions |
 
 ### Production Metrics (Live)
 
 | Metric | Value |
 |--------|-------|
-| Blocklist Size | 130 domains |
+| Blocklist Size | 130+ embedded + remote sources |
+| Categories | 8 (ads, tracking, malware, phishing, adult, gambling, social, cryptominers) |
 | Cache Hit Rate | 33% |
 | Block Rate | 25% |
 | ML Inference | 61µs |
