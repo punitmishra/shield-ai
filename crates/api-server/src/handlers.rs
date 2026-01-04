@@ -3,12 +3,13 @@
 use axum::{
     extract::{
         ws::{Message, WebSocket, WebSocketUpgrade},
-        Path, Query, State,
+        ConnectInfo, Path, Query, State,
     },
     http::StatusCode,
     response::Response,
     Json,
 };
+use std::net::SocketAddr;
 use futures::{SinkExt, StreamExt};
 use serde::{Deserialize, Serialize};
 use shield_metrics::QueryLogEntry;
@@ -23,6 +24,7 @@ use chrono::Utc;
 use shield_db::models::{DbAllowlistEntry, DbBlocklistEntry};
 
 // Re-exports for API responses
+pub use shield_dns_core::unified_filter::FilterReason;
 pub use shield_ml_engine::{AnalyticsSnapshot, DeepRiskAnalysis};
 pub use shield_profiles::{Profile, ProfileStats, ProtectionLevel};
 pub use shield_threat_intel::{ThreatAnalysis, ThreatCategory};
@@ -368,10 +370,13 @@ pub async fn analyze_domain(
 pub async fn doh_query(
     Query(params): Query<DohQuery>,
     State(state): State<Arc<AppState>>,
+    connect_info: Option<ConnectInfo<SocketAddr>>,
 ) -> Result<Json<DohResponse>, (StatusCode, Json<ErrorResponse>)> {
+    let client_ip = connect_info.map(|ci| ci.0.ip());
+
     // Check for wire format first (iOS/macOS use this)
     if let Some(ref dns_query) = params.dns {
-        return doh_query_wire_format(dns_query, state).await;
+        return doh_query_wire_format(dns_query, state, client_ip).await;
     }
 
     // Fall back to JSON format
@@ -401,11 +406,20 @@ pub async fn doh_query(
 
     info!("DoH query (JSON): {} type={}", domain, record_type);
 
-    // Check if blocked
-    if state.filter.is_blocked(&domain) {
+    // Use unified filter with client IP for profile-aware blocking
+    let filter_result = state.unified_filter.check(&domain, client_ip);
+
+    if filter_result.decision == shield_dns_core::filter::FilterDecision::Block {
+        let client_ip_str = client_ip.map(|ip| ip.to_string()).unwrap_or_else(|| "unknown".to_string());
         state
             .metrics
-            .record_query_with_details(domain.clone(), "0.0.0.0".to_string(), true, 0);
+            .record_query_with_details(domain.clone(), client_ip_str, true, 0);
+
+        debug!(
+            "DoH blocked: {} (reason: {:?}, category: {:?})",
+            domain, filter_result.reason, filter_result.category
+        );
+
         return Ok(Json(DohResponse {
             status: 3, // NXDOMAIN
             truncated: false,
@@ -473,9 +487,12 @@ pub async fn doh_query(
 /// iOS/macOS send POST requests with binary DNS message in body
 pub async fn doh_query_post(
     State(state): State<Arc<AppState>>,
+    connect_info: Option<ConnectInfo<SocketAddr>>,
     body: axum::body::Bytes,
 ) -> Result<impl axum::response::IntoResponse, (StatusCode, Json<ErrorResponse>)> {
     use base64::{engine::general_purpose::STANDARD, Engine};
+
+    let client_ip = connect_info.map(|ci| ci.0.ip());
 
     // Convert body bytes to base64 for parsing
     let dns_base64 = STANDARD.encode(&body);
@@ -496,12 +513,20 @@ pub async fn doh_query_post(
 
     info!("DoH POST query: {} type={}", domain, record_type_num);
 
-    // Check if blocked
-    let blocked = state.filter.is_blocked(&domain);
+    // Use unified filter with client IP for profile-aware blocking
+    let filter_result = state.unified_filter.check(&domain, client_ip);
+    let blocked = filter_result.decision == shield_dns_core::filter::FilterDecision::Block;
+
     if blocked {
+        let client_ip_str = client_ip.map(|ip| ip.to_string()).unwrap_or_else(|| "unknown".to_string());
         state
             .metrics
-            .record_query_with_details(domain.clone(), "0.0.0.0".to_string(), true, 0);
+            .record_query_with_details(domain.clone(), client_ip_str, true, 0);
+
+        debug!(
+            "DoH POST blocked: {} (reason: {:?}, category: {:?})",
+            domain, filter_result.reason, filter_result.category
+        );
     }
 
     // Resolve domain if not blocked
@@ -534,6 +559,7 @@ pub async fn doh_query_post(
 async fn doh_query_wire_format(
     dns_base64: &str,
     state: Arc<AppState>,
+    client_ip: Option<std::net::IpAddr>,
 ) -> Result<Json<DohResponse>, (StatusCode, Json<ErrorResponse>)> {
     // Parse the DNS query
     let (domain, record_type_num) = match parse_dns_wire_query(dns_base64) {
@@ -551,11 +577,20 @@ async fn doh_query_wire_format(
 
     info!("DoH query (wire): {} type={}", domain, record_type_num);
 
-    // Check if blocked
-    if state.filter.is_blocked(&domain) {
+    // Use unified filter with client IP for profile-aware blocking
+    let filter_result = state.unified_filter.check(&domain, client_ip);
+
+    if filter_result.decision == shield_dns_core::filter::FilterDecision::Block {
+        let client_ip_str = client_ip.map(|ip| ip.to_string()).unwrap_or_else(|| "unknown".to_string());
         state
             .metrics
-            .record_query_with_details(domain.clone(), "0.0.0.0".to_string(), true, 0);
+            .record_query_with_details(domain.clone(), client_ip_str, true, 0);
+
+        debug!(
+            "DoH wire blocked: {} (reason: {:?}, category: {:?})",
+            domain, filter_result.reason, filter_result.category
+        );
+
         return Ok(Json(DohResponse {
             status: 3, // NXDOMAIN
             truncated: false,
@@ -915,8 +950,10 @@ pub async fn bulk_add_to_blocklist(
 pub async fn resolve_domain(
     Path(domain): Path<String>,
     State(state): State<Arc<AppState>>,
+    connect_info: Option<ConnectInfo<SocketAddr>>,
 ) -> Result<Json<DnsResolveResponse>, Json<ErrorResponse>> {
     let start = std::time::Instant::now();
+    let client_ip = connect_info.map(|ci| ci.0.ip());
 
     // Validate domain
     if domain.is_empty() || domain.len() > 253 {
@@ -939,17 +976,23 @@ pub async fn resolve_domain(
         }));
     }
 
-    // Check if blocked
-    if state.resolver.is_blocked(&domain) {
+    // Use unified filter with client IP for profile-aware filtering
+    let filter_result = state.unified_filter.check(&domain, client_ip);
+
+    if filter_result.decision == shield_dns_core::filter::FilterDecision::Block {
         let query_time_ms = start.elapsed().as_millis() as u64;
+        let client_ip_str = client_ip.map(|ip| ip.to_string()).unwrap_or_else(|| "unknown".to_string());
         state.metrics.record_query_with_details(
             domain.clone(),
-            "0.0.0.0".to_string(),
+            client_ip_str,
             true,
             query_time_ms,
         );
 
-        debug!("Blocked domain: {} in {}ms", domain, query_time_ms);
+        debug!(
+            "Blocked domain: {} in {}ms (reason: {:?}, category: {:?})",
+            domain, query_time_ms, filter_result.reason, filter_result.category
+        );
 
         return Ok(Json(DnsResolveResponse {
             domain,
@@ -1378,6 +1421,144 @@ pub async fn assign_device(
 /// Get profile stats
 pub async fn profile_stats(State(state): State<Arc<AppState>>) -> Json<ProfileStats> {
     Json(state.profiles.stats())
+}
+
+// ============================================================================
+// Unified Filter Management Endpoints
+// ============================================================================
+
+use shield_dns_core::unified_filter::{DeviceProfile, UnifiedFilterStats};
+
+/// Get unified filter statistics
+pub async fn unified_filter_stats(State(state): State<Arc<AppState>>) -> Json<UnifiedFilterStats> {
+    Json(state.unified_filter.stats())
+}
+
+/// Check if a domain is blocked with full details
+#[derive(Serialize)]
+pub struct BlockCheckResponse {
+    pub domain: String,
+    pub blocked: bool,
+    pub reason: Option<FilterReason>,
+    pub category: Option<String>,
+    pub profile_name: Option<String>,
+}
+
+pub async fn check_domain_blocking(
+    Path(domain): Path<String>,
+    State(state): State<Arc<AppState>>,
+    connect_info: Option<ConnectInfo<SocketAddr>>,
+) -> Json<BlockCheckResponse> {
+    let client_ip = connect_info.map(|ci| ci.0.ip());
+    let result = state.unified_filter.check(&domain, client_ip);
+
+    Json(BlockCheckResponse {
+        domain,
+        blocked: result.decision == shield_dns_core::filter::FilterDecision::Block,
+        reason: Some(result.reason),
+        category: result.category,
+        profile_name: result.profile_name,
+    })
+}
+
+/// Assign a device profile by IP address
+#[derive(Deserialize)]
+pub struct AssignProfileToIpRequest {
+    pub ip_address: String,
+    pub profile_name: String,
+    pub blocked_categories: Vec<String>,
+    pub custom_blocklist: Option<Vec<String>>,
+    pub custom_allowlist: Option<Vec<String>>,
+}
+
+#[derive(Serialize)]
+pub struct AssignProfileResponse {
+    pub success: bool,
+    pub message: String,
+}
+
+pub async fn assign_profile_to_ip(
+    State(state): State<Arc<AppState>>,
+    Json(request): Json<AssignProfileToIpRequest>,
+) -> Json<AssignProfileResponse> {
+    let ip: std::net::IpAddr = match request.ip_address.parse() {
+        Ok(ip) => ip,
+        Err(_) => {
+            return Json(AssignProfileResponse {
+                success: false,
+                message: "Invalid IP address format".to_string(),
+            });
+        }
+    };
+
+    let profile = DeviceProfile {
+        id: format!("ip-{}", request.ip_address),
+        name: request.profile_name.clone(),
+        blocked_categories: request.blocked_categories,
+        custom_blocklist: request.custom_blocklist.unwrap_or_default(),
+        custom_allowlist: request.custom_allowlist.unwrap_or_default(),
+        enabled: true,
+    };
+
+    state.unified_filter.assign_profile_to_ip(ip, profile);
+
+    Json(AssignProfileResponse {
+        success: true,
+        message: format!("Profile '{}' assigned to IP {}", request.profile_name, request.ip_address),
+    })
+}
+
+/// Get available blocking categories
+pub async fn get_blocking_categories() -> Json<Vec<CategoryInfo>> {
+    Json(vec![
+        CategoryInfo { name: "ads".to_string(), description: "Advertising and ad networks".to_string(), default_enabled: true },
+        CategoryInfo { name: "tracking".to_string(), description: "Analytics and user tracking".to_string(), default_enabled: true },
+        CategoryInfo { name: "malware".to_string(), description: "Malicious domains and malware".to_string(), default_enabled: true },
+        CategoryInfo { name: "phishing".to_string(), description: "Phishing and credential theft".to_string(), default_enabled: true },
+        CategoryInfo { name: "adult".to_string(), description: "Adult content".to_string(), default_enabled: false },
+        CategoryInfo { name: "gambling".to_string(), description: "Gambling sites".to_string(), default_enabled: false },
+        CategoryInfo { name: "social".to_string(), description: "Social media".to_string(), default_enabled: false },
+        CategoryInfo { name: "cryptominers".to_string(), description: "Cryptocurrency mining scripts".to_string(), default_enabled: true },
+    ])
+}
+
+#[derive(Serialize)]
+pub struct CategoryInfo {
+    pub name: String,
+    pub description: String,
+    pub default_enabled: bool,
+}
+
+/// Enable or disable a blocking category
+#[derive(Deserialize)]
+pub struct CategoryToggleRequest {
+    pub enabled: bool,
+}
+
+pub async fn toggle_category(
+    Path(category): Path<String>,
+    State(state): State<Arc<AppState>>,
+    Json(request): Json<CategoryToggleRequest>,
+) -> Json<AssignProfileResponse> {
+    if request.enabled {
+        state.unified_filter.enable_category(&category);
+    } else {
+        state.unified_filter.disable_category(&category);
+    }
+
+    Json(AssignProfileResponse {
+        success: true,
+        message: format!(
+            "Category '{}' {}",
+            category,
+            if request.enabled { "enabled" } else { "disabled" }
+        ),
+    })
+}
+
+/// Get currently enabled categories
+pub async fn get_enabled_categories(State(state): State<Arc<AppState>>) -> Json<Vec<String>> {
+    Json(state.unified_filter.get_enabled_categories())
 }
 
 // ============================================================================

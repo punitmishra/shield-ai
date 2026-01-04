@@ -98,6 +98,13 @@ async fn main() -> Result<()> {
             get(handlers::get_profile).delete(handlers::delete_profile),
         )
         .route("/api/profiles/device", post(handlers::assign_device))
+        // Unified filter management endpoints
+        .route("/api/filter/stats", get(handlers::unified_filter_stats))
+        .route("/api/filter/check/:domain", get(handlers::check_domain_blocking))
+        .route("/api/filter/categories", get(handlers::get_blocking_categories))
+        .route("/api/filter/categories/enabled", get(handlers::get_enabled_categories))
+        .route("/api/filter/categories/:category", put(handlers::toggle_category))
+        .route("/api/filter/profile/ip", post(handlers::assign_profile_to_ip))
         // Tier management endpoints
         .route("/api/tiers/pricing", get(handlers::get_pricing))
         .route("/api/tiers/check", post(handlers::check_feature))

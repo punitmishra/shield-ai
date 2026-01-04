@@ -7,6 +7,7 @@ use shield_db::SqliteDb;
 use shield_dns_core::cache::DNSCache;
 use shield_dns_core::filter::FilterEngine;
 use shield_dns_core::resolver::Resolver;
+use shield_dns_core::unified_filter::UnifiedFilter;
 use shield_metrics::MetricsCollector;
 use shield_ml_engine::MLEngine;
 use shield_profiles::ProfileManager;
@@ -23,6 +24,7 @@ pub struct AppState {
     pub start_time: Instant,
     pub resolver: Arc<Resolver>,
     pub filter: Arc<FilterEngine>,
+    pub unified_filter: Arc<UnifiedFilter>,
     pub ai_engine: Arc<AIEngine>,
     pub rate_limiter: Arc<RateLimiter>,
     pub threat_intel: Arc<ThreatIntelEngine>,
@@ -59,6 +61,25 @@ impl AppState {
 
         // Create DNS resolver with cache and filter
         let resolver = Resolver::new(cache, filter.clone()).await?;
+
+        // Initialize unified filter with blocklist support
+        let unified_filter = Arc::new(UnifiedFilter::new(filter.clone()));
+
+        // Fetch blocklists asynchronously (non-blocking)
+        let uf_clone = unified_filter.clone();
+        tokio::spawn(async move {
+            match uf_clone.init_blocklists("config/blocklist-sources.json").await {
+                Ok(stats) => {
+                    info!(
+                        "Blocklists loaded: {} domains from {} sources",
+                        stats.total_domains, stats.sources_loaded
+                    );
+                }
+                Err(e) => {
+                    warn!("Failed to load blocklists, using defaults: {}", e);
+                }
+            }
+        });
 
         // Initialize AI engine
         let ai_engine = Arc::new(AIEngine::new().await?);
@@ -104,6 +125,7 @@ impl AppState {
             start_time: Instant::now(),
             resolver: Arc::new(resolver),
             filter,
+            unified_filter,
             ai_engine,
             rate_limiter,
             threat_intel,
