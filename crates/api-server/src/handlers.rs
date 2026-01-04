@@ -3,12 +3,13 @@
 use axum::{
     extract::{
         ws::{Message, WebSocket, WebSocketUpgrade},
-        Path, Query, State,
+        ConnectInfo, Path, Query, State,
     },
     http::StatusCode,
     response::Response,
     Json,
 };
+use std::net::SocketAddr;
 use futures::{SinkExt, StreamExt};
 use serde::{Deserialize, Serialize};
 use shield_metrics::QueryLogEntry;
@@ -23,6 +24,7 @@ use chrono::Utc;
 use shield_db::models::{DbAllowlistEntry, DbBlocklistEntry};
 
 // Re-exports for API responses
+pub use shield_dns_core::unified_filter::FilterReason;
 pub use shield_ml_engine::{AnalyticsSnapshot, DeepRiskAnalysis};
 pub use shield_profiles::{Profile, ProfileStats, ProtectionLevel};
 pub use shield_threat_intel::{ThreatAnalysis, ThreatCategory};
@@ -368,10 +370,13 @@ pub async fn analyze_domain(
 pub async fn doh_query(
     Query(params): Query<DohQuery>,
     State(state): State<Arc<AppState>>,
+    connect_info: Option<ConnectInfo<SocketAddr>>,
 ) -> Result<Json<DohResponse>, (StatusCode, Json<ErrorResponse>)> {
+    let client_ip = connect_info.map(|ci| ci.0.ip());
+
     // Check for wire format first (iOS/macOS use this)
     if let Some(ref dns_query) = params.dns {
-        return doh_query_wire_format(dns_query, state).await;
+        return doh_query_wire_format(dns_query, state, client_ip).await;
     }
 
     // Fall back to JSON format
@@ -401,11 +406,20 @@ pub async fn doh_query(
 
     info!("DoH query (JSON): {} type={}", domain, record_type);
 
-    // Check if blocked
-    if state.filter.is_blocked(&domain) {
+    // Use unified filter with client IP for profile-aware blocking
+    let filter_result = state.unified_filter.check(&domain, client_ip);
+
+    if filter_result.decision == shield_dns_core::filter::FilterDecision::Block {
+        let client_ip_str = client_ip.map(|ip| ip.to_string()).unwrap_or_else(|| "unknown".to_string());
         state
             .metrics
-            .record_query_with_details(domain.clone(), "0.0.0.0".to_string(), true, 0);
+            .record_query_with_details(domain.clone(), client_ip_str, true, 0);
+
+        debug!(
+            "DoH blocked: {} (reason: {:?}, category: {:?})",
+            domain, filter_result.reason, filter_result.category
+        );
+
         return Ok(Json(DohResponse {
             status: 3, // NXDOMAIN
             truncated: false,
@@ -473,9 +487,12 @@ pub async fn doh_query(
 /// iOS/macOS send POST requests with binary DNS message in body
 pub async fn doh_query_post(
     State(state): State<Arc<AppState>>,
+    connect_info: Option<ConnectInfo<SocketAddr>>,
     body: axum::body::Bytes,
 ) -> Result<impl axum::response::IntoResponse, (StatusCode, Json<ErrorResponse>)> {
     use base64::{engine::general_purpose::STANDARD, Engine};
+
+    let client_ip = connect_info.map(|ci| ci.0.ip());
 
     // Convert body bytes to base64 for parsing
     let dns_base64 = STANDARD.encode(&body);
@@ -496,12 +513,20 @@ pub async fn doh_query_post(
 
     info!("DoH POST query: {} type={}", domain, record_type_num);
 
-    // Check if blocked
-    let blocked = state.filter.is_blocked(&domain);
+    // Use unified filter with client IP for profile-aware blocking
+    let filter_result = state.unified_filter.check(&domain, client_ip);
+    let blocked = filter_result.decision == shield_dns_core::filter::FilterDecision::Block;
+
     if blocked {
+        let client_ip_str = client_ip.map(|ip| ip.to_string()).unwrap_or_else(|| "unknown".to_string());
         state
             .metrics
-            .record_query_with_details(domain.clone(), "0.0.0.0".to_string(), true, 0);
+            .record_query_with_details(domain.clone(), client_ip_str, true, 0);
+
+        debug!(
+            "DoH POST blocked: {} (reason: {:?}, category: {:?})",
+            domain, filter_result.reason, filter_result.category
+        );
     }
 
     // Resolve domain if not blocked
@@ -534,6 +559,7 @@ pub async fn doh_query_post(
 async fn doh_query_wire_format(
     dns_base64: &str,
     state: Arc<AppState>,
+    client_ip: Option<std::net::IpAddr>,
 ) -> Result<Json<DohResponse>, (StatusCode, Json<ErrorResponse>)> {
     // Parse the DNS query
     let (domain, record_type_num) = match parse_dns_wire_query(dns_base64) {
@@ -551,11 +577,20 @@ async fn doh_query_wire_format(
 
     info!("DoH query (wire): {} type={}", domain, record_type_num);
 
-    // Check if blocked
-    if state.filter.is_blocked(&domain) {
+    // Use unified filter with client IP for profile-aware blocking
+    let filter_result = state.unified_filter.check(&domain, client_ip);
+
+    if filter_result.decision == shield_dns_core::filter::FilterDecision::Block {
+        let client_ip_str = client_ip.map(|ip| ip.to_string()).unwrap_or_else(|| "unknown".to_string());
         state
             .metrics
-            .record_query_with_details(domain.clone(), "0.0.0.0".to_string(), true, 0);
+            .record_query_with_details(domain.clone(), client_ip_str, true, 0);
+
+        debug!(
+            "DoH wire blocked: {} (reason: {:?}, category: {:?})",
+            domain, filter_result.reason, filter_result.category
+        );
+
         return Ok(Json(DohResponse {
             status: 3, // NXDOMAIN
             truncated: false,
@@ -915,8 +950,10 @@ pub async fn bulk_add_to_blocklist(
 pub async fn resolve_domain(
     Path(domain): Path<String>,
     State(state): State<Arc<AppState>>,
+    connect_info: Option<ConnectInfo<SocketAddr>>,
 ) -> Result<Json<DnsResolveResponse>, Json<ErrorResponse>> {
     let start = std::time::Instant::now();
+    let client_ip = connect_info.map(|ci| ci.0.ip());
 
     // Validate domain
     if domain.is_empty() || domain.len() > 253 {
@@ -939,17 +976,23 @@ pub async fn resolve_domain(
         }));
     }
 
-    // Check if blocked
-    if state.resolver.is_blocked(&domain) {
+    // Use unified filter with client IP for profile-aware filtering
+    let filter_result = state.unified_filter.check(&domain, client_ip);
+
+    if filter_result.decision == shield_dns_core::filter::FilterDecision::Block {
         let query_time_ms = start.elapsed().as_millis() as u64;
+        let client_ip_str = client_ip.map(|ip| ip.to_string()).unwrap_or_else(|| "unknown".to_string());
         state.metrics.record_query_with_details(
             domain.clone(),
-            "0.0.0.0".to_string(),
+            client_ip_str,
             true,
             query_time_ms,
         );
 
-        debug!("Blocked domain: {} in {}ms", domain, query_time_ms);
+        debug!(
+            "Blocked domain: {} in {}ms (reason: {:?}, category: {:?})",
+            domain, query_time_ms, filter_result.reason, filter_result.category
+        );
 
         return Ok(Json(DnsResolveResponse {
             domain,
@@ -1378,6 +1421,514 @@ pub async fn assign_device(
 /// Get profile stats
 pub async fn profile_stats(State(state): State<Arc<AppState>>) -> Json<ProfileStats> {
     Json(state.profiles.stats())
+}
+
+// ============================================================================
+// Unified Filter Management Endpoints
+// ============================================================================
+
+use shield_dns_core::unified_filter::{DeviceProfile, UnifiedFilterStats};
+
+/// Get unified filter statistics
+pub async fn unified_filter_stats(State(state): State<Arc<AppState>>) -> Json<UnifiedFilterStats> {
+    Json(state.unified_filter.stats())
+}
+
+/// Check if a domain is blocked with full details
+#[derive(Serialize)]
+pub struct BlockCheckResponse {
+    pub domain: String,
+    pub blocked: bool,
+    pub reason: Option<FilterReason>,
+    pub category: Option<String>,
+    pub profile_name: Option<String>,
+}
+
+pub async fn check_domain_blocking(
+    Path(domain): Path<String>,
+    State(state): State<Arc<AppState>>,
+    connect_info: Option<ConnectInfo<SocketAddr>>,
+) -> Json<BlockCheckResponse> {
+    let client_ip = connect_info.map(|ci| ci.0.ip());
+    let result = state.unified_filter.check(&domain, client_ip);
+
+    Json(BlockCheckResponse {
+        domain,
+        blocked: result.decision == shield_dns_core::filter::FilterDecision::Block,
+        reason: Some(result.reason),
+        category: result.category,
+        profile_name: result.profile_name,
+    })
+}
+
+/// Assign a device profile by IP address
+#[derive(Deserialize)]
+pub struct AssignProfileToIpRequest {
+    pub ip_address: String,
+    pub profile_name: String,
+    pub blocked_categories: Vec<String>,
+    pub custom_blocklist: Option<Vec<String>>,
+    pub custom_allowlist: Option<Vec<String>>,
+}
+
+#[derive(Serialize)]
+pub struct AssignProfileResponse {
+    pub success: bool,
+    pub message: String,
+}
+
+pub async fn assign_profile_to_ip(
+    State(state): State<Arc<AppState>>,
+    Json(request): Json<AssignProfileToIpRequest>,
+) -> Json<AssignProfileResponse> {
+    let ip: std::net::IpAddr = match request.ip_address.parse() {
+        Ok(ip) => ip,
+        Err(_) => {
+            return Json(AssignProfileResponse {
+                success: false,
+                message: "Invalid IP address format".to_string(),
+            });
+        }
+    };
+
+    let profile = DeviceProfile {
+        id: format!("ip-{}", request.ip_address),
+        name: request.profile_name.clone(),
+        blocked_categories: request.blocked_categories,
+        custom_blocklist: request.custom_blocklist.unwrap_or_default(),
+        custom_allowlist: request.custom_allowlist.unwrap_or_default(),
+        enabled: true,
+    };
+
+    state.unified_filter.assign_profile_to_ip(ip, profile);
+
+    Json(AssignProfileResponse {
+        success: true,
+        message: format!("Profile '{}' assigned to IP {}", request.profile_name, request.ip_address),
+    })
+}
+
+/// Get available blocking categories
+pub async fn get_blocking_categories() -> Json<Vec<CategoryInfo>> {
+    Json(vec![
+        CategoryInfo { name: "ads".to_string(), description: "Advertising and ad networks".to_string(), default_enabled: true },
+        CategoryInfo { name: "tracking".to_string(), description: "Analytics and user tracking".to_string(), default_enabled: true },
+        CategoryInfo { name: "malware".to_string(), description: "Malicious domains and malware".to_string(), default_enabled: true },
+        CategoryInfo { name: "phishing".to_string(), description: "Phishing and credential theft".to_string(), default_enabled: true },
+        CategoryInfo { name: "adult".to_string(), description: "Adult content".to_string(), default_enabled: false },
+        CategoryInfo { name: "gambling".to_string(), description: "Gambling sites".to_string(), default_enabled: false },
+        CategoryInfo { name: "social".to_string(), description: "Social media".to_string(), default_enabled: false },
+        CategoryInfo { name: "cryptominers".to_string(), description: "Cryptocurrency mining scripts".to_string(), default_enabled: true },
+    ])
+}
+
+#[derive(Serialize)]
+pub struct CategoryInfo {
+    pub name: String,
+    pub description: String,
+    pub default_enabled: bool,
+}
+
+/// Enable or disable a blocking category
+#[derive(Deserialize)]
+pub struct CategoryToggleRequest {
+    pub enabled: bool,
+}
+
+pub async fn toggle_category(
+    Path(category): Path<String>,
+    State(state): State<Arc<AppState>>,
+    Json(request): Json<CategoryToggleRequest>,
+) -> Json<AssignProfileResponse> {
+    if request.enabled {
+        state.unified_filter.enable_category(&category);
+    } else {
+        state.unified_filter.disable_category(&category);
+    }
+
+    Json(AssignProfileResponse {
+        success: true,
+        message: format!(
+            "Category '{}' {}",
+            category,
+            if request.enabled { "enabled" } else { "disabled" }
+        ),
+    })
+}
+
+/// Get currently enabled categories
+pub async fn get_enabled_categories(State(state): State<Arc<AppState>>) -> Json<Vec<String>> {
+    Json(state.unified_filter.get_enabled_categories())
+}
+
+/// Refresh blocklists from remote sources
+#[derive(Serialize)]
+pub struct BlocklistRefreshResponse {
+    pub success: bool,
+    pub total_domains: usize,
+    pub sources_loaded: usize,
+    pub sources_failed: usize,
+    pub by_category: HashMap<String, usize>,
+    pub message: String,
+}
+
+pub async fn refresh_blocklists(State(state): State<Arc<AppState>>) -> Json<BlocklistRefreshResponse> {
+    info!("Manual blocklist refresh triggered");
+
+    match state.unified_filter.init_blocklists("config/blocklist-sources.json").await {
+        Ok(stats) => {
+            info!(
+                "Blocklist refresh complete: {} domains from {} sources",
+                stats.total_domains, stats.sources_loaded
+            );
+            Json(BlocklistRefreshResponse {
+                success: true,
+                total_domains: stats.total_domains,
+                sources_loaded: stats.sources_loaded,
+                sources_failed: stats.sources_failed,
+                by_category: stats.by_category,
+                message: format!(
+                    "Loaded {} domains from {} sources ({} failed)",
+                    stats.total_domains, stats.sources_loaded, stats.sources_failed
+                ),
+            })
+        }
+        Err(e) => {
+            warn!("Blocklist refresh failed: {}", e);
+            Json(BlocklistRefreshResponse {
+                success: false,
+                total_domains: 0,
+                sources_loaded: 0,
+                sources_failed: 0,
+                by_category: HashMap::new(),
+                message: format!("Failed to refresh blocklists: {}", e),
+            })
+        }
+    }
+}
+
+// ============================================================================
+// Real-Time Analytics Endpoints
+// ============================================================================
+
+/// Real-time analytics response
+#[derive(Serialize)]
+pub struct RealTimeAnalytics {
+    pub queries_per_minute: f64,
+    pub queries_per_hour: f64,
+    pub current_block_rate: f64,
+    pub current_cache_hit_rate: f64,
+    pub top_blocked_domains: Vec<TopDomain>,
+    pub blocking_by_category: HashMap<String, u64>,
+    pub active_clients: usize,
+    pub uptime_seconds: u64,
+}
+
+#[derive(Serialize, Clone)]
+pub struct TopDomain {
+    pub domain: String,
+    pub count: u64,
+    pub category: Option<String>,
+}
+
+/// Get real-time analytics
+pub async fn get_realtime_analytics(State(state): State<Arc<AppState>>) -> Json<RealTimeAnalytics> {
+    let snapshot = state.metrics.snapshot();
+    let uptime = state.start_time.elapsed().as_secs();
+
+    // Calculate queries per minute/hour based on uptime
+    let queries_per_minute = if uptime > 0 {
+        (snapshot.total_queries as f64 / uptime as f64) * 60.0
+    } else {
+        0.0
+    };
+    let queries_per_hour = queries_per_minute * 60.0;
+
+    let block_rate = if snapshot.total_queries > 0 {
+        snapshot.blocked_queries as f64 / snapshot.total_queries as f64
+    } else {
+        0.0
+    };
+
+    // Get filter stats for category breakdown
+    let filter_stats = state.unified_filter.stats();
+
+    // Convert category counts
+    let blocking_by_category: HashMap<String, u64> = filter_stats
+        .by_category
+        .into_iter()
+        .map(|(k, v)| (k, v as u64))
+        .collect();
+
+    // Get top blocked domains from query history
+    let history = state.metrics.get_query_history(100);
+    let mut domain_counts: HashMap<String, u64> = HashMap::new();
+    for entry in history.iter().filter(|e| e.blocked) {
+        *domain_counts.entry(entry.domain.clone()).or_insert(0) += 1;
+    }
+
+    let mut top_blocked: Vec<TopDomain> = domain_counts
+        .into_iter()
+        .map(|(domain, count)| TopDomain {
+            category: state.unified_filter.get_blocking_category(&domain),
+            domain,
+            count,
+        })
+        .collect();
+    top_blocked.sort_by(|a, b| b.count.cmp(&a.count));
+    top_blocked.truncate(10);
+
+    Json(RealTimeAnalytics {
+        queries_per_minute,
+        queries_per_hour,
+        current_block_rate: block_rate,
+        current_cache_hit_rate: snapshot.cache_hit_rate,
+        top_blocked_domains: top_blocked,
+        blocking_by_category,
+        active_clients: snapshot.unique_clients,
+        uptime_seconds: uptime,
+    })
+}
+
+/// Time series data point
+#[derive(Serialize)]
+pub struct TimeSeriesPoint {
+    pub timestamp: u64,
+    pub value: u64,
+}
+
+/// Query trends response
+#[derive(Serialize)]
+pub struct QueryTrends {
+    pub total_queries: Vec<TimeSeriesPoint>,
+    pub blocked_queries: Vec<TimeSeriesPoint>,
+    pub period_minutes: u32,
+}
+
+/// Get query trends over time
+pub async fn get_query_trends(
+    State(state): State<Arc<AppState>>,
+    Query(params): Query<TrendsParams>,
+) -> Json<QueryTrends> {
+    let period_minutes = params.period.unwrap_or(60);
+    let history = state.metrics.get_query_history(1000);
+
+    let now = std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .unwrap_or_default()
+        .as_secs();
+
+    let bucket_size_secs = (period_minutes as u64 * 60) / 12; // 12 buckets
+    let mut total_buckets: HashMap<u64, u64> = HashMap::new();
+    let mut blocked_buckets: HashMap<u64, u64> = HashMap::new();
+
+    for entry in history {
+        let bucket = (entry.timestamp / bucket_size_secs) * bucket_size_secs;
+        *total_buckets.entry(bucket).or_insert(0) += 1;
+        if entry.blocked {
+            *blocked_buckets.entry(bucket).or_insert(0) += 1;
+        }
+    }
+
+    let start_time = now.saturating_sub(period_minutes as u64 * 60);
+    let mut total_queries: Vec<TimeSeriesPoint> = total_buckets
+        .into_iter()
+        .filter(|(t, _)| *t >= start_time)
+        .map(|(timestamp, value)| TimeSeriesPoint { timestamp, value })
+        .collect();
+    total_queries.sort_by_key(|p| p.timestamp);
+
+    let mut blocked_queries: Vec<TimeSeriesPoint> = blocked_buckets
+        .into_iter()
+        .filter(|(t, _)| *t >= start_time)
+        .map(|(timestamp, value)| TimeSeriesPoint { timestamp, value })
+        .collect();
+    blocked_queries.sort_by_key(|p| p.timestamp);
+
+    Json(QueryTrends {
+        total_queries,
+        blocked_queries,
+        period_minutes,
+    })
+}
+
+#[derive(Deserialize)]
+pub struct TrendsParams {
+    pub period: Option<u32>, // minutes
+}
+
+/// Threat detection summary
+#[derive(Serialize)]
+pub struct ThreatSummary {
+    pub malware_blocked: u64,
+    pub phishing_blocked: u64,
+    pub tracking_blocked: u64,
+    pub ads_blocked: u64,
+    pub total_threats: u64,
+    pub threat_trend: String, // "increasing", "stable", "decreasing"
+}
+
+/// Get threat detection summary
+pub async fn get_threat_summary(State(state): State<Arc<AppState>>) -> Json<ThreatSummary> {
+    let history = state.metrics.get_query_history(1000);
+
+    let mut malware_blocked = 0u64;
+    let mut phishing_blocked = 0u64;
+    let mut tracking_blocked = 0u64;
+    let mut ads_blocked = 0u64;
+
+    for entry in history.iter().filter(|e| e.blocked) {
+        if let Some(category) = state.unified_filter.get_blocking_category(&entry.domain) {
+            match category.as_str() {
+                "malware" => malware_blocked += 1,
+                "phishing" => phishing_blocked += 1,
+                "tracking" => tracking_blocked += 1,
+                "ads" => ads_blocked += 1,
+                _ => {}
+            }
+        }
+    }
+
+    let total_threats = malware_blocked + phishing_blocked + tracking_blocked + ads_blocked;
+
+    Json(ThreatSummary {
+        malware_blocked,
+        phishing_blocked,
+        tracking_blocked,
+        ads_blocked,
+        total_threats,
+        threat_trend: "stable".to_string(), // Could be calculated from historical data
+    })
+}
+
+// ============================================================================
+// Webhook Management Endpoints
+// ============================================================================
+
+use crate::webhooks::{WebhookConfig, WebhookEvent};
+
+/// List all webhooks
+pub async fn list_webhooks(State(state): State<Arc<AppState>>) -> Json<Vec<WebhookConfig>> {
+    Json(state.webhooks.list())
+}
+
+/// Register a new webhook
+#[derive(Deserialize)]
+pub struct RegisterWebhookRequest {
+    pub id: String,
+    pub url: String,
+    pub events: Vec<String>,
+    pub secret: Option<String>,
+    #[serde(default)]
+    pub headers: HashMap<String, String>,
+}
+
+#[derive(Serialize)]
+pub struct WebhookResponse {
+    pub success: bool,
+    pub message: String,
+}
+
+pub async fn register_webhook(
+    State(state): State<Arc<AppState>>,
+    Json(request): Json<RegisterWebhookRequest>,
+) -> Json<WebhookResponse> {
+    let events: Vec<WebhookEvent> = request
+        .events
+        .iter()
+        .filter_map(|e| match e.as_str() {
+            "malware_blocked" => Some(WebhookEvent::MalwareBlocked),
+            "phishing_blocked" => Some(WebhookEvent::PhishingBlocked),
+            "threat_blocked" => Some(WebhookEvent::ThreatBlocked),
+            "high_risk_detected" => Some(WebhookEvent::HighRiskDetected),
+            "blocklist_updated" => Some(WebhookEvent::BlocklistUpdated),
+            "all" => Some(WebhookEvent::All),
+            _ => None,
+        })
+        .collect();
+
+    if events.is_empty() {
+        return Json(WebhookResponse {
+            success: false,
+            message: "No valid events specified".to_string(),
+        });
+    }
+
+    let config = WebhookConfig {
+        id: request.id,
+        url: request.url,
+        events,
+        secret: request.secret,
+        enabled: true,
+        headers: request.headers,
+    };
+
+    match state.webhooks.register(config) {
+        Ok(()) => Json(WebhookResponse {
+            success: true,
+            message: "Webhook registered successfully".to_string(),
+        }),
+        Err(e) => Json(WebhookResponse {
+            success: false,
+            message: e,
+        }),
+    }
+}
+
+/// Delete a webhook
+pub async fn delete_webhook(
+    Path(id): Path<String>,
+    State(state): State<Arc<AppState>>,
+) -> Json<WebhookResponse> {
+    if state.webhooks.unregister(&id) {
+        Json(WebhookResponse {
+            success: true,
+            message: format!("Webhook '{}' deleted", id),
+        })
+    } else {
+        Json(WebhookResponse {
+            success: false,
+            message: format!("Webhook '{}' not found", id),
+        })
+    }
+}
+
+/// Test a webhook
+pub async fn test_webhook(
+    Path(id): Path<String>,
+    State(state): State<Arc<AppState>>,
+) -> Json<WebhookResponse> {
+    let webhooks = state.webhooks.list();
+    let webhook = webhooks.iter().find(|w| w.id == id);
+
+    match webhook {
+        Some(_) => {
+            // Send a test notification
+            let notification = crate::webhooks::ThreatNotification {
+                event: "test".to_string(),
+                timestamp: std::time::SystemTime::now()
+                    .duration_since(std::time::UNIX_EPOCH)
+                    .unwrap_or_default()
+                    .as_secs(),
+                domain: "test.example.com".to_string(),
+                category: "test".to_string(),
+                client_ip: None,
+                risk_score: Some(0.0),
+                details: Some("This is a test notification from Shield AI".to_string()),
+            };
+
+            state.webhooks.notify_threat(notification).await;
+
+            Json(WebhookResponse {
+                success: true,
+                message: format!("Test notification sent to webhook '{}'", id),
+            })
+        }
+        None => Json(WebhookResponse {
+            success: false,
+            message: format!("Webhook '{}' not found", id),
+        }),
+    }
 }
 
 // ============================================================================

@@ -1,10 +1,12 @@
 //! Shield AI DNS Core Engine
 //! Ultra-fast DNS resolver with AI-powered filtering
 
+pub mod blocklist_fetcher;
 pub mod cache;
 pub mod config;
 pub mod filter;
 pub mod resolver;
+pub mod unified_filter;
 
 use anyhow::Result;
 use serde::{Deserialize, Serialize};

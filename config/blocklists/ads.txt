@@ -23,9 +23,11 @@ appsflyer.com
 branch.io
 adjust.com
 
-# Analytics (optional - comment out if needed)
-# google-analytics.com
-# analytics.google.com
+# Analytics
+google-analytics.com
+analytics.google.com
+googletagmanager.com
+googletagservices.com
 
 # Social media trackers
 connect.facebook.net

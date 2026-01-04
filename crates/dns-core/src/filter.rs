@@ -6,7 +6,8 @@ use std::sync::Arc;
 use tracing::{debug, info};
 
 /// Filter decision for a domain
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
+#[serde(rename_all = "lowercase")]
 pub enum FilterDecision {
     Allow,
     Block,
