@@ -1,6 +1,8 @@
 //! Application state management
 
+use crate::background_tasks::{BackgroundTasks, BackgroundTasksConfig, warm_cache};
 use crate::rate_limiter::{RateLimiter, RateLimiterConfig};
+use crate::webhooks::WebhookManager;
 use shield_ai_engine::AIEngine;
 use shield_auth::AuthService;
 use shield_db::SqliteDb;
@@ -34,6 +36,9 @@ pub struct AppState {
     pub auth: Arc<AuthService>,
     #[allow(dead_code)]
     pub db: Arc<SqliteDb>,
+    #[allow(dead_code)]
+    background_tasks: Arc<BackgroundTasks>,
+    pub webhooks: Arc<WebhookManager>,
 }
 
 impl AppState {
@@ -115,15 +120,39 @@ impl AppState {
         }));
         info!("Rate limiter initialized");
 
+        // Initialize metrics
+        let metrics = Arc::new(MetricsCollector::new());
+
+        // Wrap resolver in Arc for sharing
+        let resolver = Arc::new(resolver);
+
+        // Initialize background tasks (blocklist auto-refresh, metrics, etc.)
+        let bg_config = BackgroundTasksConfig::default();
+        let background_tasks = Arc::new(BackgroundTasks::new(bg_config));
+        background_tasks.start(unified_filter.clone(), metrics.clone());
+        info!("Background tasks initialized (blocklist refresh every 6 hours)");
+
+        // Start cache warming in background
+        let resolver_for_warming = resolver.clone();
+        tokio::spawn(async move {
+            // Wait a bit for server to stabilize
+            tokio::time::sleep(Duration::from_secs(5)).await;
+            warm_cache(&resolver_for_warming).await;
+        });
+
+        // Initialize webhook manager for threat notifications
+        let webhooks = Arc::new(WebhookManager::new());
+        info!("Webhook manager initialized");
+
         info!(
             "Application state initialized - blocklist: {} domains",
             filter.blocklist_size()
         );
 
         Ok(Self {
-            metrics: Arc::new(MetricsCollector::new()),
+            metrics,
             start_time: Instant::now(),
-            resolver: Arc::new(resolver),
+            resolver,
             filter,
             unified_filter,
             ai_engine,
@@ -134,6 +163,8 @@ impl AppState {
             ml_engine,
             auth,
             db,
+            background_tasks,
+            webhooks,
         })
     }
 

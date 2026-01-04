@@ -1,7 +1,7 @@
 # Shield AI - Project Checkpoint & Memory Context
 
 ## Project State: v1.0.0-beta (Production Deployed)
-**Last Updated**: 2026-01-04 (Session 21)
+**Last Updated**: 2026-01-04 (Session 22)
 
 ---
 
@@ -44,7 +44,7 @@ flowchart TB
     end
 
     subgraph API["API Gateway (Axum :8080)"]
-        REST["51 REST Endpoints"]
+        REST["58 REST Endpoints"]
         WSS["WebSocket Server"]
         DoH["DNS-over-HTTPS"]
         Auth["JWT Auth Middleware"]
@@ -114,7 +114,7 @@ sequenceDiagram
 | Crate | Purpose | Status | Tests |
 |-------|---------|--------|-------|
 | `shield-dns-core` | DNS resolution, caching, unified filtering | ✅ Complete | 9 |
-| `shield-api-server` | REST API, WebSocket, handlers | ✅ Complete | 0 |
+| `shield-api-server` | REST API, WebSocket, handlers | ✅ Complete | 6 |
 | `shield-ai-engine` | AI-powered domain analysis | ✅ Complete | 0 |
 | `shield-ml-engine` | DGA detection, risk ranking | ✅ Complete | 5 |
 | `shield-metrics` | Prometheus metrics collection | ✅ Complete | 0 |
@@ -125,7 +125,7 @@ sequenceDiagram
 | `shield-auth` | JWT auth, device registration | ✅ Complete | 4 |
 | `shield-db` | SQLite persistence | ✅ Complete | 5 |
 
-**Total Rust Tests**: 39 passing
+**Total Rust Tests**: 45 passing
 
 ---
 
@@ -157,7 +157,7 @@ sequenceDiagram
 
 ---
 
-## API Endpoints (51 Total)
+## API Endpoints (58 Total)
 
 ### Authentication (8 endpoints) - NEW
 | Method | Endpoint | Auth | Description |
@@ -221,6 +221,17 @@ sequenceDiagram
 - `POST /api/filter/profile/ip` - Assign device profile to IP address
 - `POST /api/filter/refresh` - Manually refresh blocklists from remote sources
 
+### Real-Time Analytics (3 endpoints) - NEW
+- `GET /api/analytics/realtime` - Real-time stats (queries/min, block rate, top blocked)
+- `GET /api/analytics/trends` - Query trends over time (time series data)
+- `GET /api/analytics/threats` - Threat summary (malware/phishing/tracking blocked)
+
+### Webhooks (4 endpoints) - NEW
+- `GET /api/webhooks` - List registered webhooks
+- `POST /api/webhooks` - Register new webhook
+- `DELETE /api/webhooks/:id` - Delete webhook
+- `POST /api/webhooks/:id/test` - Test webhook with sample notification
+
 ### Tiers
 - `GET /api/tiers/pricing` - Pricing info ($0.99/mo, $7.99/yr)
 - `POST /api/tiers/check` - Feature check
@@ -278,7 +289,63 @@ All 8 auth endpoints tested and working:
 
 ## Session History
 
-### Session 2026-01-04 (Part 21 - Current)
+### Session 2026-01-04 (Part 22 - Current)
+**Elite Backend Features: Background Tasks, Analytics, Webhooks**
+
+**Major Features Added:**
+
+1. **Background Task System** (`background_tasks.rs`):
+   - Scheduled blocklist auto-refresh (every 6 hours)
+   - Metrics aggregation logging
+   - Cache stats logging
+   - Graceful shutdown support
+
+2. **Cache Warming**:
+   - Pre-populates DNS cache with 30+ popular domains on startup
+   - Reduces cold-start latency for common queries
+   - Includes Google, Facebook, GitHub, Netflix, etc.
+
+3. **Real-Time Analytics API** (3 new endpoints):
+   - `GET /api/analytics/realtime` - Queries/min, block rate, top blocked domains
+   - `GET /api/analytics/trends` - Time-series data for charting
+   - `GET /api/analytics/threats` - Malware/phishing/tracking summary
+
+4. **Webhook Notification System** (`webhooks.rs`):
+   - Register webhooks for threat detection events
+   - Event types: malware_blocked, phishing_blocked, threat_blocked, high_risk_detected
+   - HMAC signature support for security
+   - Rate limiting to prevent webhook spam
+   - Test endpoint for verification
+
+5. **Webhook Management API** (4 new endpoints):
+   - `GET /api/webhooks` - List registered webhooks
+   - `POST /api/webhooks` - Register new webhook
+   - `DELETE /api/webhooks/:id` - Delete webhook
+   - `POST /api/webhooks/:id/test` - Send test notification
+
+**New Files Created:**
+- `crates/api-server/src/background_tasks.rs` - Background task manager (260 lines)
+- `crates/api-server/src/webhooks.rs` - Webhook notification system (310 lines)
+
+**Files Modified:**
+- `crates/api-server/src/main.rs` - Added modules and routes
+- `crates/api-server/src/state.rs` - Added background tasks and webhooks
+- `crates/api-server/src/handlers.rs` - Added analytics and webhook endpoints
+- `crates/api-server/Cargo.toml` - Added reqwest, parking_lot
+- `crates/dns-core/src/unified_filter.rs` - Added get_blocking_category()
+
+**Test Results:**
+- 45 tests passing (was 39)
+- Added 6 new tests: 2 background_tasks + 4 webhook tests
+
+**API Summary:**
+- Total endpoints: 58 (was 51)
+- New analytics endpoints: 3
+- New webhook endpoints: 4
+
+---
+
+### Session 2026-01-04 (Part 21)
 **Blocklist Refresh Endpoint & Test Coverage**
 
 **Improvements Made:**
@@ -1252,8 +1319,10 @@ sheilds-ai/
 | **DoH (RFC 8484)** | ✅ Working | GET/POST with profile-aware filtering |
 | **Mobile App** | ⚠️ Partial | iOS build complete, Android failing |
 | **DNS Profile** | ✅ Available | macOS/iOS profile download |
-| **API Endpoints** | ✅ 51 Total | 7 filter management endpoints |
-| **Rust Tests** | ✅ 39 Passing | +2 new tests for ad blocking verification |
+| **API Endpoints** | ✅ 58 Total | +7 analytics & webhook endpoints |
+| **Rust Tests** | ✅ 45 Passing | +6 new tests for background tasks & webhooks |
+| **Background Tasks** | ✅ Active | Auto-refresh blocklists, cache warming |
+| **Webhooks** | ✅ Available | Real-time threat notifications |
 | **Documentation** | ✅ Complete | API guide, test cases, setup instructions |
 
 ### Production Metrics (Live)

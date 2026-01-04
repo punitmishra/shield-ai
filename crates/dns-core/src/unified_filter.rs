@@ -349,6 +349,11 @@ impl UnifiedFilter {
         self.blocklist_manager.disable_category(category);
     }
 
+    /// Get which category blocks a domain (if any)
+    pub fn get_blocking_category(&self, domain: &str) -> Option<String> {
+        self.blocklist_manager.get_blocking_category(domain)
+    }
+
     /// Get enabled categories
     pub fn get_enabled_categories(&self) -> Vec<String> {
         self.blocklist_manager.get_enabled_categories()

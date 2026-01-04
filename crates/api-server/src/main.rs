@@ -1,9 +1,11 @@
 //! Shield AI API Server
 //! Production-grade RESTful API for DNS protection management
 
+mod background_tasks;
 mod handlers;
 mod rate_limiter;
 mod state;
+mod webhooks;
 
 use std::env;
 use std::net::SocketAddr;
@@ -106,6 +108,14 @@ async fn main() -> Result<()> {
         .route("/api/filter/categories/:category", put(handlers::toggle_category))
         .route("/api/filter/profile/ip", post(handlers::assign_profile_to_ip))
         .route("/api/filter/refresh", post(handlers::refresh_blocklists))
+        // Real-time analytics endpoints
+        .route("/api/analytics/realtime", get(handlers::get_realtime_analytics))
+        .route("/api/analytics/trends", get(handlers::get_query_trends))
+        .route("/api/analytics/threats", get(handlers::get_threat_summary))
+        // Webhook management endpoints
+        .route("/api/webhooks", get(handlers::list_webhooks).post(handlers::register_webhook))
+        .route("/api/webhooks/:id", delete(handlers::delete_webhook))
+        .route("/api/webhooks/:id/test", post(handlers::test_webhook))
         // Tier management endpoints
         .route("/api/tiers/pricing", get(handlers::get_pricing))
         .route("/api/tiers/check", post(handlers::check_feature))

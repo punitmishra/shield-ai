@@ -1608,6 +1608,330 @@ pub async fn refresh_blocklists(State(state): State<Arc<AppState>>) -> Json<Bloc
 }
 
 // ============================================================================
+// Real-Time Analytics Endpoints
+// ============================================================================
+
+/// Real-time analytics response
+#[derive(Serialize)]
+pub struct RealTimeAnalytics {
+    pub queries_per_minute: f64,
+    pub queries_per_hour: f64,
+    pub current_block_rate: f64,
+    pub current_cache_hit_rate: f64,
+    pub top_blocked_domains: Vec<TopDomain>,
+    pub blocking_by_category: HashMap<String, u64>,
+    pub active_clients: usize,
+    pub uptime_seconds: u64,
+}
+
+#[derive(Serialize, Clone)]
+pub struct TopDomain {
+    pub domain: String,
+    pub count: u64,
+    pub category: Option<String>,
+}
+
+/// Get real-time analytics
+pub async fn get_realtime_analytics(State(state): State<Arc<AppState>>) -> Json<RealTimeAnalytics> {
+    let snapshot = state.metrics.snapshot();
+    let uptime = state.start_time.elapsed().as_secs();
+
+    // Calculate queries per minute/hour based on uptime
+    let queries_per_minute = if uptime > 0 {
+        (snapshot.total_queries as f64 / uptime as f64) * 60.0
+    } else {
+        0.0
+    };
+    let queries_per_hour = queries_per_minute * 60.0;
+
+    let block_rate = if snapshot.total_queries > 0 {
+        snapshot.blocked_queries as f64 / snapshot.total_queries as f64
+    } else {
+        0.0
+    };
+
+    // Get filter stats for category breakdown
+    let filter_stats = state.unified_filter.stats();
+
+    // Convert category counts
+    let blocking_by_category: HashMap<String, u64> = filter_stats
+        .by_category
+        .into_iter()
+        .map(|(k, v)| (k, v as u64))
+        .collect();
+
+    // Get top blocked domains from query history
+    let history = state.metrics.get_query_history(100);
+    let mut domain_counts: HashMap<String, u64> = HashMap::new();
+    for entry in history.iter().filter(|e| e.blocked) {
+        *domain_counts.entry(entry.domain.clone()).or_insert(0) += 1;
+    }
+
+    let mut top_blocked: Vec<TopDomain> = domain_counts
+        .into_iter()
+        .map(|(domain, count)| TopDomain {
+            category: state.unified_filter.get_blocking_category(&domain),
+            domain,
+            count,
+        })
+        .collect();
+    top_blocked.sort_by(|a, b| b.count.cmp(&a.count));
+    top_blocked.truncate(10);
+
+    Json(RealTimeAnalytics {
+        queries_per_minute,
+        queries_per_hour,
+        current_block_rate: block_rate,
+        current_cache_hit_rate: snapshot.cache_hit_rate,
+        top_blocked_domains: top_blocked,
+        blocking_by_category,
+        active_clients: snapshot.unique_clients,
+        uptime_seconds: uptime,
+    })
+}
+
+/// Time series data point
+#[derive(Serialize)]
+pub struct TimeSeriesPoint {
+    pub timestamp: u64,
+    pub value: u64,
+}
+
+/// Query trends response
+#[derive(Serialize)]
+pub struct QueryTrends {
+    pub total_queries: Vec<TimeSeriesPoint>,
+    pub blocked_queries: Vec<TimeSeriesPoint>,
+    pub period_minutes: u32,
+}
+
+/// Get query trends over time
+pub async fn get_query_trends(
+    State(state): State<Arc<AppState>>,
+    Query(params): Query<TrendsParams>,
+) -> Json<QueryTrends> {
+    let period_minutes = params.period.unwrap_or(60);
+    let history = state.metrics.get_query_history(1000);
+
+    let now = std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .unwrap_or_default()
+        .as_secs();
+
+    let bucket_size_secs = (period_minutes as u64 * 60) / 12; // 12 buckets
+    let mut total_buckets: HashMap<u64, u64> = HashMap::new();
+    let mut blocked_buckets: HashMap<u64, u64> = HashMap::new();
+
+    for entry in history {
+        let bucket = (entry.timestamp / bucket_size_secs) * bucket_size_secs;
+        *total_buckets.entry(bucket).or_insert(0) += 1;
+        if entry.blocked {
+            *blocked_buckets.entry(bucket).or_insert(0) += 1;
+        }
+    }
+
+    let start_time = now.saturating_sub(period_minutes as u64 * 60);
+    let mut total_queries: Vec<TimeSeriesPoint> = total_buckets
+        .into_iter()
+        .filter(|(t, _)| *t >= start_time)
+        .map(|(timestamp, value)| TimeSeriesPoint { timestamp, value })
+        .collect();
+    total_queries.sort_by_key(|p| p.timestamp);
+
+    let mut blocked_queries: Vec<TimeSeriesPoint> = blocked_buckets
+        .into_iter()
+        .filter(|(t, _)| *t >= start_time)
+        .map(|(timestamp, value)| TimeSeriesPoint { timestamp, value })
+        .collect();
+    blocked_queries.sort_by_key(|p| p.timestamp);
+
+    Json(QueryTrends {
+        total_queries,
+        blocked_queries,
+        period_minutes,
+    })
+}
+
+#[derive(Deserialize)]
+pub struct TrendsParams {
+    pub period: Option<u32>, // minutes
+}
+
+/// Threat detection summary
+#[derive(Serialize)]
+pub struct ThreatSummary {
+    pub malware_blocked: u64,
+    pub phishing_blocked: u64,
+    pub tracking_blocked: u64,
+    pub ads_blocked: u64,
+    pub total_threats: u64,
+    pub threat_trend: String, // "increasing", "stable", "decreasing"
+}
+
+/// Get threat detection summary
+pub async fn get_threat_summary(State(state): State<Arc<AppState>>) -> Json<ThreatSummary> {
+    let history = state.metrics.get_query_history(1000);
+
+    let mut malware_blocked = 0u64;
+    let mut phishing_blocked = 0u64;
+    let mut tracking_blocked = 0u64;
+    let mut ads_blocked = 0u64;
+
+    for entry in history.iter().filter(|e| e.blocked) {
+        if let Some(category) = state.unified_filter.get_blocking_category(&entry.domain) {
+            match category.as_str() {
+                "malware" => malware_blocked += 1,
+                "phishing" => phishing_blocked += 1,
+                "tracking" => tracking_blocked += 1,
+                "ads" => ads_blocked += 1,
+                _ => {}
+            }
+        }
+    }
+
+    let total_threats = malware_blocked + phishing_blocked + tracking_blocked + ads_blocked;
+
+    Json(ThreatSummary {
+        malware_blocked,
+        phishing_blocked,
+        tracking_blocked,
+        ads_blocked,
+        total_threats,
+        threat_trend: "stable".to_string(), // Could be calculated from historical data
+    })
+}
+
+// ============================================================================
+// Webhook Management Endpoints
+// ============================================================================
+
+use crate::webhooks::{WebhookConfig, WebhookEvent};
+
+/// List all webhooks
+pub async fn list_webhooks(State(state): State<Arc<AppState>>) -> Json<Vec<WebhookConfig>> {
+    Json(state.webhooks.list())
+}
+
+/// Register a new webhook
+#[derive(Deserialize)]
+pub struct RegisterWebhookRequest {
+    pub id: String,
+    pub url: String,
+    pub events: Vec<String>,
+    pub secret: Option<String>,
+    #[serde(default)]
+    pub headers: HashMap<String, String>,
+}
+
+#[derive(Serialize)]
+pub struct WebhookResponse {
+    pub success: bool,
+    pub message: String,
+}
+
+pub async fn register_webhook(
+    State(state): State<Arc<AppState>>,
+    Json(request): Json<RegisterWebhookRequest>,
+) -> Json<WebhookResponse> {
+    let events: Vec<WebhookEvent> = request
+        .events
+        .iter()
+        .filter_map(|e| match e.as_str() {
+            "malware_blocked" => Some(WebhookEvent::MalwareBlocked),
+            "phishing_blocked" => Some(WebhookEvent::PhishingBlocked),
+            "threat_blocked" => Some(WebhookEvent::ThreatBlocked),
+            "high_risk_detected" => Some(WebhookEvent::HighRiskDetected),
+            "blocklist_updated" => Some(WebhookEvent::BlocklistUpdated),
+            "all" => Some(WebhookEvent::All),
+            _ => None,
+        })
+        .collect();
+
+    if events.is_empty() {
+        return Json(WebhookResponse {
+            success: false,
+            message: "No valid events specified".to_string(),
+        });
+    }
+
+    let config = WebhookConfig {
+        id: request.id,
+        url: request.url,
+        events,
+        secret: request.secret,
+        enabled: true,
+        headers: request.headers,
+    };
+
+    match state.webhooks.register(config) {
+        Ok(()) => Json(WebhookResponse {
+            success: true,
+            message: "Webhook registered successfully".to_string(),
+        }),
+        Err(e) => Json(WebhookResponse {
+            success: false,
+            message: e,
+        }),
+    }
+}
+
+/// Delete a webhook
+pub async fn delete_webhook(
+    Path(id): Path<String>,
+    State(state): State<Arc<AppState>>,
+) -> Json<WebhookResponse> {
+    if state.webhooks.unregister(&id) {
+        Json(WebhookResponse {
+            success: true,
+            message: format!("Webhook '{}' deleted", id),
+        })
+    } else {
+        Json(WebhookResponse {
+            success: false,
+            message: format!("Webhook '{}' not found", id),
+        })
+    }
+}
+
+/// Test a webhook
+pub async fn test_webhook(
+    Path(id): Path<String>,
+    State(state): State<Arc<AppState>>,
+) -> Json<WebhookResponse> {
+    let webhooks = state.webhooks.list();
+    let webhook = webhooks.iter().find(|w| w.id == id);
+
+    match webhook {
+        Some(_) => {
+            // Send a test notification
+            let notification = crate::webhooks::ThreatNotification {
+                event: "test".to_string(),
+                timestamp: std::time::SystemTime::now()
+                    .duration_since(std::time::UNIX_EPOCH)
+                    .unwrap_or_default()
+                    .as_secs(),
+                domain: "test.example.com".to_string(),
+                category: "test".to_string(),
+                client_ip: None,
+                risk_score: Some(0.0),
+                details: Some("This is a test notification from Shield AI".to_string()),
+            };
+
+            state.webhooks.notify_threat(notification).await;
+
+            Json(WebhookResponse {
+                success: true,
+                message: format!("Test notification sent to webhook '{}'", id),
+            })
+        }
+        None => Json(WebhookResponse {
+            success: false,
+            message: format!("Webhook '{}' not found", id),
+        }),
+    }
+}
+
+// ============================================================================
 // Tier Management Endpoints
 // ============================================================================
 
