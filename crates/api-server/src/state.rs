@@ -1,12 +1,15 @@
 //! Application state management
 
+use crate::background_tasks::{BackgroundTasks, BackgroundTasksConfig, warm_cache};
 use crate::rate_limiter::{RateLimiter, RateLimiterConfig};
+use crate::webhooks::WebhookManager;
 use shield_ai_engine::AIEngine;
 use shield_auth::AuthService;
 use shield_db::SqliteDb;
 use shield_dns_core::cache::DNSCache;
 use shield_dns_core::filter::FilterEngine;
 use shield_dns_core::resolver::Resolver;
+use shield_dns_core::unified_filter::UnifiedFilter;
 use shield_metrics::MetricsCollector;
 use shield_ml_engine::MLEngine;
 use shield_profiles::ProfileManager;
@@ -23,6 +26,7 @@ pub struct AppState {
     pub start_time: Instant,
     pub resolver: Arc<Resolver>,
     pub filter: Arc<FilterEngine>,
+    pub unified_filter: Arc<UnifiedFilter>,
     pub ai_engine: Arc<AIEngine>,
     pub rate_limiter: Arc<RateLimiter>,
     pub threat_intel: Arc<ThreatIntelEngine>,
@@ -32,6 +36,9 @@ pub struct AppState {
     pub auth: Arc<AuthService>,
     #[allow(dead_code)]
     pub db: Arc<SqliteDb>,
+    #[allow(dead_code)]
+    background_tasks: Arc<BackgroundTasks>,
+    pub webhooks: Arc<WebhookManager>,
 }
 
 impl AppState {
@@ -59,6 +66,25 @@ impl AppState {
 
         // Create DNS resolver with cache and filter
         let resolver = Resolver::new(cache, filter.clone()).await?;
+
+        // Initialize unified filter with blocklist support
+        let unified_filter = Arc::new(UnifiedFilter::new(filter.clone()));
+
+        // Fetch blocklists asynchronously (non-blocking)
+        let uf_clone = unified_filter.clone();
+        tokio::spawn(async move {
+            match uf_clone.init_blocklists("config/blocklist-sources.json").await {
+                Ok(stats) => {
+                    info!(
+                        "Blocklists loaded: {} domains from {} sources",
+                        stats.total_domains, stats.sources_loaded
+                    );
+                }
+                Err(e) => {
+                    warn!("Failed to load blocklists, using defaults: {}", e);
+                }
+            }
+        });
 
         // Initialize AI engine
         let ai_engine = Arc::new(AIEngine::new().await?);
@@ -94,16 +120,41 @@ impl AppState {
         }));
         info!("Rate limiter initialized");
 
+        // Initialize metrics
+        let metrics = Arc::new(MetricsCollector::new());
+
+        // Wrap resolver in Arc for sharing
+        let resolver = Arc::new(resolver);
+
+        // Initialize background tasks (blocklist auto-refresh, metrics, etc.)
+        let bg_config = BackgroundTasksConfig::default();
+        let background_tasks = Arc::new(BackgroundTasks::new(bg_config));
+        background_tasks.start(unified_filter.clone(), metrics.clone());
+        info!("Background tasks initialized (blocklist refresh every 6 hours)");
+
+        // Start cache warming in background
+        let resolver_for_warming = resolver.clone();
+        tokio::spawn(async move {
+            // Wait a bit for server to stabilize
+            tokio::time::sleep(Duration::from_secs(5)).await;
+            warm_cache(&resolver_for_warming).await;
+        });
+
+        // Initialize webhook manager for threat notifications
+        let webhooks = Arc::new(WebhookManager::new());
+        info!("Webhook manager initialized");
+
         info!(
             "Application state initialized - blocklist: {} domains",
             filter.blocklist_size()
         );
 
         Ok(Self {
-            metrics: Arc::new(MetricsCollector::new()),
+            metrics,
             start_time: Instant::now(),
-            resolver: Arc::new(resolver),
+            resolver,
             filter,
+            unified_filter,
             ai_engine,
             rate_limiter,
             threat_intel,
@@ -112,6 +163,8 @@ impl AppState {
             ml_engine,
             auth,
             db,
+            background_tasks,
+            webhooks,
         })
     }
 
